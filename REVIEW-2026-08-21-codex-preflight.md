@@ -101,3 +101,30 @@ Codexの変更は**クラウドセッションが上位層の欠落を自覚す�
 - **P-5** 監査の **P-A（案件側 `AGENTS.md` の設置）** と **P-C（`unverified-figma-value` 5件の処理）** は依然として最優先である。今回の変更はこの2つの代替にならない。
 
 P-1〜P-4は正本の変更を伴うため、着手にはオーナー承認が必要。
+
+---
+
+## 6. 対応（2026-08-21 claude、オーナー指示「修正しろ」）
+
+同セッションで P-1〜P-4 を適用した。適用範囲はクラウドで機械的に検証できるものに限る。
+
+| 指摘 | 対応 |
+| --- | --- |
+| R-1 | `WORKFLOW.md` / 入口2枚 / `README.md` の実行形を cwd 非依存の絶対パスに統一。「非0終了、判定不能…」を「非0終了、またはJSON判定が得られない場合」に改め、案件cwdでも実行できるようにした |
+| R-2 | 本リポジトリ側のみ実施。入口2枚に**着手前ゲート5項目を本文として直書き**し、「規則本文を入口へ複製しない」設計をこのゲートに限り例外にした。**案件側 `AGENTS.md` の設置はクラウドから実施できないため未了** |
+| R-3 | `--assert-local` を追加。`cloud-restricted` は **exit 2**、`local` は exit 0。実プロセス起動のE2Eで終了コードを固定。`rules/figma-spec-pipeline.md` のフェーズ0チェックリストと実行ゲート節に前段として追加した |
+| R-4 | 文書中の呼称を「環境判定 `workflow-preflight`」に統一し、`figma:gate preflight` とは別物で両方通す旨を `WORKFLOW.md`・入口・`README.md`・`figma-spec-pipeline.md` に明記 |
+| R-5 | 死条件（`local` かつ上位ファイル欠落）と、実装が返さない「判定不能」を規則本文から削除 |
+| R-6 | 判定を `accessSync` から**実読**へ変更。下限200バイトとMarkdown見出しの有無を検査し、空・プレースホルダで `local` にならないようにした。E2Eに負の3件を追加。旧世代コピーは検出できない旨を規則本文に明記 |
+| R-7 | 環境変数を「補助シグナル」に格下げし、判定の正本をファイルの実読と規定。`CLAUDE_CODE_REMOTE` は実測済み、`CODEX_CI` は未実測であることを `WORKFLOW.md` に記録 |
+| R-8 | `FIGMA_TO_CODE_VAULT_WORKFLOW` / `FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW` で上位層パスを上書き可能にし、E2Eで固定 |
+| R-9 | `STATE.md` に本件の記録を追加 |
+| R-10 | `README.md` の版・最終更新を更新し、必読リストに `rules/figma-scope-lock.md` を追加 |
+
+実測: `tools/workflow-preflight.e2e.mjs` は9群へ拡張し PASS。`tools/figma-log-promote.e2e.mjs` / `tools/figma-scope-lock.e2e.mjs` に回帰なし。`--assert-local` はこのクラウドで exit 2、既定実行は exit 0。
+
+### 未実施（ローカルセッションが必要）
+
+1. **案件側 `AGENTS.md` の設置**（監査P-A の本体）。本リポジトリは案件cwdの祖先ではないため、クラウドからは配送経路を作れない。**これが未了の間、今回の入口強化は案件セッションに届かない。**
+2. **`figma-gate` から `--assert-local` を自動起動する配線**。案件側 `package.json` と実測が要る。現状は「チェックリストに書かれた手順」であり、機械的強制ではない。
+3. 監査C（旧 `C:\AI\MyBrain` 参照5箇所）、監査D（`unverified-figma-value` 5件の滞留）、監査E（忠実度ベンチマーク0件）。いずれも別scopeであり、`WORKFLOW.md` のscope分離規定により本scopeへ混ぜていない。

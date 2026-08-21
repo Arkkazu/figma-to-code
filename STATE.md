@@ -1330,3 +1330,11 @@
   - **結論の範囲:** 1組のA/Bはパイロットであり、将来の改善効果の証明とは呼ばない。追加ペアと効果主張の評価条件は、実測前にownerが別途定める。根拠のない件数閾値は置かない。公開しない比較実験にrelease-checkは要求しないが、公開する場合だけA/B双方でowner承認済みrelease-checkを必須にする。
   - **ownerが採用後に指定する入力:** 実Figma URL（fileKey/root nodeを含む）、実装scopeと除外範囲、A/B各worktree・実装/批評context、PC/SP viewport、checkpoint対象とpainted判定、baseline、Bで評価する承認済み改善、公開する場合のURL・デプロイ識別子を指定する。これらが揃うまで実Figma測定・A/B比較・改善効果の報告は開始しない。
   - **採用前の境界:** comparison contractの起草と隔離E2Eは[120]で完了したが、代替独立批評とowner採用前に実案件の比較根拠として使わない。確定済みspec本文、`QUESTIONS.md`、figma-gate、gate manifest、MyBrain manifestは変更しない。
+
+- [2026-08-21 claude / 環境判定 workflow-preflight の批評と修正] **クラウド判定の欠陥修正（codex `0c8c866`）を独立検証し、指摘10件のうち機械的に検証できる7件を修正した。**
+  - 妥当と認めた点: `CLAUDE_CODE_REMOTE` 単独判定は実在の欠陥（`71e4509`、claudeが混入させたもの）。安全弁を環境変数でなく上位層ファイルの可読性に置いた向きは正しい。依存注入によりE2Eが実環境非依存。
+  - 修正した指摘: R-1（案件cwdで exit 1 → 絶対パス形を規定）、R-3（両モード exit 0 で強制力なし → `--assert-local` で exit 2）、R-4（`figma:gate preflight` との用語衝突 → 「環境判定」と明示し両方通すと規定）、R-5（実装上ありえない死条件を削除）、R-6（`accessSync` のみで空・プレースホルダが `local` になる → 下限バイトと見出しを検査）、R-7（`CODEX_CI=1` 未実測 → 補助シグナルへ格下げし実測状況を明記）、R-8（Windows固定パス → 環境変数で上書き可）、R-10（README状態欄と必読リスト）。
+  - 併せて監査P-Aの本リポジトリ側を実施: 入口2枚に「着手前ゲート」5項目を本文として直書きし、`WORKFLOW.md` の「規則本文を入口へ複製しない」設計を、このゲートに限り例外とした。
+  - 実測: `tools/workflow-preflight.e2e.mjs` を9群へ拡張し、実プロセス起動で終了コード（local=0 / cloud=2）まで固定。`figma-log-promote.e2e` / `figma-scope-lock.e2e` に回帰なし。
+  - 未実施（ローカル必須）: 監査P-A の案件側 `AGENTS.md` 設置（本リポジトリは案件cwdの祖先ではないため、クラウドからは届かない）。`figma-gate` から `--assert-local` を自動起動する配線（案件側 `package.json` と実測が要る）。監査C（旧 `C:\AI\MyBrain` 参照5箇所）、監査D（`unverified-figma-value` 5件の滞留）、監査E（忠実度ベンチマーク0件）は別scopeとして未着手。
+  - 記録: `AUDIT-2026-08-21-rule-adherence.md`、`REVIEW-2026-08-21-codex-preflight.md`

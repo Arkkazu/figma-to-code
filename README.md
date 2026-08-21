@@ -6,7 +6,13 @@
 
 ## 実行時の入口
 
-どちらのエージェントも、入口ファイルを読んだ直後の最初のツール実行で `node tools/workflow-preflight.mjs` を実行する。これによりCodexクラウドをClaude専用の環境変数だけで誤ってローカル扱いする経路と、上位規則が欠けたまま実装を始める経路を閉じる。
+どちらのエージェントも、入口ファイルを読んだ直後の最初のツール実行で環境判定を実行する。cwdに依存しないよう絶対パスで呼ぶ。
+
+```bash
+node C:\AI\figma-to-code\tools\workflow-preflight.mjs
+```
+
+これによりCodexクラウドをClaude専用の環境変数だけで誤ってローカル扱いする経路と、上位規則が欠けたまま実装を始める経路を閉じる。Figma実装scopeでソースを編集する前は `--assert-local` を付けて非0終了で止まることを確認する。この環境判定は編集前ゲート `figma:gate preflight` とは別物で、両方を通す。
 
 ### Codex
 1. `C:\Users\tane1\.codex\AGENTS.md`
@@ -20,7 +26,7 @@
 3. `C:\AI\web-development\CLAUDE.md`
 4. `CLAUDE.md`
 
-その後、共通で `rules/figma-spec-pipeline.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`、必要な `templates/` と案件側 `MyBrain/` を読む。
+その後、共通で `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`、必要な `templates/` と案件側 `MyBrain/` を読む。
 
 ## 構成
 
@@ -37,5 +43,5 @@ Figma照合はコーディング反復の中で実施する。Git hook、commit�
 
 ## 状態
 
-- 版: 0.3.1（D-010起草を含む）
-- 最終更新: 2026-07-18
+- 版: 0.3.2（D-010起草、環境判定 `workflow-preflight` を含む）
+- 最終更新: 2026-08-21

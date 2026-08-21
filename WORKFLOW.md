@@ -4,7 +4,15 @@
 
 ## Figma実装・修正タスクの開始順
 
-入口（`AGENTS.md` / `CLAUDE.md`）を読んだ直後、他の調査・編集より先にリポジトリ直下で `node tools/workflow-preflight.mjs` を実行する。`local` なら下記1〜5を順に読み、`cloud-restricted` なら次節の制限に従う。非0終了、判定不能、または `local` で必須上位ファイルが欠けた場合は着手しない。
+入口（`AGENTS.md` / `CLAUDE.md`）を読んだ直後、他の調査・編集より先に環境判定 `workflow-preflight` を実行する。案件ディレクトリなど本リポジトリ外で作業している場合も同じなので、**cwdに依存しない絶対パスで呼ぶ**。
+
+```bash
+node C:\AI\figma-to-code\tools\workflow-preflight.mjs
+```
+
+`local` なら下記1〜5を順に読み、`cloud-restricted` なら次節の制限に従う。非0終了、またはJSON判定が得られない場合は着手しない。
+
+本ファイルで `workflow-preflight` と呼ぶものは**環境判定**であり、`rules/figma-spec-pipeline.md` の編集前ゲート `figma:gate preflight` とは別物である。環境判定のPASSは編集前ゲートの代わりにならない。両方を通す。
 
 1. `C:\AI\vault\WORKFLOW.md`
 2. `C:\AI\web-development\WORKFLOW.md`
@@ -16,9 +24,19 @@
 
 Claude Code / Codex のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、5（案件側 `MyBrain/`）は存在しない**。ユーザースコープのMCP設定も届かない。
 
-クラウド判定の正本は `tools/workflow-preflight.mjs` とする。`CLAUDE_CODE_REMOTE=true` または `CODEX_CI=1` をクラウドの明示シグナルとして扱い、さらにローカル必須上位ファイルを参照できない環境も安全側で `cloud-restricted` とする。特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
+クラウド判定の正本は `tools/workflow-preflight.mjs` が**上位層の `WORKFLOW.md` を実際に読めるか**とする。読めない、下限バイト未満、Markdown見出しが無い（空・プレースホルダ）の場合は `cloud-restricted` とする。`CLAUDE_CODE_REMOTE=true` と `CODEX_CI=1` は補助シグナルであり、特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
 
-preflight が `cloud-restricted` を返したとき、実行してよいのは次に限る。
+2026-08-21 実測：Claude Codeのクラウドセッションは `CLAUDE_CODE_REMOTE=true` を持ち、上位層2ファイルはどちらも存在しない。`CODEX_CI=1` はCodexクラウドの申告値であり、本リポジトリでは未実測である。判定はファイルの実読を正本とするため、この値の当否に結果が依存しない構成にしてある。
+
+上位層のルート位置が既定と異なるローカル環境では、`FIGMA_TO_CODE_VAULT_WORKFLOW` と `FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW` でパスを上書きする。ファイル検査は空・プレースホルダを弾くが、**旧世代のコピーは検出できない**。世代差の検査はこの環境判定の責務ではない。
+
+Figma実装・修正でソースを編集する前は、環境判定を非0で落ちないことまで確認する（`cloud-restricted` は exit 2）。
+
+```bash
+node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
+```
+
+`workflow-preflight` が `cloud-restricted` を返したとき、実行してよいのは次に限る。
 
 - このリポジトリ内で完結するテスト・E2E・lintの実行と、その失敗の修正
 - `spec/`・`rules/`・`tools/` の静的な整合確認と、機械的に検証できる修正
