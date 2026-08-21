@@ -1370,3 +1370,8 @@
   - 検出できないもの：案件名・クライアント名、CSSセレクタ、DOM対応の断片、スクリーンショットの内容。PASSは「機械で見える範囲に無い」ことしか意味しないと `public-memory-policy.md` に明記した。
   - 実測：`public-memory-scan.e2e.mjs` は全10規則が発火することと、公開してよい記述（`06:54`、`16:9`、`localhost:3000`、`C:\AI\vault`、Node版）を誤検出しないことを固定。現在の `MyBrain/` は findings 0 で、その清潔さも回帰として固定した。
   - ポリシーの「Before Commit Or Push」を実行コマンド付きの手順に書き換え、`MyBrain/README.md` からも参照した。
+
+- [2026-08-22 claude / 公開MyBrainのOpen Item完了] **root `README.md` からのリンク方針をオーナー決定により適用した。**
+  - 決定: 構成一覧に1行だけ置き、独立節は作らない。独立節はポリシー本文を要約したくなり、`MyBrain/rules/public-memory-policy.md` との二重管理を招くため。READMEは所在だけを示し中身を持たない。
+  - 適用: 構成一覧に `MyBrain/`（案件側の非公開 `MyBrain/` とは別物である旨つき）を追加。`状態` の最終更新を 2026-08-22 へ更新（監査F-4の再発防止）。`MyBrain/STATE.md` のOpen Itemを決定内容つきで閉じた。
+  - これで `MyBrain/STATE.md` のOpen Itemは0件。

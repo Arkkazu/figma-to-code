@@ -20,8 +20,13 @@
 
 ## Open Items
 
+- None.
+
+## Resolved
+
 - 2026-08-22: Added `tools/public-memory-scan.mjs` as the pre-push private-data
   scan for this directory, with `tools/public-memory-scan.e2e.mjs` fixing both
   the positive and negative cases. This directory currently scans clean.
-- Decide whether root `README.md` should link to this directory after owner
-  review.
+- 2026-08-22: Decided with the owner that root `README.md` lists this directory
+  as one line under its structure list, and that no dedicated section is added -
+  a section would duplicate `rules/public-memory-policy.md`. Applied.

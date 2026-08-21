@@ -43,6 +43,7 @@ node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<
 - `tools/`：環境判定・案件入口の設置・訂正ログ昇格の実行器
 - `references/`：Figmaレビュー基準などの参照資料
 - `spec/`：この手法そのものを育成する仕様
+- `MyBrain/`：本リポジトリを改善するための公開メモリ（案件側の非公開 `MyBrain/` とは別物）
 - `LOOP.md` / `STATE.md`：手法育成ループの状態
 
 ## Gitとの関係
@@ -52,4 +53,4 @@ Figma照合はコーディング反復の中で実施する。Git hook、commit�
 ## 状態
 
 - 版: 0.3.2（D-010起草、環境判定 `workflow-preflight` を含む）
-- 最終更新: 2026-08-21
+- 最終更新: 2026-08-22
