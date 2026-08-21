@@ -10,7 +10,7 @@
 node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 ```
 
-`local` なら下記1〜5を順に読み、`cloud-restricted` なら次節の制限に従う。非0終了、またはJSON判定が得られない場合は着手しない。
+`local` なら下記1〜6を順に読み、`cloud-restricted` なら次節の制限に従う。非0終了、またはJSON判定が得られない場合は着手しない。
 
 本ファイルで `workflow-preflight` と呼ぶものは**環境判定**であり、`rules/figma-spec-pipeline.md` の編集前ゲート `figma:gate preflight` とは別物である。環境判定のPASSは編集前ゲートの代わりにならない。両方を通す。
 
@@ -18,7 +18,8 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 2. `C:\AI\web-development\WORKFLOW.md`
 3. 本ファイルと `README.md`
 4. `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`
-5. 案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
+5. 本リポジトリの規則・テンプレート・tools・workflowを改善する場合は、リポジトリ直下の `MyBrain/README.md`、`MyBrain/STATE.md`、`MyBrain/rules/`
+6. 案件のFigma実装・修正を行う場合は、案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
 ## 案件側への入口の設置
 
@@ -33,7 +34,7 @@ node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --che
 
 ## クラウドセッションでの実行範囲
 
-Claude Code / Codex のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、5（案件側 `MyBrain/`）は存在しない**。ユーザースコープのMCP設定も届かない。
+Claude Code / Codex のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、6（案件側 `MyBrain/`）は存在しない**。リポジトリ直下の `MyBrain/` はクローンに含まれるため、本リポジトリを改善する作業では5も読む。ユーザースコープのMCP設定は届かない。
 
 クラウド判定の正本は `tools/workflow-preflight.mjs` が**上位層の `WORKFLOW.md` を実際に読めるか**とする。読めない、下限バイト未満、Markdown見出しが無い（空・プレースホルダ）の場合は `cloud-restricted` とする。`CLAUDE_CODE_REMOTE=true` と `CODEX_CI=1` は補助シグナルであり、特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
 
