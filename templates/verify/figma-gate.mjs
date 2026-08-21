@@ -2,6 +2,7 @@
 import { FIGMA_GATE_CONTRACT_VERSION, assertCheckpointIsCurrent, assertPageCoverageComplete, completeSection, initializePageCoverage, prepareSectionClose, sectionStart } from "./figma-page-coverage.mjs";
 import { validateCorrectionReceipt } from "./correction-receipt.mjs";
 import { assertResponsiveHtmlSingleDom } from "./responsive-html-guard.mjs";
+import { markCoordinationGateActive, markCoordinationGateClosed, withScopePreflightLock } from "./scope-coordination.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -510,6 +511,16 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
     preEditApproval = { instruction, paths: approvedPaths };
   }
 
+  // Figmaで可視のvectorが実装から落ちていないかを台帳と突き合わせる監査。
+  // 既存manifestを一斉に落とさないため、いまは宣言した案件だけで動く任意項目にしている。
+  // 既存manifestの移行が済んだら必須へ上げる。
+  let visibleAssetAuditPath = null;
+  if (scope.visibleAssetAuditPath !== undefined) {
+    const auditPath = toRepoPath(scope.visibleAssetAuditPath, "manifest.scope.visibleAssetAuditPath");
+    toEvidencePath(auditPath.absolutePath, "manifest.scope.visibleAssetAuditPath");
+    visibleAssetAuditPath = auditPath.relativePath;
+  }
+
   // HTML/PHPを変更するscopeは W3C 証跡のパスを宣言する。
   // 実行できない事情がある場合だけ w3cSkip に理由を書く（合格にはならず未実施として残る）。
   const w3cEvidencePath = scope.w3cEvidencePath === undefined ? null : requireString(scope.w3cEvidencePath, "manifest.scope.w3cEvidencePath");
@@ -757,6 +768,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
     layerEvidencePath,
     changeTargets: changeTargets.map(({ relativePath, absolutePath }) => ({ relativePath, absolutePath })),
     generatedTargets,
+    visibleAssetAuditPath,
     preEditApproval,
     responsiveHtmlSourceFiles: responsiveHtmlSources.map(({ relativePath }) => relativePath),
     deferredResponsiveHtmlSourceFiles: validatedDeferredResponsiveHtmlSources.map(({ relativePath }) => relativePath),
@@ -2540,13 +2552,61 @@ function preflight(manifestPath, implementationIdentityInput) {
   // 最後に実行する。manifest / spec / node map の検査で落ちる経路の失敗理由を変えないため。
   const preEdit = assertTargetsUneditedBeforePreflight(validated);
   const applicableRules = applicableRuleRefs(validated);
-  // Do not create mutable page-coverage runtime until every ordinary
-  // preflight eligibility check has passed. In particular, a dirty/Git
-  // rejection must not replace the runtime that belongs to an earlier active
-  // preflight with a different condition identity.
-  initializePageCoverage(manifestPath, implementationIdentity);
+  const relativeManifestPath = relative(repoRoot, absoluteManifestPath).replace(/\\/g, "/");
+  // 受領証は gate 種別ごとに1枠しかない。衝突判定から受領証作成までを同一の排他ロック内で
+  // 行わないと、二つのpreflightがどちらも「衝突なし」と判定したあとで、片方がもう片方の
+  // 受領証とpage coverage runtimeを黙って上書きできてしまう。
+  //
+  // identityは v13 の規約どおり実行時フラグ由来のものを渡す。manifest には書かせない。
+  try {
+    withScopePreflightLock(
+      { root: repoRoot, gateKind: "figma", manifestPath: relativeManifestPath },
+      () => {
+        run(
+          "node",
+          [
+            "MyBrain/verify/scope-conflict-audit.mjs",
+            "--gate", "figma",
+            "--actor", implementationIdentity.actor,
+            "--context-id", implementationIdentity.contextId,
+            relativeManifestPath,
+          ],
+          "scope conflict audit",
+          "SPEC"
+        );
+        if (validated.visibleAssetAuditPath) {
+          run(
+            "node",
+            ["MyBrain/verify/figma-visible-asset-audit.mjs", "preflight", validated.visibleAssetAuditPath],
+            "visible asset audit preflight",
+            "SPEC"
+          );
+        }
+        markCoordinationGateActive({
+          root: repoRoot,
+          scopeId: validated.id,
+          gateKind: "figma",
+          actor: implementationIdentity.actor,
+          contextId: implementationIdentity.contextId,
+          manifestPath: relativeManifestPath,
+        });
+        // Do not create mutable page-coverage runtime until every ordinary
+        // preflight eligibility check has passed. In particular, a dirty/Git
+        // rejection must not replace the runtime that belongs to an earlier active
+        // preflight with a different condition identity.
+        initializePageCoverage(manifestPath, implementationIdentity);
+        writeState(preflightState());
+      }
+    );
+  } catch (error) {
+    fail(`SPEC FAIL: scope conflict preflight guard failed: ${error.message}`);
+  }
+  pass(`Rules that apply to this scope (read before editing):\n  - ${applicableRules.join("\n  - ")}`);
+  pass("Preflight evidence is complete. Source edits may begin.");
 
-  writeState({
+  // 受領証の中身。ロック内で一度だけ書く。宣言は巻き上げられるので使用箇所より後で構わない。
+  function preflightState() {
+    return {
     version: FIGMA_GATE_STATE_VERSION,
     phase: "preflight",
     repository: repoRoot,
@@ -2584,9 +2644,8 @@ function preflight(manifestPath, implementationIdentityInput) {
     applicableRules,
     preflightId: randomUUID(),
     preflightAt: new Date().toISOString(),
-  });
-  pass(`Rules that apply to this scope (read before editing):\n  - ${applicableRules.join("\n  - ")}`);
-  pass("Preflight evidence is complete. Source edits may begin.");
+    };
+  }
 }
 
 function close(manifestPath) {
@@ -2684,6 +2743,20 @@ function close(manifestPath) {
   };
   const learning = runPostflightLearning(absoluteManifestPath, closedState);
   writeState({ ...closedState, learning });
+  // 台帳を閉じるのは受領証を書いたあと。先に閉じると、close検査が落ちたときに
+  // 台帳だけ closed になり、実際には未検証のscopeが空き枠として見えてしまう。
+  try {
+    markCoordinationGateClosed({
+      root: repoRoot,
+      scopeId: validated.id,
+      gateKind: "figma",
+      actor: implementationIdentity.actor,
+      contextId: implementationIdentity.contextId,
+      manifestPath: relative(repoRoot, absoluteManifestPath).replace(/\\/g, "/"),
+    });
+  } catch (error) {
+    fail(`Scope coordination close update failed: ${error.message}`);
+  }
   pass(
     `Scope close PASS: SPEC FAIL 0 / LAYOUT FAIL 0 / VISUAL FAIL 0 ` +
       `— components ${validated.checkpointPlan.length}/${validated.components.length}, ` +

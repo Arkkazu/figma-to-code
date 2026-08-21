@@ -4,7 +4,7 @@
 // Figma, P-11, a role, or a pair lifecycle.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -171,6 +171,33 @@ function createFixture(prefix) {
   };
   mkdirSync(directory, { recursive: true });
   mkdirSync(join(root, "site"), { recursive: true });
+  // preflight は scope conflict audit を別プロセスで起動する。実体と両台帳が無いと、
+  // このe2eが検証したい内容へ到達する前に落ちる。
+  const verifierDirectory = join(root, "MyBrain", "verify");
+  for (const name of ["scope-coordination.mjs", "scope-conflict-audit.mjs"]) {
+    cpSync(join(dirname(fixturePath), name), join(verifierDirectory, name));
+  }
+  // 担当者名はこのフィクスチャ固有。台帳で宣言することで、正本に案件の担当者名を
+  // 焼き込まずに済む（scope-conflict-audit.mjs の actors 既定を上書きする）。
+  writeJson(join(verifierDirectory, "shared-component-ownership.json"), {
+    version: 2,
+    exclusivePathOwnership: [{ pattern: "**", owner: "fixture-implementation" }],
+  });
+  writeJson(join(verifierDirectory, "scope-coordination.json"), {
+    version: 2,
+    actors: ["fixture-implementation"],
+    updatedAt: "2026-08-21T00:00:00+09:00",
+    scopes: [
+      {
+        id: "fixture-gate",
+        actor: "fixture-implementation",
+        implementationContextId: "fixture-implementation-context",
+        status: "waiting",
+        manifestPath: "MyBrain/verify/fixture/gate.json",
+        gates: { figma: "waiting" },
+      },
+    ],
+  });
   writeFileSync(join(root, "site", "view.txt"), "clean declared target\n", "utf8");
   writeFileSync(join(directory, "mapping.md"), "fixture mapping\n", "utf8");
   writeFileSync(join(directory, "search.md"), "fixture search evidence\n", "utf8");

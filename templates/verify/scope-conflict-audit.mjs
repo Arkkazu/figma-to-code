@@ -3,7 +3,9 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { isAbsolute, relative, resolve } from "node:path";
 
-const ACTORS = new Set(["claude", "codex"]);
+// 担当者名は案件ごとに決まる。正本の配布物に特定の名前を焼き込まないため、
+// 既定を持ちつつ scope-coordination.json の actors で上書きできるようにする。
+const DEFAULT_ACTORS = ["claude", "codex"];
 const GATE_KINDS = new Set(["figma", "coding"]);
 const OPERATIONS = new Set(["preflight", "amend"]);
 
@@ -99,7 +101,7 @@ function dirtyPaths(root) {
   return paths;
 }
 
-function validateOwnershipRules(ownership, violations) {
+function validateOwnershipRules(ownership, violations, actors) {
   if (ownership?.version !== 2) violations.push("共有所有者台帳の version は 2 である必要があります。");
   const rules = ownership?.exclusivePathOwnership;
   if (!Array.isArray(rules) || rules.length === 0) {
@@ -108,7 +110,7 @@ function validateOwnershipRules(ownership, violations) {
   }
   for (const [index, rule] of rules.entries()) {
     if (!rule || typeof rule.pattern !== "string" || rule.pattern.trim() === "") violations.push(`共有所有者台帳の ${index} 行目に pattern がありません。`);
-    if (!ACTORS.has(rule?.owner)) violations.push(`共有所有者台帳の ${index} 行目の owner が不正です。`);
+    if (!actors.has(rule?.owner)) violations.push(`共有所有者台帳の ${index} 行目の owner が不正です。`);
     if (rule?.except !== undefined && !Array.isArray(rule.except)) violations.push(`共有所有者台帳の ${index} 行目の except は配列である必要があります。`);
   }
   return rules;
@@ -172,8 +174,8 @@ function permittedFigmaDirtyTargets(root, manifest, gateKind, targets, violation
   return permitted;
 }
 
-function loadCoordinationEntry(root, entry, violations) {
-  if (!entry || typeof entry.id !== "string" || !ACTORS.has(entry.actor) || typeof entry.implementationContextId !== "string" || entry.implementationContextId.trim() === "" || typeof entry.manifestPath !== "string") {
+function loadCoordinationEntry(root, entry, violations, actors) {
+  if (!entry || typeof entry.id !== "string" || !actors.has(entry.actor) || typeof entry.implementationContextId !== "string" || entry.implementationContextId.trim() === "" || typeof entry.manifestPath !== "string") {
     violations.push("scope coordination台帳の active/waiting行に id・actor・implementationContextId・manifestPath が揃っていません。");
     return null;
   }
@@ -188,8 +190,15 @@ function loadCoordinationEntry(root, entry, violations) {
     return null;
   }
   if (manifest.id !== entry.id) violations.push(`scope coordination台帳の ${entry.id} はmanifest idと一致しません。`);
-  if (manifest.scope?.implementationActor !== entry.actor) violations.push(`scope coordination台帳の ${entry.id} はmanifestのimplementationActorと一致しません。`);
-  if (manifest.scope?.implementationContextId !== entry.implementationContextId) violations.push(`scope coordination台帳の ${entry.id} はmanifestのimplementationContextIdと一致しません。`);
+  // Figma gate v13 の manifest は identity を持たない（実行時フラグだけを正とする設計）。
+  // 宣言がある場合だけ突き合わせる。宣言が無いこと自体は違反ではなく、
+  // その scope の identity は台帳の行が唯一の記録になる。
+  if (manifest.scope?.implementationActor !== undefined && manifest.scope.implementationActor !== entry.actor) {
+    violations.push(`scope coordination台帳の ${entry.id} はmanifestのimplementationActorと一致しません。`);
+  }
+  if (manifest.scope?.implementationContextId !== undefined && manifest.scope.implementationContextId !== entry.implementationContextId) {
+    violations.push(`scope coordination台帳の ${entry.id} はmanifestのimplementationContextIdと一致しません。`);
+  }
   if (!entry.gates || typeof entry.gates !== "object" || Array.isArray(entry.gates)) violations.push(`scope coordination台帳の ${entry.id} に gates がありません。`);
   return { entry, manifest, targets, absoluteManifestPath };
 }
@@ -200,7 +209,7 @@ function dependencySatisfied(root, dependency) {
   return Boolean(state && state.manifestId === dependency.scopeId && state.phase === (dependency.phase ?? "closed"));
 }
 
-function audit({ root, manifestPath, gateKind, operation }) {
+function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
   const violations = [];
   const absoluteManifestPath = isAbsolute(manifestPath) ? manifestPath : resolve(root, manifestPath);
   let manifest;
@@ -214,9 +223,18 @@ function audit({ root, manifestPath, gateKind, operation }) {
     throw new AuditError([error.message]);
   }
 
+  // 担当者の集合は台帳が持つ。ここに焼き込むと、案件が担当者を増やすたびに正本を書き換える
+  // ことになり、監査だけが古い集合で落ちる状態が生まれる。
+  const declaredActors = Array.isArray(coordination.actors) ? coordination.actors.filter((value) => typeof value === "string" && value.trim() !== "") : [];
+  const actors = new Set(declaredActors.length > 0 ? declaredActors : DEFAULT_ACTORS);
+
   const scopeId = typeof manifest.id === "string" ? manifest.id : "";
-  const actor = manifest.scope?.implementationActor;
-  const contextId = manifest.scope?.implementationContextId;
+  // identityの出どころは2つある。coding gate は manifest.scope に宣言させ、Figma gate v13 は
+  // preflightのCLIフラグだけを認めて manifest 側の宣言を拒否する（ファイルの自己申告は
+  // 古くなりうるという理由）。監査はどちらの流儀も受け取れる必要があるため、
+  // 渡された値を優先し、無いときだけ manifest を見る。
+  const actor = identity.actor ?? manifest.scope?.implementationActor;
+  const contextId = identity.contextId ?? manifest.scope?.implementationContextId;
   let targets = [];
   try {
     targets = operationTargets(manifest, "対象manifest");
@@ -224,11 +242,11 @@ function audit({ root, manifestPath, gateKind, operation }) {
     violations.push(error.message);
   }
   if (!scopeId) violations.push("対象manifestの id がありません。");
-  if (!ACTORS.has(actor)) violations.push("対象manifestの scope.implementationActor は claude または codex である必要があります。");
-  if (typeof contextId !== "string" || contextId.trim() === "") violations.push("対象manifestの scope.implementationContextId がありません。");
+  if (!actors.has(actor)) violations.push(`実装者は ${[...actors].join(" または ")} のいずれかである必要があります（--actor か対象manifestの scope.implementationActor で渡す）。`);
+  if (typeof contextId !== "string" || contextId.trim() === "") violations.push("実装コンテキストIDがありません（--context-id か対象manifestの scope.implementationContextId で渡す）。");
   if (!OPERATIONS.has(operation)) violations.push("scope conflict auditのoperationが不正です。");
   if (operation === "amend" && gateKind !== "coding") violations.push("amendはcoding gateだけで実行できます。");
-  const ownershipRules = validateOwnershipRules(ownership, violations);
+  const ownershipRules = validateOwnershipRules(ownership, violations, actors);
 
   if (!Array.isArray(coordination.scopes)) {
     violations.push("scope coordination台帳の scopes がありません。");
@@ -239,7 +257,7 @@ function audit({ root, manifestPath, gateKind, operation }) {
     || entry?.status === "waiting"
     || (operation === "preflight" && entry?.id === scopeId && entry?.status === "aborted" && entry?.gates?.[gateKind] === "aborted")
   );
-  const loadedEntries = activeEntries.map((entry) => loadCoordinationEntry(root, entry, violations)).filter(Boolean);
+  const loadedEntries = activeEntries.map((entry) => loadCoordinationEntry(root, entry, violations, actors)).filter(Boolean);
   const own = loadedEntries.find(({ entry }) => entry.id === scopeId);
   if (!own) {
     violations.push(`${scopeId || "対象scope"} はscope coordination台帳で active または waiting として予約されていません。`);
@@ -330,26 +348,32 @@ function audit({ root, manifestPath, gateKind, operation }) {
 function parseArgs(argv) {
   let gateKind = null;
   let operation = "preflight";
+  const identity = {};
   const positional = [];
+  const named = {
+    "--gate": (value) => { gateKind = value; },
+    "--operation": (value) => { operation = value; },
+    "--actor": (value) => { identity.actor = value; },
+    "--context-id": (value) => { identity.contextId = value; },
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
-    if (value.startsWith("--gate=")) gateKind = value.slice("--gate=".length);
-    else if (value === "--gate") gateKind = argv[++index];
-    else if (value.startsWith("--operation=")) operation = value.slice("--operation=".length);
-    else if (value === "--operation") operation = argv[++index];
-    else positional.push(value);
+    const equals = value.indexOf("=");
+    const flag = equals >= 0 ? value.slice(0, equals) : value;
+    if (!Object.hasOwn(named, flag)) { positional.push(value); continue; }
+    named[flag](equals >= 0 ? value.slice(equals + 1) : argv[++index]);
   }
-  return { gateKind, operation, manifestPath: positional[0] };
+  return { gateKind, operation, identity, manifestPath: positional[0] };
 }
 
-const { gateKind, operation, manifestPath } = parseArgs(process.argv.slice(2));
+const { gateKind, operation, identity, manifestPath } = parseArgs(process.argv.slice(2));
 if (!manifestPath || !GATE_KINDS.has(gateKind) || !OPERATIONS.has(operation)) {
-  console.error("Usage: node MyBrain/verify/scope-conflict-audit.mjs --gate <figma|coding> [--operation <preflight|amend>] <manifest.json>");
+  console.error("Usage: node MyBrain/verify/scope-conflict-audit.mjs --gate <figma|coding> [--operation <preflight|amend>] [--actor <name> --context-id <id>] <manifest.json>");
   process.exit(2);
 }
 
 try {
-  const result = audit({ root: process.cwd(), manifestPath, gateKind, operation });
+  const result = audit({ root: process.cwd(), manifestPath, gateKind, operation, identity });
   console.log(`PASS: scope conflict audit (${result.scopeId}) / ${result.targetCount} target(s) / actor=${result.actor} / gate=${result.gateKind} / operation=${result.operation}`);
 } catch (error) {
   const violations = error instanceof AuditError ? error.violations : [error.message];
