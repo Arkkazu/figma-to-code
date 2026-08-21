@@ -10,6 +10,25 @@
 4. `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`
 5. 案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
+## クラウドセッションでの実行範囲
+
+Claude Code のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、5（案件側 `MyBrain/`）は存在しない**。ユーザースコープのMCP設定も届かない。判定は環境変数 `CLAUDE_CODE_REMOTE` が `true` かどうかで行う。
+
+`CLAUDE_CODE_REMOTE=true` のとき、実行してよいのは次に限る。
+
+- このリポジトリ内で完結するテスト・E2E・lintの実行と、その失敗の修正
+- `spec/`・`rules/`・`tools/` の静的な整合確認と、機械的に検証できる修正
+- 独立レビュー（批評のみ。正本の変更を伴わないもの）
+
+次は実行してはならない。作業を止めてローカルセッションへ差し戻す。
+
+- 案件側 `MyBrain/` を根拠とする判断、および案件側への記録
+- 共通Vault・Web Developmentの `corrections.md` / `mistakes.md` への追記と、正本の昇格
+- Figma実物との照合を要する実装・修正（fileKey・node-idは案件側にあり、クラウドには無い）
+- 実ブラウザ実測を根拠とする完了報告（Chromeが導入された環境でのみ可）
+
+差し戻すときは、「クラウドでは判断できない項目」を列挙し、ローカルで再開すべき手順を書いて終える。**上位層を読めないまま推測で埋めてはならない。**読めなかった層を読んだことにして完了報告することは、この規則の最も重大な違反とする。
+
 Figma URL付きの実装・修正では、Figma実物・spec・DOM対応表・実ブラウザ実測が揃うまで推測で編集しない。Figma照合はコーディング反復内で行い、Git hook、commit、push、deployでは実行しない。
 
 Figmaの実装・修正scopeでは、編集前に D-012スコープロックとして `rules/figma-scope-lock.md` のscope manifestを開始する。visual・componentの修正scopeに、共通ルール、検証ツール、LOOP仕様、ログ昇格の変更を混ぜてはならない。これらはオーナーが明示した別scopeだけで扱う。
