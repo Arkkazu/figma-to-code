@@ -23,6 +23,23 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 
 `rules/`・`templates/`・本ファイルに書かれた `MyBrain/verify/…`、`MyBrain/rules/corrections.md` などのパスは、**すべて6の案件側 `MyBrain/` を指す**。5のリポジトリ直下 `MyBrain/` は本リポジトリを改善するための公開メモリであり、検証キットもgate manifestも置かない。同名だが別物として扱う。
 
+## 着手前ゲート
+
+Figma URLや「デザインどおりに直して」という依頼を受けたら、次の5点を報告するまで**ソースを1行も編集しない**。入口（`AGENTS.md` / `CLAUDE.md`）はこの節を指すだけで、内容を複製しない。
+
+1. 環境判定 `workflow-preflight` の結果（`local` / `cloud-restricted`）
+2. 対象のFigma fileKey と、PC/SP それぞれの node-id（同定は「対象nodeの同定ゲート」に従う）
+3. spec（期待値と取得元）とFigma↔DOM対応表の所在。取得していない値を推測で埋めていないこと
+4. D-012スコープロック（`rules/figma-scope-lock.md`）の開始と、今回のscope外パス
+5. 次の2つがどちらも通ったこと。環境判定は編集前ゲートの代わりにならない。
+
+```bash
+node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
+npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementation-actor <actor> --implementation-context-id <context>
+```
+
+いずれかが未了なら、推測で補わず、不足情報を1つだけ確認して停止する。案件側で `figma:gate` script が未導入なら、ゲート未導入として実装を開始せず、導入手順の確認だけを行う。
+
 ## 案件側への入口の設置
 
 Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件側に入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。

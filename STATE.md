@@ -1375,3 +1375,10 @@
   - 決定: 構成一覧に1行だけ置き、独立節は作らない。独立節はポリシー本文を要約したくなり、`MyBrain/rules/public-memory-policy.md` との二重管理を招くため。READMEは所在だけを示し中身を持たない。
   - 適用: 構成一覧に `MyBrain/`（案件側の非公開 `MyBrain/` とは別物である旨つき）を追加。`状態` の最終更新を 2026-08-22 へ更新（監査F-4の再発防止）。`MyBrain/STATE.md` のOpen Itemを決定内容つきで閉じた。
   - これで `MyBrain/STATE.md` のOpen Itemは0件。
+
+- [2026-08-22 claude / 入口の縮小] **オーナー判断により、着手前ゲートの本文を `WORKFLOW.md` へ戻し、入口をポインタへ縮小した。**
+  - 経緯: 監査P-Aとして入口2枚へゲート5項目を直書きしたが、これは同じ内容が入口と規則の2箇所に存在する状態を作っていた。今回最大の欠陥（`rules/figma-spec-pipeline.md` と案件側 `MyBrain/WORKFLOW.md` に同じゲートコマンドが書かれ、片方が古いまま誰も気づかなかった）と同じ構造であり、二重管理はいずれずれる。
+  - 変更: `WORKFLOW.md` に「着手前ゲート」節を新設し、5項目と2つの起動コマンド（`workflow-preflight --assert-local` と `figma:gate preflight`）を1箇所だけに置いた。入口3枚（`AGENTS.md` / `CLAUDE.md` / `templates/project-entry.md`）は 32〜49行から**各13行**へ縮小し、(1)環境判定の実行、(2)`WORKFLOW.md`「着手前ゲート」の5点を報告するまで編集しない、(3)規則本文の所在、の3要素だけにした。
+  - これで `WORKFLOW.md` 冒頭の「規則本文をエージェント別の入口へ複製しない」と入口の実体が再び一致する。入口に残るのは禁止の一文であり、規則の中身ではない。
+  - 残る限界: 入口の一文を守ったかは自己申告のままである。機械的な強制は `figma-gate` 側（`preflight` が `workflow-preflight --assert-local` を起動し、失敗ならSPEC FAIL）にあり、ゲートを起動しない経路は塞げていない。
+  - 実測: E2E 9本すべてPASS。`gate-command-doc-audit` と `public-memory-scan` はともに exit 0。
