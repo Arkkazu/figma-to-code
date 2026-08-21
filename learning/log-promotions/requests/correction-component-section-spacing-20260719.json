@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-component-section-spacing-20260719",
+  "kind": "correction",
+  "occurredOn": "2026-07-19",
+  "failureClass": "component-section-spacing-ownership",
+  "recurrenceKey": "component-root-must-not-own-inter-section-spacing",
+  "ruleTargets": ["rules/figma-spec-pipeline.md", "rules/loop-execution.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "Figmaコンポーネントを実装するとき、コンポーネントのroot要素に外側のセクション間余白をpaddingとして持たせてはいけない。",
+  "prevention": "セクション間余白は親sectionまたはレイアウトwrapperの責務として扱う。コンポーネントのpaddingは、そのコンポーネント内部の余白だけに限定する。Figma上で隣接セクションとの距離として見える余白は、component paddingではなくparent/layout spacingとして記録・実装する。"
+}

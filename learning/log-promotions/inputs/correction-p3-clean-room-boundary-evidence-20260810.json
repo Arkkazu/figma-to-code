@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-p3-clean-room-boundary-evidence-20260810",
+  "kind": "correction",
+  "occurredOn": "2026-08-10",
+  "failureClass": "clean-room-boundary-overclaim",
+  "recurrenceKey": "clean-room-boundary-evidence",
+  "promotability": "non-promotable",
+  "nonPromotableReason": "The access boundary depends on the actual host sandbox and session permissions, which the approved static verifiers cannot model without a real per-context access probe.",
+  "summary": "A separate Windows account was presented as necessary before the P-3 clean-room contract and the actual local sandbox boundary had been tested.",
+  "prevention": "Treat a clean-room boundary as valid only after testing the exact execution context against the other condition worktree and common Git storage; do not substitute an untested operating-system account claim for that evidence."
+}

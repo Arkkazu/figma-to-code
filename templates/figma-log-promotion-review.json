@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "proposalId": "figma-log-example",
+  "proposalPath": "learning/log-promotions/proposals/figma-log-example.json",
+  "proposalSha256": "replace-with-proposal-sha256",
+  "implementation": { "actor": "codex", "contextId": "implementation-context" },
+  "reviewer": { "actor": "claude", "contextId": "independent-review-context" },
+  "checks": {
+    "evidenceIntegrity": "PASS",
+    "recurrenceThreshold": "PASS",
+    "projectFactsExcluded": "PASS",
+    "strengthensOnly": "PASS",
+    "guardrailsUnchanged": "PASS"
+  },
+  "negativeE2E": {
+    "path": "templates/verify/figma-gate.e2e.mjs",
+    "sha256": "replace-with-current-e2e-sha256",
+    "result": "PASS"
+  },
+  "ownerApproval": { "status": "pending", "owner": "kazu" }
+}

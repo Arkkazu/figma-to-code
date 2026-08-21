@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "id": "figma-log-unverified-figma-value-5a071e44b16503b1",
+  "status": "pending-review",
+  "generatedBy": "figma-log-promote.mjs",
+  "recurrence": {
+    "key": "unverified-figma-value",
+    "failureClass": "unverified-figma-value",
+    "threshold": 2,
+    "evidence": [
+      {
+        "id": "correction-provenance-spec-20260709",
+        "kind": "correction",
+        "failureClass": "unverified-figma-value",
+        "recurrenceKey": "unverified-figma-value",
+        "action": "strengthen",
+        "ruleTargets": [
+          "rules/figma-spec-pipeline.md"
+        ],
+        "verifierTargets": [
+          "templates/verify/figma-gate.mjs",
+          "templates/verify/figma-gate.e2e.mjs"
+        ],
+        "source": {
+          "path": "rules/corrections.md",
+          "heading": "2026-07-09",
+          "line": 75,
+          "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+        }
+      },
+      {
+        "id": "mistake-provenance-spec-20260625",
+        "kind": "mistake",
+        "failureClass": "unverified-figma-value",
+        "recurrenceKey": "unverified-figma-value",
+        "action": "strengthen",
+        "ruleTargets": [
+          "rules/figma-spec-pipeline.md"
+        ],
+        "verifierTargets": [
+          "templates/verify/figma-gate.mjs",
+          "templates/verify/figma-gate.e2e.mjs"
+        ],
+        "source": {
+          "path": "rules/mistakes.md",
+          "heading": "2026-06-25",
+          "line": 84,
+          "sha256": "618fda7815a1235455ee581a5d7565ade1084c4f6551c2589f7535b9a7637945"
+        }
+      }
+    ]
+  },
+  "requiredChange": {
+    "action": "strengthen",
+    "ruleTargets": [
+      "rules/figma-spec-pipeline.md"
+    ],
+    "verifierTargets": [
+      "templates/verify/figma-gate.e2e.mjs",
+      "templates/verify/figma-gate.mjs"
+    ],
+    "negativeE2ERequired": true
+  },
+  "review": {
+    "loopEngineeringSpec": "C:\\AI\\loop-engineering\\spec\\06-self-improvement.md",
+    "requiresIndependentReview": true,
+    "requiresOwnerApproval": true,
+    "applyAllowed": false,
+    "promotionPlanRequired": true
+  }
+}

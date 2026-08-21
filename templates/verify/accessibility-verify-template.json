@@ -1,0 +1,49 @@
+{
+  "url": "https://example.invalid/page/",
+  "reportPath": "MyBrain/verify/reports/accessibility-<scope>.json",
+  "viewport": {
+    "width": 1440,
+    "height": 1600
+  },
+  "viewportPolicy": {
+    "scrollbars": "hidden"
+  },
+  "axe": {
+    "sourcePath": "node_modules/axe-core/axe.min.js",
+    "approvedExceptions": []
+  },
+  "contrast": {
+    "targets": [
+      {
+        "id": "page-heading",
+        "selector": "main h1",
+        "kind": "text"
+      },
+      {
+        "id": "primary-button-border",
+        "selector": ".button--primary",
+        "kind": "ui",
+        "foregroundProperty": "borderTopColor",
+        "backgroundScope": "behind"
+      }
+    ],
+    "approvedExceptions": []
+  },
+  "keyboard": {
+    "stateFlows": [
+      {
+        "name": "global-menu",
+        "triggerSelector": "#global-menu-toggle"
+      }
+    ],
+    "dialogs": [
+      {
+        "name": "contact-modal",
+        "triggerSelector": "#contact-modal-open",
+        "dialogSelector": "#contact-modal",
+        "firstSelector": "#contact-modal-close",
+        "lastSelector": "#contact-modal-submit"
+      }
+    ]
+  }
+}

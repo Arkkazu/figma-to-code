@@ -1,0 +1,15 @@
+{
+  "_comment": "v5 role-side probe plan. This plan file and inventory.path must be inside ownStaging when invoked by CLI. ownStaging itself must be a physical non-reparse role-staging-<16-64 lowercase hex> directory; inventory/config/P-9/P-7 challenge must realpath under it. P-7 self sentinels intentionally do not live under staging: helper reads the actual TEMP and TMP inherited by this role launch, requires both, rejects either overlap with staging, and records both values/hashes. probeId must be probe- followed by 32-128 lowercase hex. Do not add a comparison contract, Decision J, coordinator authority, matrix plan, bootstrap output, peer identity, or coordinator path.",
+  "version": 5,
+  "kind": "p3-clean-room-probe-plan-v5",
+  "probeId": "probe-REPLACE-32-to-128-lowercase-hex",
+  "stage": "full",
+  "ownStaging": {
+    "path": "REPLACE-absolute-role-staging-64hex-root",
+    "exists": true
+  },
+  "inventory": {
+    "path": "REPLACE-absolute-role-side-inventory-path",
+    "sha256": "REPLACE-64-lowercase-hex-sha256"
+  }
+}

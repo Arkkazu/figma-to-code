@@ -1,0 +1,1259 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-06T22:24:55.823Z",
+  "catalog": {
+    "id": "figma-rulebook-feature-coverage-20260806",
+    "path": "templates/verify/figma-feature-coverage-catalog.json",
+    "scope": "figma-to-code の案件横断ルール。案件固有のFigmaデータや初回実装の計測値は含めない。"
+  },
+  "result": {
+    "featureCount": 10,
+    "fullyCoveredFeatures": 8,
+    "findings": 2,
+    "pass": false,
+    "note": "pass は監査カタログ上の4段根拠が全て見つかったことを示す。Figmaページを使う初回実装の忠実度・実測値を示すものではない。"
+  },
+  "features": [
+    {
+      "id": "node-structure",
+      "name": "ノード構造・座標・寸法",
+      "source": "Q-01 §1 行1。ページ構造とFigma nodeの対応を固定する機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "`get_metadata`（疎XML）【公式】",
+              "line": 20,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/figma-dom-mapping-template.md",
+              "needle": "Figma node | 実装DOM / selector | Figma事実",
+              "line": 15,
+              "sha256": "4ca67b608ec1a25c186a40a6ec91d9174b377b6cdc47d793b38c85694592f7b8",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/03-layout.md",
+              "needle": "Auto Layout プロパティ → CSS",
+              "line": 14,
+              "sha256": "a3557d2a6d152ddf1e00eb4b72c87b9fd8700ffcaa70bede4251d95d97452f25",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/figma-gate.mjs",
+              "needle": "assertNodeMapCoverage",
+              "line": 423,
+              "sha256": "4e4cb8c5d34015292996fc4cb26bf84f161b6969ca02fdf5f71196535e46af11",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "auto-layout",
+      "name": "Auto Layout・Grid・制約",
+      "source": "Q-01 §1 行2、Q-03。親子構造、Hug/Fill/Fixed、Grid、constraintsの変換。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "Auto Layout（方向・gap・padding・整列）",
+              "line": 21,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/03-layout.md",
+              "needle": "Grid モードの変換（REST 公式フィールドから確定）",
+              "line": 50,
+              "sha256": "a3557d2a6d152ddf1e00eb4b72c87b9fd8700ffcaa70bede4251d95d97452f25",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/03-layout.md",
+              "needle": "`display: flex; flex-direction: row;`",
+              "line": 20,
+              "sha256": "a3557d2a6d152ddf1e00eb4b72c87b9fd8700ffcaa70bede4251d95d97452f25",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/verify-layout.mjs",
+              "needle": "getComputedStyle(element)",
+              "line": 116,
+              "sha256": "cd48dd265f1ff71af99651a5af50a38620b9d190eb52279d7bb46134390e43cb",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "text-typography",
+      "name": "テキスト・タイポグラフィ",
+      "source": "Q-01 §1 行3およびQ-04。文言・改行・TypeStyleをブラウザ実測へつなぐ機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "文言、改行位置、テキスト階層 | `get_design_context`",
+              "line": 22,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/04-typography.md",
+              "needle": "### 3-1. その他のテキストプロパティの変換",
+              "line": 55,
+              "sha256": "ecfc8b306df8e23d18631e638d3a53178d376ade3d9fd2fa6df3151061b90aa6",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/04-typography.md",
+              "needle": "`font-synthesis: none;`",
+              "line": 31,
+              "sha256": "ecfc8b306df8e23d18631e638d3a53178d376ade3d9fd2fa6df3151061b90aa6",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/verify-layout.mjs",
+              "needle": "fontSize: style.fontSize",
+              "line": 128,
+              "sha256": "cd48dd265f1ff71af99651a5af50a38620b9d190eb52279d7bb46134390e43cb",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "variables-and-styles",
+      "name": "Variables・Styles（デザイントークン）",
+      "source": "Q-01 §1 行4およびQ-02。Figma Variables / StylesからCSSカスタムプロパティへ写像する機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "`get_variable_defs` または個別スクリーンショット",
+              "line": 40,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/02-tokens.md",
+              "needle": "CSS カスタムプロパティへ写像する。変換の入力は",
+              "line": 8,
+              "sha256": "269e66cb9a47a56d43f932ce6ebb2ea543e90ee9a00338a867cacfceb758e0e9",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/02-tokens.md",
+              "needle": "変換規則（Figma → CSS カスタムプロパティ）",
+              "line": 20,
+              "sha256": "269e66cb9a47a56d43f932ce6ebb2ea543e90ee9a00338a867cacfceb758e0e9",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/verify-layout.mjs",
+              "needle": "backgroundColor: style.backgroundColor,",
+              "line": 146,
+              "sha256": "cd48dd265f1ff71af99651a5af50a38620b9d190eb52279d7bb46134390e43cb",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "rendered-reference",
+      "name": "Figmaレンダリング基準画像",
+      "source": "Q-01 §1 行5およびQ-09。Figma画面とブラウザ描画を同一componentで比較する機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "`get_screenshot`（PNG）【公式】",
+              "line": 24,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/09-verification.md",
+              "needle": "スクリーンショットは補助証跡であり、レイアウト",
+              "line": 8,
+              "sha256": "2514c904788b2dd8d55768f94af20285f3c6ea8eb46516bcea4bd73b1afaa104",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/checkpoint-capture.mjs",
+              "needle": "condition-based browser capture for Figma checkpoints.",
+              "line": 2,
+              "sha256": "ad44ed1aa6eb619fd8a3925a0ad5391d63bcb9a0c29553553d949ebd1ee726d5",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/checkpoint-diff.mjs",
+              "needle": "deterministic pixel diff",
+              "line": 2,
+              "sha256": "26927e4e0689d7864b5ffe18e803410323cef65b2ab02004b3b9d47e15d411d5",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "raster-and-vector-assets",
+      "name": "ラスター・ベクターアセット",
+      "source": "Q-01 §1 行6a/6bおよびQ-05。Figma exportをアセットとして取り込む機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "`download_assets`（raw画像優先）",
+              "line": 25,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/05-assets.md",
+              "needle": "アセット種別 | 取得形式 | 配信形式 | 根拠",
+              "line": 14,
+              "sha256": "f8678ee113033aef6012f594021f2a847534bb71a3e2cb53dd7f445bb3fc6b23",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "uncovered",
+          "status": "uncovered",
+          "reason": "Q-05はWebP変換をビルド工程へ委ねるが、案件横断テンプレートに変換結果と表示寸法を検証する実行器がない。",
+          "evidence": [],
+          "proposal": {
+            "title": "アセット変換結果の検証契約を追加する",
+            "summary": "Figma exportのhash、実フォーマット、表示CSS寸法、変換後の寸法・alphaを同じ入力から検査し、案件のビルド方式に依存する変換実体は案件側で登録する。",
+            "targets": [
+              "templates/verify/asset-verify.mjs",
+              "templates/verify/README.md"
+            ],
+            "negativeE2ERequired": true
+          }
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/figma-gate.mjs",
+              "needle": "Figma asset export hash does not match",
+              "line": 486,
+              "sha256": "4e4cb8c5d34015292996fc4cb26bf84f161b6969ca02fdf5f71196535e46af11",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "uncovered"
+    },
+    {
+      "id": "component-instance-mapping",
+      "name": "コンポーネント・インスタンス・既存実装対応",
+      "source": "Q-01 §1 行7およびQ-06。Figma component/instanceと既存コードのreuse/extend/new判断。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "`get_code_connect_map` / `get_libraries` / `search_design_system`",
+              "line": 27,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/06-components.md",
+              "needle": "**マッピング照会**: Code Connect 利用時",
+              "line": 20,
+              "sha256": "25fa587b1a6274f769caa906ccb4a956cff52eb98b63a86dc1e348f66000ae7e",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/component-decisions-example.json",
+              "needle": "\"decision\": \"not-applicable\",",
+              "line": 9,
+              "sha256": "2803841e234d547b11ea740ca314d3ab2d386c3832232ecc9dde7b1715c74d66",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/figma-gate.mjs",
+              "needle": "component decision manifest must cover every component exactly once",
+              "line": 759,
+              "sha256": "4e4cb8c5d34015292996fc4cb26bf84f161b6969ca02fdf5f71196535e46af11",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "responsive-constraints",
+      "name": "レスポンシブ制約・中間幅",
+      "source": "Q-03 constraintsとQ-07。固定Figma canvasを可変viewportへ解釈する機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/03-layout.md",
+              "needle": "constraints の扱い: §3（Center/Scale の確定式は 3-1 / 3-2）",
+              "line": 180,
+              "sha256": "a3557d2a6d152ddf1e00eb4b72c87b9fd8700ffcaa70bede4251d95d97452f25",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/07-responsive.md",
+              "needle": "## 2. デザインに無い中間幅の補間規則（既定）",
+              "line": 24,
+              "sha256": "b40a6e1116e97dfb3c4bc017f2ba43be07b8c84ee120715d769b11ce7315580a",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/07-responsive.md",
+              "needle": "@media only screen and (min-width: 1272px)",
+              "line": 17,
+              "sha256": "b40a6e1116e97dfb3c4bc017f2ba43be07b8c84ee120715d769b11ce7315580a",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/verify-layout.mjs",
+              "needle": "check(\"page scrollWidth<=\", data.page.scrollWidth",
+              "line": 197,
+              "sha256": "cd48dd265f1ff71af99651a5af50a38620b9d190eb52279d7bb46134390e43cb",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "keyframe-motion",
+      "name": "キーフレームモーション",
+      "source": "Q-01 §1 行8aおよびQ-08。duration/easing/propertyを実測に基づき変換する機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/01-extraction.md",
+              "needle": "`get_motion_context`",
+              "line": 28,
+              "sha256": "8a28fbcd17ecd4063f842d78e57a3c506c0d16d001192220abdf532c09200b99",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/08-motion.md",
+              "needle": "キーフレームアニメーション（ループ・入場演出）",
+              "line": 46,
+              "sha256": "b380e1a8d64dd4570f4ec10e16bd1533beded2a5942723af7407a1a787226967",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/08-motion.md",
+              "needle": "CSS `@keyframes`（`get_motion_context` の変換出力を検証の上使用）",
+              "line": 46,
+              "sha256": "b380e1a8d64dd4570f4ec10e16bd1533beded2a5942723af7407a1a787226967",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "templates/verify/motion-verify.mjs",
+              "needle": "sampleAtMs must be a positive integer for intermediate states.",
+              "line": 131,
+              "sha256": "ec43e5c0b6a7429fc46931f9aba9b639c33f8a20e8ae1bc5f9cc803a896de996",
+              "found": true
+            }
+          ]
+        }
+      },
+      "status": "covered"
+    },
+    {
+      "id": "prototype-interactions",
+      "name": "プロトタイプ遷移・トリガー",
+      "source": "Q-01 §1 行8bおよびQ-08。REST interaction定義をclick/hover等の実装へ変換する機能。",
+      "stages": {
+        "acquisition": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/08-motion.md",
+              "needle": "`interactions`（`Interaction[]`）",
+              "line": 23,
+              "sha256": "b380e1a8d64dd4570f4ec10e16bd1533beded2a5942723af7407a1a787226967",
+              "found": true
+            }
+          ]
+        },
+        "specification": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/08-motion.md",
+              "needle": "Figmaトリガー【公式・出典5】 | 実装",
+              "line": 53,
+              "sha256": "b380e1a8d64dd4570f4ec10e16bd1533beded2a5942723af7407a1a787226967",
+              "found": true
+            }
+          ]
+        },
+        "conversion": {
+          "declaredStatus": "covered",
+          "status": "covered",
+          "evidence": [
+            {
+              "path": "spec/08-motion.md",
+              "needle": "JS の click イベント（リンク遷移は `<a>` を優先）",
+              "line": 55,
+              "sha256": "b380e1a8d64dd4570f4ec10e16bd1533beded2a5942723af7407a1a787226967",
+              "found": true
+            }
+          ]
+        },
+        "verification": {
+          "declaredStatus": "unverifiable",
+          "status": "unverifiable",
+          "reason": "motion-verifyは状態属性とcomputed styleを照合するが、prototypeの遷移先URL・画面到達・遷移後の状態までを期待値として検査できない。",
+          "evidence": [],
+          "proposal": {
+            "title": "プロトタイプ遷移後の到達状態を検証する",
+            "summary": "motion-verifyにクリック後のURL、hash、または遷移先要素の可視状態を待機して照合する期待値を追加し、遷移しない負のfixtureをE2Eで固定する。",
+            "targets": [
+              "templates/verify/motion-verify.mjs",
+              "templates/verify/motion-verify.e2e.mjs",
+              "templates/verify/motion-verify-template.json"
+            ],
+            "negativeE2ERequired": true
+          }
+        }
+      },
+      "status": "unverifiable"
+    }
+  ],
+  "graph": {
+    "format": "mermaid",
+    "direction": "LR",
+    "nodes": [
+      {
+        "id": "feature_node_structure",
+        "type": "feature",
+        "label": "ノード構造・座標・寸法",
+        "status": "covered"
+      },
+      {
+        "id": "feature_node_structure_acquisition",
+        "type": "stage",
+        "featureId": "node-structure",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_node_structure_specification",
+        "type": "stage",
+        "featureId": "node-structure",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_node_structure_conversion",
+        "type": "stage",
+        "featureId": "node-structure",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_node_structure_verification",
+        "type": "stage",
+        "featureId": "node-structure",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_auto_layout",
+        "type": "feature",
+        "label": "Auto Layout・Grid・制約",
+        "status": "covered"
+      },
+      {
+        "id": "feature_auto_layout_acquisition",
+        "type": "stage",
+        "featureId": "auto-layout",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_auto_layout_specification",
+        "type": "stage",
+        "featureId": "auto-layout",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_auto_layout_conversion",
+        "type": "stage",
+        "featureId": "auto-layout",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_auto_layout_verification",
+        "type": "stage",
+        "featureId": "auto-layout",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_text_typography",
+        "type": "feature",
+        "label": "テキスト・タイポグラフィ",
+        "status": "covered"
+      },
+      {
+        "id": "feature_text_typography_acquisition",
+        "type": "stage",
+        "featureId": "text-typography",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_text_typography_specification",
+        "type": "stage",
+        "featureId": "text-typography",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_text_typography_conversion",
+        "type": "stage",
+        "featureId": "text-typography",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_text_typography_verification",
+        "type": "stage",
+        "featureId": "text-typography",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_variables_and_styles",
+        "type": "feature",
+        "label": "Variables・Styles（デザイントークン）",
+        "status": "covered"
+      },
+      {
+        "id": "feature_variables_and_styles_acquisition",
+        "type": "stage",
+        "featureId": "variables-and-styles",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_variables_and_styles_specification",
+        "type": "stage",
+        "featureId": "variables-and-styles",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_variables_and_styles_conversion",
+        "type": "stage",
+        "featureId": "variables-and-styles",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_variables_and_styles_verification",
+        "type": "stage",
+        "featureId": "variables-and-styles",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_rendered_reference",
+        "type": "feature",
+        "label": "Figmaレンダリング基準画像",
+        "status": "covered"
+      },
+      {
+        "id": "feature_rendered_reference_acquisition",
+        "type": "stage",
+        "featureId": "rendered-reference",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_rendered_reference_specification",
+        "type": "stage",
+        "featureId": "rendered-reference",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_rendered_reference_conversion",
+        "type": "stage",
+        "featureId": "rendered-reference",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_rendered_reference_verification",
+        "type": "stage",
+        "featureId": "rendered-reference",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_raster_and_vector_assets",
+        "type": "feature",
+        "label": "ラスター・ベクターアセット",
+        "status": "uncovered"
+      },
+      {
+        "id": "feature_raster_and_vector_assets_acquisition",
+        "type": "stage",
+        "featureId": "raster-and-vector-assets",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_raster_and_vector_assets_specification",
+        "type": "stage",
+        "featureId": "raster-and-vector-assets",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_raster_and_vector_assets_conversion",
+        "type": "stage",
+        "featureId": "raster-and-vector-assets",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "uncovered"
+      },
+      {
+        "id": "feature_raster_and_vector_assets_verification",
+        "type": "stage",
+        "featureId": "raster-and-vector-assets",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_component_instance_mapping",
+        "type": "feature",
+        "label": "コンポーネント・インスタンス・既存実装対応",
+        "status": "covered"
+      },
+      {
+        "id": "feature_component_instance_mapping_acquisition",
+        "type": "stage",
+        "featureId": "component-instance-mapping",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_component_instance_mapping_specification",
+        "type": "stage",
+        "featureId": "component-instance-mapping",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_component_instance_mapping_conversion",
+        "type": "stage",
+        "featureId": "component-instance-mapping",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_component_instance_mapping_verification",
+        "type": "stage",
+        "featureId": "component-instance-mapping",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_responsive_constraints",
+        "type": "feature",
+        "label": "レスポンシブ制約・中間幅",
+        "status": "covered"
+      },
+      {
+        "id": "feature_responsive_constraints_acquisition",
+        "type": "stage",
+        "featureId": "responsive-constraints",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_responsive_constraints_specification",
+        "type": "stage",
+        "featureId": "responsive-constraints",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_responsive_constraints_conversion",
+        "type": "stage",
+        "featureId": "responsive-constraints",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_responsive_constraints_verification",
+        "type": "stage",
+        "featureId": "responsive-constraints",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_keyframe_motion",
+        "type": "feature",
+        "label": "キーフレームモーション",
+        "status": "covered"
+      },
+      {
+        "id": "feature_keyframe_motion_acquisition",
+        "type": "stage",
+        "featureId": "keyframe-motion",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_keyframe_motion_specification",
+        "type": "stage",
+        "featureId": "keyframe-motion",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_keyframe_motion_conversion",
+        "type": "stage",
+        "featureId": "keyframe-motion",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_keyframe_motion_verification",
+        "type": "stage",
+        "featureId": "keyframe-motion",
+        "stage": "verification",
+        "label": "検証",
+        "status": "covered"
+      },
+      {
+        "id": "feature_prototype_interactions",
+        "type": "feature",
+        "label": "プロトタイプ遷移・トリガー",
+        "status": "unverifiable"
+      },
+      {
+        "id": "feature_prototype_interactions_acquisition",
+        "type": "stage",
+        "featureId": "prototype-interactions",
+        "stage": "acquisition",
+        "label": "取得",
+        "status": "covered"
+      },
+      {
+        "id": "feature_prototype_interactions_specification",
+        "type": "stage",
+        "featureId": "prototype-interactions",
+        "stage": "specification",
+        "label": "spec化",
+        "status": "covered"
+      },
+      {
+        "id": "feature_prototype_interactions_conversion",
+        "type": "stage",
+        "featureId": "prototype-interactions",
+        "stage": "conversion",
+        "label": "変換",
+        "status": "covered"
+      },
+      {
+        "id": "feature_prototype_interactions_verification",
+        "type": "stage",
+        "featureId": "prototype-interactions",
+        "stage": "verification",
+        "label": "検証",
+        "status": "unverifiable"
+      }
+    ],
+    "edges": [
+      {
+        "from": "feature_node_structure",
+        "to": "feature_node_structure_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_node_structure_acquisition",
+        "to": "feature_node_structure_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_node_structure_specification",
+        "to": "feature_node_structure_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_node_structure_conversion",
+        "to": "feature_node_structure_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_auto_layout",
+        "to": "feature_auto_layout_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_auto_layout_acquisition",
+        "to": "feature_auto_layout_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_auto_layout_specification",
+        "to": "feature_auto_layout_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_auto_layout_conversion",
+        "to": "feature_auto_layout_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_text_typography",
+        "to": "feature_text_typography_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_text_typography_acquisition",
+        "to": "feature_text_typography_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_text_typography_specification",
+        "to": "feature_text_typography_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_text_typography_conversion",
+        "to": "feature_text_typography_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_variables_and_styles",
+        "to": "feature_variables_and_styles_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_variables_and_styles_acquisition",
+        "to": "feature_variables_and_styles_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_variables_and_styles_specification",
+        "to": "feature_variables_and_styles_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_variables_and_styles_conversion",
+        "to": "feature_variables_and_styles_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_rendered_reference",
+        "to": "feature_rendered_reference_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_rendered_reference_acquisition",
+        "to": "feature_rendered_reference_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_rendered_reference_specification",
+        "to": "feature_rendered_reference_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_rendered_reference_conversion",
+        "to": "feature_rendered_reference_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_raster_and_vector_assets",
+        "to": "feature_raster_and_vector_assets_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_raster_and_vector_assets_acquisition",
+        "to": "feature_raster_and_vector_assets_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_raster_and_vector_assets_specification",
+        "to": "feature_raster_and_vector_assets_conversion",
+        "status": "uncovered"
+      },
+      {
+        "from": "feature_raster_and_vector_assets_conversion",
+        "to": "feature_raster_and_vector_assets_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_component_instance_mapping",
+        "to": "feature_component_instance_mapping_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_component_instance_mapping_acquisition",
+        "to": "feature_component_instance_mapping_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_component_instance_mapping_specification",
+        "to": "feature_component_instance_mapping_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_component_instance_mapping_conversion",
+        "to": "feature_component_instance_mapping_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_responsive_constraints",
+        "to": "feature_responsive_constraints_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_responsive_constraints_acquisition",
+        "to": "feature_responsive_constraints_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_responsive_constraints_specification",
+        "to": "feature_responsive_constraints_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_responsive_constraints_conversion",
+        "to": "feature_responsive_constraints_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_keyframe_motion",
+        "to": "feature_keyframe_motion_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_keyframe_motion_acquisition",
+        "to": "feature_keyframe_motion_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_keyframe_motion_specification",
+        "to": "feature_keyframe_motion_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_keyframe_motion_conversion",
+        "to": "feature_keyframe_motion_verification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_prototype_interactions",
+        "to": "feature_prototype_interactions_acquisition",
+        "status": "covered"
+      },
+      {
+        "from": "feature_prototype_interactions_acquisition",
+        "to": "feature_prototype_interactions_specification",
+        "status": "covered"
+      },
+      {
+        "from": "feature_prototype_interactions_specification",
+        "to": "feature_prototype_interactions_conversion",
+        "status": "covered"
+      },
+      {
+        "from": "feature_prototype_interactions_conversion",
+        "to": "feature_prototype_interactions_verification",
+        "status": "unverifiable"
+      }
+    ],
+    "mermaid": "flowchart LR\n  feature_node_structure[\"ノード構造・座標・寸法\"]\n  feature_node_structure --> feature_node_structure_acquisition[\"取得: covered\"]\n  class feature_node_structure_acquisition pass\n  feature_node_structure_acquisition --> feature_node_structure_specification[\"spec化: covered\"]\n  class feature_node_structure_specification pass\n  feature_node_structure_specification --> feature_node_structure_conversion[\"変換: covered\"]\n  class feature_node_structure_conversion pass\n  feature_node_structure_conversion --> feature_node_structure_verification[\"検証: covered\"]\n  class feature_node_structure_verification pass\n  feature_auto_layout[\"Auto Layout・Grid・制約\"]\n  feature_auto_layout --> feature_auto_layout_acquisition[\"取得: covered\"]\n  class feature_auto_layout_acquisition pass\n  feature_auto_layout_acquisition --> feature_auto_layout_specification[\"spec化: covered\"]\n  class feature_auto_layout_specification pass\n  feature_auto_layout_specification --> feature_auto_layout_conversion[\"変換: covered\"]\n  class feature_auto_layout_conversion pass\n  feature_auto_layout_conversion --> feature_auto_layout_verification[\"検証: covered\"]\n  class feature_auto_layout_verification pass\n  feature_text_typography[\"テキスト・タイポグラフィ\"]\n  feature_text_typography --> feature_text_typography_acquisition[\"取得: covered\"]\n  class feature_text_typography_acquisition pass\n  feature_text_typography_acquisition --> feature_text_typography_specification[\"spec化: covered\"]\n  class feature_text_typography_specification pass\n  feature_text_typography_specification --> feature_text_typography_conversion[\"変換: covered\"]\n  class feature_text_typography_conversion pass\n  feature_text_typography_conversion --> feature_text_typography_verification[\"検証: covered\"]\n  class feature_text_typography_verification pass\n  feature_variables_and_styles[\"Variables・Styles（デザイントークン）\"]\n  feature_variables_and_styles --> feature_variables_and_styles_acquisition[\"取得: covered\"]\n  class feature_variables_and_styles_acquisition pass\n  feature_variables_and_styles_acquisition --> feature_variables_and_styles_specification[\"spec化: covered\"]\n  class feature_variables_and_styles_specification pass\n  feature_variables_and_styles_specification --> feature_variables_and_styles_conversion[\"変換: covered\"]\n  class feature_variables_and_styles_conversion pass\n  feature_variables_and_styles_conversion --> feature_variables_and_styles_verification[\"検証: covered\"]\n  class feature_variables_and_styles_verification pass\n  feature_rendered_reference[\"Figmaレンダリング基準画像\"]\n  feature_rendered_reference --> feature_rendered_reference_acquisition[\"取得: covered\"]\n  class feature_rendered_reference_acquisition pass\n  feature_rendered_reference_acquisition --> feature_rendered_reference_specification[\"spec化: covered\"]\n  class feature_rendered_reference_specification pass\n  feature_rendered_reference_specification --> feature_rendered_reference_conversion[\"変換: covered\"]\n  class feature_rendered_reference_conversion pass\n  feature_rendered_reference_conversion --> feature_rendered_reference_verification[\"検証: covered\"]\n  class feature_rendered_reference_verification pass\n  feature_raster_and_vector_assets[\"ラスター・ベクターアセット\"]\n  feature_raster_and_vector_assets --> feature_raster_and_vector_assets_acquisition[\"取得: covered\"]\n  class feature_raster_and_vector_assets_acquisition pass\n  feature_raster_and_vector_assets_acquisition --> feature_raster_and_vector_assets_specification[\"spec化: covered\"]\n  class feature_raster_and_vector_assets_specification pass\n  feature_raster_and_vector_assets_specification --> feature_raster_and_vector_assets_conversion[\"変換: uncovered\"]\n  class feature_raster_and_vector_assets_conversion gap\n  feature_raster_and_vector_assets_conversion --> feature_raster_and_vector_assets_verification[\"検証: covered\"]\n  class feature_raster_and_vector_assets_verification pass\n  feature_component_instance_mapping[\"コンポーネント・インスタンス・既存実装対応\"]\n  feature_component_instance_mapping --> feature_component_instance_mapping_acquisition[\"取得: covered\"]\n  class feature_component_instance_mapping_acquisition pass\n  feature_component_instance_mapping_acquisition --> feature_component_instance_mapping_specification[\"spec化: covered\"]\n  class feature_component_instance_mapping_specification pass\n  feature_component_instance_mapping_specification --> feature_component_instance_mapping_conversion[\"変換: covered\"]\n  class feature_component_instance_mapping_conversion pass\n  feature_component_instance_mapping_conversion --> feature_component_instance_mapping_verification[\"検証: covered\"]\n  class feature_component_instance_mapping_verification pass\n  feature_responsive_constraints[\"レスポンシブ制約・中間幅\"]\n  feature_responsive_constraints --> feature_responsive_constraints_acquisition[\"取得: covered\"]\n  class feature_responsive_constraints_acquisition pass\n  feature_responsive_constraints_acquisition --> feature_responsive_constraints_specification[\"spec化: covered\"]\n  class feature_responsive_constraints_specification pass\n  feature_responsive_constraints_specification --> feature_responsive_constraints_conversion[\"変換: covered\"]\n  class feature_responsive_constraints_conversion pass\n  feature_responsive_constraints_conversion --> feature_responsive_constraints_verification[\"検証: covered\"]\n  class feature_responsive_constraints_verification pass\n  feature_keyframe_motion[\"キーフレームモーション\"]\n  feature_keyframe_motion --> feature_keyframe_motion_acquisition[\"取得: covered\"]\n  class feature_keyframe_motion_acquisition pass\n  feature_keyframe_motion_acquisition --> feature_keyframe_motion_specification[\"spec化: covered\"]\n  class feature_keyframe_motion_specification pass\n  feature_keyframe_motion_specification --> feature_keyframe_motion_conversion[\"変換: covered\"]\n  class feature_keyframe_motion_conversion pass\n  feature_keyframe_motion_conversion --> feature_keyframe_motion_verification[\"検証: covered\"]\n  class feature_keyframe_motion_verification pass\n  feature_prototype_interactions[\"プロトタイプ遷移・トリガー\"]\n  feature_prototype_interactions --> feature_prototype_interactions_acquisition[\"取得: covered\"]\n  class feature_prototype_interactions_acquisition pass\n  feature_prototype_interactions_acquisition --> feature_prototype_interactions_specification[\"spec化: covered\"]\n  class feature_prototype_interactions_specification pass\n  feature_prototype_interactions_specification --> feature_prototype_interactions_conversion[\"変換: covered\"]\n  class feature_prototype_interactions_conversion pass\n  feature_prototype_interactions_conversion --> feature_prototype_interactions_verification[\"検証: unverifiable\"]\n  class feature_prototype_interactions_verification gap\n  classDef pass fill:#d9f7e8,stroke:#1d7a46,color:#123d25\n  classDef gap fill:#ffe8e8,stroke:#b42318,color:#5c1111\n"
+  },
+  "proposals": [
+    {
+      "id": "feature-gap-raster-and-vector-assets-conversion-a5d6485a5676",
+      "status": "pending-independent-review",
+      "category": "uncovered",
+      "feature": {
+        "id": "raster-and-vector-assets",
+        "name": "ラスター・ベクターアセット"
+      },
+      "missingStage": "conversion",
+      "reason": "Q-05はWebP変換をビルド工程へ委ねるが、案件横断テンプレートに変換結果と表示寸法を検証する実行器がない。",
+      "requiredChange": {
+        "title": "アセット変換結果の検証契約を追加する",
+        "summary": "Figma exportのhash、実フォーマット、表示CSS寸法、変換後の寸法・alphaを同じ入力から検査し、案件のビルド方式に依存する変換実体は案件側で登録する。",
+        "targets": [
+          "templates/verify/asset-verify.mjs",
+          "templates/verify/README.md"
+        ],
+        "negativeE2ERequired": true
+      },
+      "requiredReview": "independent-reviewer + owner approval",
+      "note": "この提案は正本・gate・specを自動変更しない。実装後に負のE2E、独立批評、owner承認をそろえてから昇格する。"
+    },
+    {
+      "id": "feature-gap-prototype-interactions-verification-58843a7f8147",
+      "status": "pending-independent-review",
+      "category": "unverifiable",
+      "feature": {
+        "id": "prototype-interactions",
+        "name": "プロトタイプ遷移・トリガー"
+      },
+      "missingStage": "verification",
+      "reason": "motion-verifyは状態属性とcomputed styleを照合するが、prototypeの遷移先URL・画面到達・遷移後の状態までを期待値として検査できない。",
+      "requiredChange": {
+        "title": "プロトタイプ遷移後の到達状態を検証する",
+        "summary": "motion-verifyにクリック後のURL、hash、または遷移先要素の可視状態を待機して照合する期待値を追加し、遷移しない負のfixtureをE2Eで固定する。",
+        "targets": [
+          "templates/verify/motion-verify.mjs",
+          "templates/verify/motion-verify.e2e.mjs",
+          "templates/verify/motion-verify-template.json"
+        ],
+        "negativeE2ERequired": true
+      },
+      "requiredReview": "independent-reviewer + owner approval",
+      "note": "この提案は正本・gate・specを自動変更しない。実装後に負のE2E、独立批評、owner承認をそろえてから昇格する。"
+    }
+  ]
+}

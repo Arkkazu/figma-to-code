@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "catalogId": "figma-rulebook-feature-coverage-20260806",
+  "scope": "figma-to-code の案件横断ルール。案件固有のFigmaデータや初回実装の計測値は含めない。",
+  "features": [
+    {
+      "id": "node-structure",
+      "name": "ノード構造・座標・寸法",
+      "source": "Q-01 §1 行1。ページ構造とFigma nodeの対応を固定する機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "`get_metadata`（疎XML）【公式】" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "templates/verify/figma-dom-mapping-template.md", "needle": "Figma node | 実装DOM / selector | Figma事実" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/03-layout.md", "needle": "Auto Layout プロパティ → CSS" }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/figma-gate.mjs", "needle": "assertNodeMapCoverage" }] }
+      }
+    },
+    {
+      "id": "auto-layout",
+      "name": "Auto Layout・Grid・制約",
+      "source": "Q-01 §1 行2、Q-03。親子構造、Hug/Fill/Fixed、Grid、constraintsの変換。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "Auto Layout（方向・gap・padding・整列）" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/03-layout.md", "needle": "Grid モードの変換（REST 公式フィールドから確定）" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/03-layout.md", "needle": "`display: flex; flex-direction: row;`" }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/verify-layout.mjs", "needle": "getComputedStyle(element)" }] }
+      }
+    },
+    {
+      "id": "text-typography",
+      "name": "テキスト・タイポグラフィ",
+      "source": "Q-01 §1 行3およびQ-04。文言・改行・TypeStyleをブラウザ実測へつなぐ機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "文言、改行位置、テキスト階層 | `get_design_context`" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/04-typography.md", "needle": "### 3-1. その他のテキストプロパティの変換" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/04-typography.md", "needle": "`font-synthesis: none;`" }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/verify-layout.mjs", "needle": "fontSize: style.fontSize" }] }
+      }
+    },
+    {
+      "id": "variables-and-styles",
+      "name": "Variables・Styles（デザイントークン）",
+      "source": "Q-01 §1 行4およびQ-02。Figma Variables / StylesからCSSカスタムプロパティへ写像する機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "`get_variable_defs` または個別スクリーンショット" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/02-tokens.md", "needle": "CSS カスタムプロパティへ写像する。変換の入力は" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/02-tokens.md", "needle": "変換規則（Figma → CSS カスタムプロパティ）" }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/verify-layout.mjs", "needle": "backgroundColor: style.backgroundColor," }] }
+      }
+    },
+    {
+      "id": "rendered-reference",
+      "name": "Figmaレンダリング基準画像",
+      "source": "Q-01 §1 行5およびQ-09。Figma画面とブラウザ描画を同一componentで比較する機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "`get_screenshot`（PNG）【公式】" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/09-verification.md", "needle": "スクリーンショットは補助証跡であり、レイアウト" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "templates/verify/checkpoint-capture.mjs", "needle": "condition-based browser capture for Figma checkpoints." }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/checkpoint-diff.mjs", "needle": "deterministic pixel diff" }] }
+      }
+    },
+    {
+      "id": "raster-and-vector-assets",
+      "name": "ラスター・ベクターアセット",
+      "source": "Q-01 §1 行6a/6bおよびQ-05。Figma exportをアセットとして取り込む機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "`download_assets`（raw画像優先）" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/05-assets.md", "needle": "アセット種別 | 取得形式 | 配信形式 | 根拠" }] },
+        "conversion": {
+          "status": "covered",
+          "evidence": [{ "path": "templates/verify/asset-verify.mjs", "needle": "Q-05 のFigma export→登録済み出力→実ページ利用を照合する任意の独立検証器" }]
+        },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/figma-gate.mjs", "needle": "Figma asset export hash does not match" }] }
+      }
+    },
+    {
+      "id": "component-instance-mapping",
+      "name": "コンポーネント・インスタンス・既存実装対応",
+      "source": "Q-01 §1 行7およびQ-06。Figma component/instanceと既存コードのreuse/extend/new判断。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "`get_code_connect_map` / `get_libraries` / `search_design_system`" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/06-components.md", "needle": "**マッピング照会**: Code Connect 利用時" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "templates/verify/component-decisions-example.json", "needle": "\"decision\": \"not-applicable\"," }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/figma-gate.mjs", "needle": "component decision manifest must cover every component exactly once" }] }
+      }
+    },
+    {
+      "id": "responsive-constraints",
+      "name": "レスポンシブ制約・中間幅",
+      "source": "Q-03 constraintsとQ-07。固定Figma canvasを可変viewportへ解釈する機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/03-layout.md", "needle": "constraints の扱い: §3（Center/Scale の確定式は 3-1 / 3-2）" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/07-responsive.md", "needle": "## 2. デザインに無い中間幅の補間規則（既定）" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/07-responsive.md", "needle": "@media only screen and (min-width: 1272px)" }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/verify-layout.mjs", "needle": "check(\"page scrollWidth<=\", data.page.scrollWidth" }] }
+      }
+    },
+    {
+      "id": "keyframe-motion",
+      "name": "キーフレームモーション",
+      "source": "Q-01 §1 行8aおよびQ-08。duration/easing/propertyを実測に基づき変換する機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/01-extraction.md", "needle": "`get_motion_context`" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/08-motion.md", "needle": "キーフレームアニメーション（ループ・入場演出）" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/08-motion.md", "needle": "CSS `@keyframes`（`get_motion_context` の変換出力を検証の上使用）" }] },
+        "verification": { "status": "covered", "evidence": [{ "path": "templates/verify/motion-verify.mjs", "needle": "sampleAtMs must be a positive integer for intermediate states." }] }
+      }
+    },
+    {
+      "id": "prototype-interactions",
+      "name": "プロトタイプ遷移・トリガー",
+      "source": "Q-01 §1 行8bおよびQ-08。REST interaction定義をclick/hover等の実装へ変換する機能。",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "spec/08-motion.md", "needle": "`interactions`（`Interaction[]`）" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "spec/08-motion.md", "needle": "Figmaトリガー【公式・出典5】 | 実装" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "spec/08-motion.md", "needle": "JS の click イベント（リンク遷移は `<a>` を優先）" }] },
+        "verification": {
+          "status": "covered",
+          "evidence": [{ "path": "templates/verify/motion-verify.mjs", "needle": "if (action.type !== \"click\") fail(`" }]
+        }
+      }
+    }
+  ]
+}

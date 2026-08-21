@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "id": "figma-log-intake-3d7863287b80d745",
+  "status": "waiting-human",
+  "policyPath": "rules/log-promotion-policy.json",
+  "policySha256": "680b9017688fbf1b7d77d2547557292454a56b82ca999d0d3f0729db3a1c5de3",
+  "records": [
+    {
+      "id": "correction-20260730-scoped-fix-execution-fence",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-30: scoped-fix-execution-drift",
+        "line": 187,
+        "sha256": "a84bc2e1dc46f7938ff4e52baefb649fad2e27621912fdfc7bdda4bbca73b253"
+      }
+    },
+    {
+      "id": "correction-browser-layout-static-verification-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: browser-layout-static-verification",
+        "line": 177,
+        "sha256": "250b6d8569916af459f581dfeba3af7e1e8e48e2262ae6514a7213aab440e9e4"
+      }
+    },
+    {
+      "id": "correction-component-section-spacing-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: component-section-spacing-ownership",
+        "line": 172,
+        "sha256": "0b7d33495a8dbd2d5a00e72e0c32244ccd85630458389b76ae3ce4b88e36c5d4"
+      }
+    },
+    {
+      "id": "correction-log-feedback-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: log-to-rule-feedback-gap",
+        "line": 162,
+        "sha256": "571c62d0fef12ae0912174e475778a53ee9d76b01157630d8ca0c75f6509dcfb"
+      }
+    },
+    {
+      "id": "correction-owner-correction-receipt-gate-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: owner-correction-log-not-gated",
+        "line": 182,
+        "sha256": "951dcc71dfbbe4421679ce857b1b9bb85165b87913733dd1614723d37789df44"
+      }
+    },
+    {
+      "id": "correction-provenance-spec-20260709",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-09",
+        "line": 248,
+        "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+      }
+    },
+    {
+      "id": "mistake-provenance-spec-20260625",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-06-25",
+        "line": 140,
+        "sha256": "405a72d3fbb09975c1e4bee4137752b7188fbac18a663765a8c0fc87a4070db6"
+      }
+    },
+    {
+      "id": "scope-expansion-during-scoped-fix-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: scope-expansion-during-scoped-fix",
+        "line": 167,
+        "sha256": "5730d8a17d2662199f96cdd2b5d256caba4d3d334688b95b80602764992b6546"
+      }
+    }
+  ],
+  "unclassified": [
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-05: 反復カードのリンク先・画像同一性はDOM属性で照合する",
+      "line": 1,
+      "sha256": "b6667ff02a53bc680a7637afae50c75a6dc7aad078b124c449a8a170620726bb"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-05: 非表示を期待するspec要素をreadiness待機へ含めない",
+      "line": 5,
+      "sha256": "329b787946311bf99017e1afb01056c9266151cbc1989c5689646965152dc3f6"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: node map の figmaNodeId は実IDだけを使う",
+      "line": 9,
+      "sha256": "263067d26804b59af8e5cadfff1c89dda5b2787d396e0059c46acd047773964b"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 「実施済みか」の判定は、実施の証跡を見て決める",
+      "line": 14,
+      "sha256": "6ff01a0daec756289e1beeecd6535430315353f0bdb4d4c3f45ce6ba6b981c65"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 「検出はするが止めない」検査は、検出していないのと同じ扱いになる",
+      "line": 18,
+      "sha256": "250ae7d88a4066b9139c601928f3d556945b8b5fd9a835d366bdbe0999949f99"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 契約が「埋められない欄」を必須にすると捏造を強いる",
+      "line": 23,
+      "sha256": "937da2484e89f101fefb7f569682a4813549922ddcda43b77be1af93a93e8216"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: Figmaのテキストノードは文言を検証対象にする",
+      "line": 29,
+      "sha256": "e09810be0832f7ef038d97fc731637bd928e7cdbcdaddafa587953729fb573f3"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 期待値を持たないspec要素は「検証したふり」になる",
+      "line": 34,
+      "sha256": "e0f1039eec449205e2924eb67a21152efede458c58df8f599668718e3a26ea0e"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 証跡を退避するときは、残る義務を同じ出力に載せる",
+      "line": 39,
+      "sha256": "8bf3c985d1744dcdb112ae97d21c805d889f499bfe969d5223da060271389d17"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 旧契約の棚卸しでは、参照デザインが現行かを先に見る",
+      "line": 43,
+      "sha256": "b977d23f155a3033db206b9fafa7e1b95d80b002313752472affba4a2b9fd9a9"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 抜け穴が常用され始めたら、正当なケースを機械判定に変える",
+      "line": 48,
+      "sha256": "c264aabe4d39824a9a2a4b267b06a3ccab7a3786b13795f6c43ae68c85a5b4ac"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: 画素差分は線画のサイズ誤りをほぼ検出できない",
+      "line": 52,
+      "sha256": "0852d738fa1d44e181cc88bff8ed3d38c4c13cc64239af05cbc892464c978e4d"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-04: Figmaの書き出しベクタを contain で敷かない",
+      "line": 55,
+      "sha256": "1b98f496ca02d2b46d0173314b123d07aebdb905d346152742f71c23839ca620"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 先行scopeの証跡を複製したら、scope固有の記述を全件書き換える",
+      "line": 60,
+      "sha256": "de7adeb187f464829dc4217925fa9d5538e7ff3e1f87f7d7c61b3136832950de"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: close-report に契約バージョンを刻む",
+      "line": 65,
+      "sha256": "632a168c412f846187c2ef061d0ad00b1060984c3e91f400b50ec9513237edc7"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 検証の待機上限はプロトコル往復とページ読み込みで分ける",
+      "line": 68,
+      "sha256": "96fc7ead3f71eb831ee70897698714c654804e83bfa42424a2ab82cfa5d7021e"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 子プロセスを持つツールはプロセスツリーごと終了させる（Windows）",
+      "line": 71,
+      "sha256": "3bb435084b6a34dd363e9dfcc0170c248ecbafd55af02926e82145cedc19da7f"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 契約を強化したら旧契約scopeの棚卸しを同時に行う",
+      "line": 74,
+      "sha256": "d5ff3cba2163a7d2c02fb24d66957d25e74ad27d2d6c56fc7596326b3ab91f48"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: Figmaの行送りは整数pxへ丸められる",
+      "line": 77,
+      "sha256": "6f3a0171791c11c600b7692ef5d81fa76cbb41f64ac61c7c53a91ad33d2dad7b"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 矩形に出ない性質はspecへ明示しないと素通りする",
+      "line": 81,
+      "sha256": "61a55db502722147039ed9649f3fe7276ed8dad49e2ebfbbd6dd5d4edeff734e"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 画像差分の原因は面積ではなく差分画素の座標で特定する",
+      "line": 84,
+      "sha256": "cb758d847f9eafbee5814277c0d90eaec97efe8afd2b00b60fba4f43fc417f6e"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: サブピクセル領域では画素差分とレイアウトの正しさが単調に対応しない",
+      "line": 87,
+      "sha256": "5a478f9c9f084d9aec1737d0d3a13de2366d75671625b234a3b23880855a75f1"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-03: 画像差分の閾値は実測した下限に基づいて宣言する",
+      "line": 90,
+      "sha256": "b473c14fb224564c66756eb39d9000fd0df0ea27cad3fb6fc4cc264b1da5250e"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-31: Text nodeの行数と省略表示を一組で検証",
+      "line": 93,
+      "sha256": "815bc9a985df808fc742b362416f588d66107ae2eb005270369205f5d75c7fb2"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-31: テキストの可視行数はoverflow後を測る",
+      "line": 96,
+      "sha256": "290144bb597c33c6ebfe148e711380633d5b41e3c9ce8e1cf29597849124ca31"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-02（2）: page coverageの証跡は「文字列があること」で満たさない",
+      "line": 121,
+      "sha256": "5477208d851ff4f856476feeb86bf6551e9920634dd87fb3a72656e562b83168"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-02: page coverageを inventory と scope contract に分離する",
+      "line": 129,
+      "sha256": "54ccadf0216e39e77df3a8c98932f6c34bfbee7cf0b2968a34981369f84a58dd"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-31（2）: 規則の追加ではなく機械強制で塞ぐ",
+      "line": 134,
+      "sha256": "009eef219641ad0adfb0e7daae0f3da056f144c42b7e5f20a9eab54e22af80ef"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-31: 反復componentのテキストleaf実測",
+      "line": 139,
+      "sha256": "906c42571e53871fb1f173f16c090d0d3893bb8759a516e20edce12d3cc23e64"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-31: 反復カードの値・順序の全件照合",
+      "line": 142,
+      "sha256": "fe7534b949ffa911ee483f9f7360769974499956b101ab4dea6c812f64cf9117"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-31: 共通部品流用前の色・アセット照合",
+      "line": 147,
+      "sha256": "718db438056acffe02257e29abae33a5b85e88f08ac5fbd4c7657769c06b6206"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-29: proactive-fidelity-improvement",
+      "line": 152,
+      "sha256": "95dcdd27e878d26f0252bc740721ff0d6e2d65ff52c7e9c88882cc3ca96c3a06"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-29: figma-to-code-is-cross-project-rulebook",
+      "line": 155,
+      "sha256": "90fa72ece73ecf90c6448d1554c86b4d1d41c2ce576a139465f3938c8fbb3462"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-29: one-shot-fidelity-is-the-product-goal",
+      "line": 158,
+      "sha256": "671c8182fd1c1db9bacad394ab3b32336fd0eda72a8d6790a01dc1fbf8a7c6f1"
+    },
+    {
+      "path": "rules/mistakes.md",
+      "kind": "mistake",
+      "heading": "2026-08-03: 証跡ファイルの複製で、前scopeの記述をそのまま提出した",
+      "line": 17,
+      "sha256": "7f42949e1a13b7c2e21f91822af74cd8d729b021115f495232fadfa7f695f34a"
+    },
+    {
+      "path": "rules/mistakes.md",
+      "kind": "mistake",
+      "heading": "2026-08-05 PowerShellが未引用セレクタの`>`をリダイレクトとして解釈し、scope外ファイルを作成した",
+      "line": 41,
+      "sha256": "0144203a44bf2a4630e69d4256b1da869f07251bb48e197cabf5f3788d13e823"
+    }
+  ],
+  "proposalIds": []
+}

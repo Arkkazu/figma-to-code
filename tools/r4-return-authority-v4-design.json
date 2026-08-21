@@ -1,0 +1,271 @@
+{
+  "schema": "p3-role-return-authority-candidate-design/v4",
+  "status": "candidate-only",
+  "proposalStatus": "proposed-pending-owner-approval",
+  "candidateOnly": true,
+  "runtimeEligible": false,
+  "ownerApproved": false,
+  "pairId": "open-service-top-hero-v1-20260809",
+  "supersedes": {
+    "candidateBundleId": "16d6b15b3cdea03c0a66794003a27f699327d4ce7b8e0c066f1e1f5dc002fa09",
+    "reason": "v4 incorporates independent-review conditions A and B: hero-laurel.png has one creation and change owner (sequence 3), and all required negative tests are explicitly retained or enumerated."
+  },
+  "auditBasis": {
+    "kind": "independent-design-audit",
+    "source": "C:/Users/tane1/.codex/attachments/23c32633-491c-484d-8dfa-91f976129384/pasted-text.txt",
+    "finding": "CONDITIONAL PASS: helper implementation may proceed only after condition A and condition B are represented in a concrete candidate design.",
+    "notAnAuthority": true
+  },
+  "executionBoundary": {
+    "pairReadiness": false,
+    "pairBegin": false,
+    "pairPreflight": false,
+    "rolePacket": false,
+    "roleDelivery": false,
+    "roleLaunch": false,
+    "implementation": false,
+    "browserMeasurement": false,
+    "figmaMeasurement": false,
+    "p11": false
+  },
+  "perSequenceBootstrap": {
+    "model": "scope-preserving-per-sequence-bootstrap",
+    "proposalStatus": "proposed-pending-owner-approval",
+    "rejectedModel": "sequence-1-attempt-1-all-28-firstComponentFullCreate",
+    "conditionInvariant": true,
+    "constraints": [
+      "The exact six-sequence mapping applies identically to baseline and current; no condition-specific allocation is permitted.",
+      "Each proposedCreateTargets list is an ordered subset of that sequence's proposedAllowedChangeTargets.",
+      "The union of all proposedCreateTargets lists must exactly equal Decision J scope.changeTargets.",
+      "No target may occur in more than one proposedCreateTargets list.",
+      "A target may be modified only by the sequence that owns it, except site/index.html and site/styles.css, which remain shared-delimited-region targets after their sequence-1 creation.",
+      "site/assets/hero/hero-laurel.png is created and may be changed only by sequence 3; sequence 6 must not list or change it.",
+      "Attempt 2 and later may not create a target.",
+      "The mapping is a candidate, not a final authority. It cannot become a runtime return-plan input until independent review passes and the owner separately approves exact final record bytes.",
+      "No firstComponentFullCreate field is permitted in v4."
+    ],
+    "sequences": [
+      {
+        "sequence": 1,
+        "elementId": "open-service-top-hero",
+        "proposedAllowedChangeTargets": [
+          "site/index.html",
+          "site/styles.css"
+        ],
+        "proposedCreateTargets": [
+          "site/index.html",
+          "site/styles.css"
+        ],
+        "allocationStatus": "PROPOSED_PENDING_OWNER_APPROVAL"
+      },
+      {
+        "sequence": 2,
+        "elementId": "open-service-header",
+        "proposedAllowedChangeTargets": [
+          "site/index.html",
+          "site/styles.css",
+          "site/assets/brand/open-service-wordmark.png",
+          "site/assets/brand/open-mark-ellipse.svg",
+          "site/assets/brand/open-mark-vector-1.svg",
+          "site/assets/brand/open-mark-vector-2.svg",
+          "site/assets/brand/open-mark-vector-3.svg",
+          "site/assets/brand/open-mark-vector-4.svg",
+          "site/assets/brand/open-mark-vector-5.svg",
+          "site/assets/brand/open-mark-vector-6.svg",
+          "site/assets/icons/header-arrow-download.svg",
+          "site/assets/icons/header-arrow-contact.svg"
+        ],
+        "proposedCreateTargets": [
+          "site/assets/brand/open-service-wordmark.png",
+          "site/assets/brand/open-mark-ellipse.svg",
+          "site/assets/brand/open-mark-vector-1.svg",
+          "site/assets/brand/open-mark-vector-2.svg",
+          "site/assets/brand/open-mark-vector-3.svg",
+          "site/assets/brand/open-mark-vector-4.svg",
+          "site/assets/brand/open-mark-vector-5.svg",
+          "site/assets/brand/open-mark-vector-6.svg",
+          "site/assets/icons/header-arrow-download.svg",
+          "site/assets/icons/header-arrow-contact.svg"
+        ],
+        "allocationStatus": "PROPOSED_PENDING_OWNER_APPROVAL"
+      },
+      {
+        "sequence": 3,
+        "elementId": "open-service-hero-visual",
+        "proposedAllowedChangeTargets": [
+          "site/index.html",
+          "site/styles.css",
+          "site/assets/hero/hero-photo.jpg",
+          "site/assets/hero/hero-graphic.png",
+          "site/assets/hero/hero-contact.png",
+          "site/assets/hero/hero-laurel.png",
+          "site/assets/hero/hero-vector-1.svg",
+          "site/assets/hero/hero-vector-2.svg",
+          "site/assets/hero/hero-vector-3.svg",
+          "site/assets/hero/hero-mask.svg",
+          "site/assets/hero/hero-shape-1.svg",
+          "site/assets/hero/hero-shape-2.svg",
+          "site/assets/hero/hero-shape-3.svg",
+          "site/assets/hero/hero-shape-4.svg"
+        ],
+        "proposedCreateTargets": [
+          "site/assets/hero/hero-photo.jpg",
+          "site/assets/hero/hero-graphic.png",
+          "site/assets/hero/hero-contact.png",
+          "site/assets/hero/hero-laurel.png",
+          "site/assets/hero/hero-vector-1.svg",
+          "site/assets/hero/hero-vector-2.svg",
+          "site/assets/hero/hero-vector-3.svg",
+          "site/assets/hero/hero-mask.svg",
+          "site/assets/hero/hero-shape-1.svg",
+          "site/assets/hero/hero-shape-2.svg",
+          "site/assets/hero/hero-shape-3.svg",
+          "site/assets/hero/hero-shape-4.svg"
+        ],
+        "allocationStatus": "PROPOSED_PENDING_OWNER_APPROVAL"
+      },
+      {
+        "sequence": 4,
+        "elementId": "open-service-hero-copy",
+        "proposedAllowedChangeTargets": [
+          "site/index.html",
+          "site/styles.css"
+        ],
+        "proposedCreateTargets": [],
+        "allocationStatus": "PROPOSED_PENDING_OWNER_APPROVAL"
+      },
+      {
+        "sequence": 5,
+        "elementId": "open-service-hero-actions",
+        "proposedAllowedChangeTargets": [
+          "site/index.html",
+          "site/styles.css",
+          "site/assets/icons/hero-arrow-download-pc.svg",
+          "site/assets/icons/hero-arrow-contact-pc.svg",
+          "site/assets/icons/hero-arrow-download-sp.svg",
+          "site/assets/icons/hero-arrow-contact-sp.svg"
+        ],
+        "proposedCreateTargets": [
+          "site/assets/icons/hero-arrow-download-pc.svg",
+          "site/assets/icons/hero-arrow-contact-pc.svg",
+          "site/assets/icons/hero-arrow-download-sp.svg",
+          "site/assets/icons/hero-arrow-contact-sp.svg"
+        ],
+        "allocationStatus": "PROPOSED_PENDING_OWNER_APPROVAL"
+      },
+      {
+        "sequence": 6,
+        "elementId": "open-service-hero-stats",
+        "proposedAllowedChangeTargets": [
+          "site/index.html",
+          "site/styles.css"
+        ],
+        "proposedCreateTargets": [],
+        "allocationStatus": "PROPOSED_PENDING_OWNER_APPROVAL"
+      }
+    ]
+  },
+  "bootstrapDirectories": {
+    "model": "derived-from-proposedCreateTargets-dirname",
+    "proposalStatus": "proposed-pending-owner-approval",
+    "constraints": [
+      "Derive directories from the ordered proposedCreateTargets list for the return; do not accept an independently entered bootstrap directory list.",
+      "Every derived directory must be relative and either equal site or be under site/.",
+      "MyBrain/, .git, .figma-gate, p3-drafts, absolute paths, and parent traversals are forbidden.",
+      "The final return plan and handoff protocol must bind the same derived directory policy."
+    ]
+  },
+  "journalV2": {
+    "status": "CANDIDATE_CONTRACT_ONLY",
+    "v1RecoveryCompatibilityRequired": true,
+    "constraints": [
+      "Write the intended per-directory journal entry before mkdir; never create a directory before its rollback intent is journaled.",
+      "Record createdByThisTransaction for every directory actually created by the transaction.",
+      "Rollback deletes journaled directories in the reverse order of their creation.",
+      "Rollback may remove a directory only when createdByThisTransaction is true and the directory is empty at rollback time.",
+      "If a rollback candidate directory is non-empty, leave it in place, report it, and fail closed; do not force-delete it.",
+      "A directory not recorded in the journal is unknown and must never be deleted by recovery, including after a mkdir-before-journal crash."
+    ]
+  },
+  "negativeTestRequirements": [
+    {
+      "id": "N-1",
+      "requirement": "Creating a target outside the current sequence allowedChangeTargets fails."
+    },
+    {
+      "id": "N-2",
+      "requirement": "Any new target creation at attempt 2 or later fails."
+    },
+    {
+      "id": "N-3",
+      "requirement": "Recreating a target already created by another sequence fails."
+    },
+    {
+      "id": "N-4",
+      "requirement": "Creating the same target twice in one sequence fails."
+    },
+    {
+      "id": "N-5",
+      "requirement": "A bootstrap directory outside site/ fails."
+    },
+    {
+      "id": "N-6",
+      "requirement": "A protocol componentReturnScopes creation set that differs from the return-plan creation set fails."
+    },
+    {
+      "id": "N-7",
+      "requirement": "A union of sequence creation sets that is not exactly the 28 frozen targets fails."
+    },
+    {
+      "id": "N-8",
+      "requirement": "Rollback sees a non-empty transaction-created directory, preserves and reports it, then fails."
+    },
+    {
+      "id": "N-9",
+      "requirement": "Recovery never deletes a directory absent from the journal."
+    },
+    {
+      "id": "N-10",
+      "requirement": "A crash after mkdir and before the journal reaches a complete entry recovers to a consistent state without deleting an unknown directory."
+    },
+    {
+      "id": "N-11",
+      "requirement": "A v1 journal recovers through v2 code."
+    },
+    {
+      "id": "N-12",
+      "requirement": "A v2 journal with a required field missing fails."
+    },
+    {
+      "id": "N-13",
+      "requirement": "A condition-local return authority with a mismatched packet manifest, attachment hash, or identityLeakScan fails."
+    },
+    {
+      "id": "N-14",
+      "requirement": "Sequence 6 listing or changing site/assets/hero/hero-laurel.png fails."
+    },
+    {
+      "id": "N-15",
+      "requirement": "Baseline and current handoff protocols that are not byte-identical fail."
+    }
+  ],
+  "retainedV4NegativeTests": [
+    {
+      "id": "V4-R-1",
+      "requirement": "A legacy firstComponentFullCreate is permitted only at sequence 1 / attempt 1 under the v4 fixture contract; v5/v4-authority candidates reject it entirely."
+    },
+    {
+      "id": "V4-R-2",
+      "requirement": "Every creation set remains an ordered subset of its sequence allowlist."
+    },
+    {
+      "id": "V4-R-3",
+      "requirement": "For shared-delimited-region targets, bytes outside the frozen delimiter bounds remain unchanged."
+    }
+  ],
+  "finalizationRequirements": [
+    "Keep this v4 candidate-only until the independent post-implementation review passes and the owner separately approves exact final record bytes.",
+    "Implement and pass N-1 through N-15 and retain every V4-R negative test in the helper E2E suite without lifecycle, role launch, browser, Figma, or P-11 execution.",
+    "Keep baseline and current finalized protocol bytes identical and preserve attachment-only boundaries."
+  ]
+}

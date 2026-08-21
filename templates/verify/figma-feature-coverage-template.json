@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "catalogId": "<project>-figma-feature-coverage",
+  "scope": "<対象案件のFigma機能を、取得・spec化・変換・検証の4段で監査する範囲を20文字以上で記す。>",
+  "features": [
+    {
+      "id": "example-feature",
+      "name": "<Figma機能名>",
+      "source": "<Figma nodeまたは取得カテゴリと、監査対象に含める理由を20文字以上で記す。>",
+      "stages": {
+        "acquisition": {
+          "status": "covered",
+          "evidence": [{ "path": "MyBrain/figma/<取得証跡>.json", "needle": "<取得済み値またはnodeId>" }]
+        },
+        "specification": {
+          "status": "covered",
+          "evidence": [{ "path": "MyBrain/verify/spec-<scope>.json", "needle": "<出典タグ付き期待値>" }]
+        },
+        "conversion": {
+          "status": "covered",
+          "evidence": [{ "path": "src/<実装ファイル>", "needle": "<変換後コードの根拠>" }]
+        },
+        "verification": {
+          "status": "covered",
+          "evidence": [{ "path": "MyBrain/verify/<検証設定または実行器>", "needle": "<実測の対象selector・期待値>" }]
+        }
+      }
+    },
+    {
+      "id": "example-unverifiable-feature",
+      "name": "<検証不能なFigma機能名>",
+      "source": "<取得済みだが現在の検証器で合否化できない理由を20文字以上で記す。>",
+      "stages": {
+        "acquisition": { "status": "covered", "evidence": [{ "path": "MyBrain/figma/<取得証跡>.json", "needle": "<取得済み値>" }] },
+        "specification": { "status": "covered", "evidence": [{ "path": "MyBrain/verify/spec-<scope>.json", "needle": "<spec期待値>" }] },
+        "conversion": { "status": "covered", "evidence": [{ "path": "src/<実装ファイル>", "needle": "<変換後コード>" }] },
+        "verification": {
+          "status": "unverifiable",
+          "reason": "<現在の検証器で観測できない理由を20文字以上で記す。>",
+          "proposal": {
+            "title": "<改善提案のタイトル（12文字以上）>",
+            "summary": "<追加する観測・FAIL条件・独立レビューを20文字以上で記す。>",
+            "targets": ["MyBrain/verify/<新規または変更する検証器>.mjs"],
+            "negativeE2ERequired": true
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "version": 9,
+  "_templateRequirements": {
+    "nodeMap": {
+      "version": 2,
+      "schema": "scoped-roots/v1",
+      "figmaRequiredKeys": [
+        "fileKey",
+        "canonicalRootNodeId",
+        "pairedSpRootNodeId",
+        "source"
+      ],
+      "scopeRoots": [
+        "pc:first-view",
+        "pc:header",
+        "sp:first-view",
+        "sp:header"
+      ],
+      "sourceEvidenceRequired": true,
+      "inventoryAndNodesRequireScopeRootNodeId": true
+    }
+  },
+  "id": "replace-with-task-id",
+  "scope": {
+    "kind": "new",
+    "changeTargets": [
+      "page-example.php",
+      "assets/scss/example.scss",
+      "assets/css/example.css",
+      "assets/images/example/figma-export.svg"
+    ],
+    "generatedTargets": [
+      "assets/css/example.css"
+    ],
+    "scssFiles": [
+      "assets/scss/example.scss"
+    ],
+    "phpFiles": [
+      "page-example.php"
+    ],
+    "responsiveHtml": {
+      "sourceFiles": [
+        "page-example.php"
+      ],
+      "deferredSourceFiles": [],
+      "exceptions": []
+    },
+    "specPath": "MyBrain/verify/spec-example.json",
+    "mappingPath": "MyBrain/verify/mapping-example.md",
+    "nodeMapPath": "MyBrain/verify/nodemap-example.json",
+    "componentsPath": "MyBrain/verify/components-example.json",
+    "verifyUrl": "http://localhost:3000/example/",
+    "checkpointPlan": [
+      "example-heading",
+      "example-card",
+      "example-cta"
+    ],
+    "pageCoveragePath": "MyBrain/verify/page-coverage.json",
+    "pageCoverageReviewPath": "MyBrain/verify/page-coverage-review.json",
+    "componentDecisionPath": "MyBrain/verify/component-decisions.json",
+    "accessibilityPath": "MyBrain/verify/accessibility-<scope>.json",
+    "motionPath": "MyBrain/verify/motion-<scope>.json"
+  },
+  "figma": {
+    "fileKey": "replace-with-figma-file-key",
+    "nodeEvidencePath": "MyBrain/verify/evidence/<target>-figma-nodes.json",
+    "layerEvidencePath": "MyBrain/verify/evidence/<target>-figma-layers.json",
+    "viewportNodes": [
+      {
+        "viewport": "pc",
+        "nodeId": "123:456",
+        "screenshotPath": "C:/tmp/figma-example-pc.png",
+        "comparisonExport": {
+          "requestedScale": 1,
+          "designWidth": 1440,
+          "designHeight": 900,
+          "rasterWidth": 1440,
+          "rasterHeight": 900,
+          "limitedByMaxDimension": false
+        }
+      },
+      {
+        "viewport": "sp",
+        "nodeId": "789:012",
+        "screenshotPath": "C:/tmp/figma-example-sp.png",
+        "comparisonExport": {
+          "requestedScale": 1,
+          "designWidth": 375,
+          "designHeight": 800,
+          "rasterWidth": 375,
+          "rasterHeight": 800,
+          "limitedByMaxDimension": false
+        }
+      }
+    ],
+    "layers": [
+      {
+        "nodeId": "123:456;789:012",
+        "name": "visible-icon-or-image",
+        "visible": true,
+        "observedBy": "Figma Plugin API get_design_context"
+      },
+      {
+        "nodeId": "123:456;789:013",
+        "name": "hidden-state-not-adopted",
+        "visible": false,
+        "observedBy": "Figma Plugin API get_design_context"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "visibleLayerId": "123:456;789:012",
+      "figmaAssetUrl": "https://www.figma.com/api/mcp/asset/replace-with-asset-id",
+      "exportFormat": "svg",
+      "exportPath": "C:/tmp/figma-visible-icon.svg",
+      "exportSha256": "replace-with-sha256-of-exportPath",
+      "localPath": "assets/images/example/figma-export.svg"
+    }
+  ]
+}

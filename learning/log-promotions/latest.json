@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "status": "waiting-human",
+  "intakePath": "learning/log-promotions/intake/figma-log-intake-d2ed99fd2816dc68.json",
+  "reportPath": "learning/log-promotions/reports/figma-log-intake-d2ed99fd2816dc68.json",
+  "proposalPaths": [],
+  "nonPromotableCount": 28,
+  "unclassifiedCount": 1,
+  "closedProposalIds": []
+}

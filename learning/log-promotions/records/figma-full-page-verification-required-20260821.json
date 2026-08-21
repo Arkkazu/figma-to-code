@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "figma-full-page-verification-required-20260821",
+  "kind": "correction",
+  "occurredOn": "2026-08-21",
+  "failureClass": "partial-page-verification",
+  "recurrenceKey": "figma-full-page-verification-before-completion",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "一部コンポーネントの照合結果をページ全体の設計一致として報告し、PC/SPの全セクションに差分がないことを確認しなかった。",
+  "prevention": "Figma実装の完了前にPC/SPのページroot全体を実ページ描画と照合し、全セクションを対応表で分類する。差分、未確認項目、または未closeのgateが一つでもあれば完了・設計一致と報告しない。"
+}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "pages": {
+    "pc": {
+      "url": "https://www.figma.com/design/FILE/NAME?node-id=PC_NODE",
+      "nodeId": "PC_NODE",
+      "metadataPath": "figma/pc-page-metadata.json",
+      "metadataSha256": "<sha256-of-pc-page-metadata>"
+    },
+    "sp": {
+      "url": "https://www.figma.com/design/FILE/NAME?node-id=SP_NODE",
+      "nodeId": "SP_NODE",
+      "metadataPath": "figma/sp-page-metadata.json",
+      "metadataSha256": "<sha256-of-sp-page-metadata>"
+    }
+  },
+  "inventory": {
+    "_comment": "ページroot配下の全セクション。scopeが変わっても同じページなら同じ内容になる不変証跡。sections はこの全件を分類しなければならない。",
+    "source": "Figma MCP get_metadata",
+    "sections": [
+      { "sectionId": "example-main", "figmaNodeIds": { "pc": "PC_MAIN", "sp": "SP_MAIN" } },
+      { "sectionId": "example-later", "figmaNodeIds": { "pc": "PC_LATER", "sp": "SP_LATER" } },
+      { "sectionId": "shared-header", "figmaNodeIds": { "pc": "PC_HEADER", "sp": "SP_HEADER" } },
+      { "sectionId": "shared-footer", "figmaNodeIds": { "pc": "PC_FOOTER", "sp": "SP_FOOTER" } }
+    ]
+  },
+  "sections": [
+    {
+      "sectionId": "example-main",
+      "role": "target",
+      "componentIds": ["example-heading", "example-card", "example-cta"]
+    },
+    {
+      "sectionId": "example-later",
+      "role": "deferred",
+      "componentIds": [],
+      "figmaNodeIds": { "pc": "PC_LATER", "sp": "SP_LATER" },
+      "reason": "本scopeの対象外。デザイン確定待ちのため着手しない。",
+      "followUpScope": "example-later-20260901"
+    },
+    {
+      "sectionId": "shared-header",
+      "role": "context",
+      "contextKind": "shared-header",
+      "componentIds": []
+    },
+    {
+      "sectionId": "shared-footer",
+      "role": "context",
+      "contextKind": "shared-footer",
+      "componentIds": []
+    }
+  ]
+}

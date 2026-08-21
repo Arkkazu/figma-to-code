@@ -1,0 +1,53 @@
+{
+  "_comment": "Coordinator-only v5 machine-validation plan. It has no manual coverage boolean. Exactly four matrices and four fullRuns (baseline/current × implementation/review) are required. runner must name this exact executing p3-clean-room-probe.mjs byte sequence. The validator re-reads every hash-pinned authority, matrix, challenge, role plan/inventory, raw config, and complete before/after JSONL; it checks observed hashes, denial error codes, original P-7 TEMP/TMP provenance, and forbids reused before/after artifacts. PASS is finite P-7/P-9/P-10/P-12 consistency only. Its output is always p11Authorization=NOT_AUTHORIZED; static config, transcript claims, and the separate feasibility-only p3-p11-app-server-spike cannot authorize P-11.",
+  "version": 5,
+  "kind": "p3-clean-room-probe-evidence-plan-v5",
+  "runner": {
+    "path": "REPLACE-absolute-p3-clean-room-probe.mjs-path",
+    "sha256": "REPLACE-64-lowercase-hex-sha256"
+  },
+  "coordinatorAuthority": {
+    "path": "REPLACE-absolute-coordinator-authority-path",
+    "sha256": "REPLACE-64-lowercase-hex-sha256"
+  },
+  "matrices": [
+    {
+      "matrixPlan": { "path": "REPLACE-absolute-coordinator-only-matrix-plan-role-1", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "challenge": { "path": "REPLACE-absolute-original-temp-challenge-v3-role-1", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "matrixPlan": { "path": "REPLACE-absolute-coordinator-only-matrix-plan-role-2", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "challenge": { "path": "REPLACE-absolute-original-temp-challenge-v3-role-2", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "matrixPlan": { "path": "REPLACE-absolute-coordinator-only-matrix-plan-role-3", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "challenge": { "path": "REPLACE-absolute-original-temp-challenge-v3-role-3", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "matrixPlan": { "path": "REPLACE-absolute-coordinator-only-matrix-plan-role-4", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "challenge": { "path": "REPLACE-absolute-original-temp-challenge-v3-role-4", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    }
+  ],
+  "fullRuns": [
+    {
+      "rolePlan": { "path": "REPLACE-absolute-role-1-full-probe-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "before": { "path": "REPLACE-absolute-role-1-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "after": { "path": "REPLACE-absolute-role-1-after-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "rolePlan": { "path": "REPLACE-absolute-role-2-full-probe-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "before": { "path": "REPLACE-absolute-role-2-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "after": { "path": "REPLACE-absolute-role-2-after-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "rolePlan": { "path": "REPLACE-absolute-role-3-full-probe-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "before": { "path": "REPLACE-absolute-role-3-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "after": { "path": "REPLACE-absolute-role-3-after-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "rolePlan": { "path": "REPLACE-absolute-role-4-full-probe-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "before": { "path": "REPLACE-absolute-role-4-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "after": { "path": "REPLACE-absolute-role-4-after-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    }
+  ]
+}

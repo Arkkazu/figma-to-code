@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "scope-expansion-during-scoped-fix-20260718",
+  "kind": "correction",
+  "occurredOn": "2026-07-18",
+  "failureClass": "scope-expansion-during-scoped-fix",
+  "recurrenceKey": "scoped-fix-expanded-to-unrequested-process-work",
+  "ruleTargets": [
+    "rules/figma-spec-pipeline.md",
+    "rules/self-improvement.md"
+  ],
+  "verifierTargets": [
+    "tools/figma-scope-lock.mjs",
+    "tools/figma-scope-lock.e2e.mjs"
+  ],
+  "summary": "A focused Figma correction was delayed because unrequested rule and verification infrastructure work was mixed into the same implementation scope.",
+  "prevention": "Start an exact-path scope lock before editing; deny out-of-scope paths, block the scope on detected drift, and require a separately owner-approved scope for process work."
+}

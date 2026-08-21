@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "_comment": "Figma子ノード↔実装DOMの機械可読な対応表。人間用の mapping-*.md と併置し、figma-gate preflight が内容を検査する。get_metadata で取得した対象node配下の子ノードを、可視要素は漏れなく登録する。",
+  "figma": {
+    "fileKey": "replace-with-figma-file-key",
+    "rootNodeId": "123:456",
+    "source": "get_metadata",
+    "capturedAt": "2026-07-31T00:00:00.000Z"
+  },
+  "nodes": [
+    {
+      "figmaNodeId": "123:456",
+      "name": "example-section",
+      "parentNodeId": null,
+      "viewport": "pc",
+      "status": "mapped",
+      "selector": ".example-section"
+    },
+    {
+      "figmaNodeId": "123:457",
+      "name": "example-section/inner",
+      "parentNodeId": "123:456",
+      "viewport": "pc",
+      "status": "mapped",
+      "selector": ".example-section__inner",
+      "note": "Auto Layout。gap と padding を spec に登録すること（親の gap 欠落が過去の実装差異の原因）"
+    },
+    {
+      "figmaNodeId": "123:458",
+      "name": "example-section/inner/heading",
+      "parentNodeId": "123:457",
+      "viewport": "pc",
+      "status": "mapped",
+      "selector": ".example-section__heading"
+    },
+    {
+      "figmaNodeId": "123:459",
+      "name": "example-section/legacy-badge",
+      "parentNodeId": "123:457",
+      "viewport": "pc",
+      "status": "figma-only",
+      "reason": "Figmaに残る旧バッジ。オーナー確認済みで今回の対象外（2026-07-31）。実装しない。"
+    },
+    {
+      "figmaNodeId": "789:012",
+      "name": "example-section",
+      "parentNodeId": null,
+      "viewport": "sp",
+      "status": "mapped",
+      "selector": ".example-section"
+    },
+    {
+      "figmaNodeId": "789:013",
+      "name": "example-section/inner",
+      "parentNodeId": "789:012",
+      "viewport": "sp",
+      "status": "mapped",
+      "selector": ".example-section__inner"
+    },
+    {
+      "figmaNodeId": "789:014",
+      "name": "example-section/inner/heading",
+      "parentNodeId": "789:013",
+      "viewport": "sp",
+      "status": "mapped",
+      "selector": ".example-section__heading"
+    },
+    {
+      "figmaNodeId": "dom-only:skip-link",
+      "name": "スキップリンク",
+      "parentNodeId": null,
+      "viewport": "sp",
+      "status": "dom-only",
+      "selector": ".example-section__skip",
+      "reason": "アクセシビリティ要件で実装側にだけ存在する。Figmaに対応nodeなし。"
+    }
+  ]
+}

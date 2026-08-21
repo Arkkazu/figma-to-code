@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-offline-nonce-submission-volume-amendment-source-pin-correction-acceptance-candidate",
+  "recordState": "owner-stage2-finalization-candidate",
+  "candidateOnly": true,
+  "ownerApproved": false,
+  "ownerApprovalState": "REQUIRED_STAGE2_FINALIZATION_APPROVAL",
+  "effective": false,
+  "stage2PresentationOrder": 3,
+  "presentationOrderOnlyNoDependencyOnTemplateOrZeroCostCandidate": true,
+  "stage1Approval": {
+    "path": "tools/r5-ordinal3-owner-stage1-content-approval-v2-correction.json",
+    "sha256": "23331c129b87657f7515d8bd91a15b13f77781b6bd7bc25ce2316d6bf2ba0bd8"
+  },
+  "acceptedCorrectionDraft": {
+    "path": "tools/r5-ordinal3-offline-nonce-submission-volume-amendment-v2-correction-draft.json",
+    "sha256": "bdfa34fce0d5779f80cb8f7cc2af60169f45353d0853de8db987d520e90047c7"
+  },
+  "predecessorOfflineDraft": {
+    "path": "tools/r5-ordinal3-offline-nonce-submission-volume-amendment-draft.json",
+    "sha256": "afdb56caddb599c4aac5eb50c5ffb1e9d06cfe903a27df571d9a976519815181",
+    "predecessorRemainsUnmodified": true,
+    "predecessorRemainsReferenceOnlyHistory": true
+  },
+  "predecessorSourceSnapshot": {
+    "field": "sourceDocuments[0].sha256",
+    "path": "tools/r5-baseline-reissue-3-candidate-design.json",
+    "predecessorDeclaredSha256": "811a84bb656bf43f168a3ae9e4d7a756d06a51fcab9e16304340d0271d9fe007",
+    "currentWorkspaceSha256": "4c56ecb4a75f12b9fedf2e5b1ac676fdc60dad877c4eead15e76a630eff05955",
+    "historicalBytesRecovered": false,
+    "predecessorRemainsUnmodified": true
+  },
+  "noAuthority": {
+    "doesNotFinalizeOwnerDecision": true,
+    "doesNotAuthorizePublication": true,
+    "doesNotCreateRuntimeVmOrSandbox": true,
+    "doesNotAuthorizeP3RoleAction": true,
+    "doesNotAuthorize": [
+      "provider selection",
+      "external account access",
+      "purchase or subscription",
+      "networking change",
+      "physical device deployment",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "accessibility validation",
+      "motion validation",
+      "gate execution",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "p11Authorization": "NOT_AUTHORIZED"
+}

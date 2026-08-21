@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "id": "figma-log-unverified-figma-value-66a72cdb86aa026a",
+  "status": "pending-review",
+  "generatedBy": "figma-log-promote.mjs",
+  "recurrence": {
+    "key": "unverified-figma-value",
+    "failureClass": "unverified-figma-value",
+    "threshold": 2,
+    "evidence": [
+      {
+        "id": "correction-provenance-spec-20260709",
+        "kind": "correction",
+        "failureClass": "unverified-figma-value",
+        "recurrenceKey": "unverified-figma-value",
+        "action": "strengthen",
+        "promotability": "promotable",
+        "ruleTargets": [
+          "rules/figma-spec-pipeline.md"
+        ],
+        "verifierTargets": [
+          "templates/verify/figma-gate.mjs",
+          "templates/verify/figma-gate.e2e.mjs"
+        ],
+        "source": {
+          "path": "rules/corrections.md",
+          "heading": "2026-07-09",
+          "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+        }
+      },
+      {
+        "id": "mistake-provenance-spec-20260625",
+        "kind": "mistake",
+        "failureClass": "unverified-figma-value",
+        "recurrenceKey": "unverified-figma-value",
+        "action": "strengthen",
+        "promotability": "promotable",
+        "ruleTargets": [
+          "rules/figma-spec-pipeline.md"
+        ],
+        "verifierTargets": [
+          "templates/verify/figma-gate.mjs",
+          "templates/verify/figma-gate.e2e.mjs"
+        ],
+        "source": {
+          "path": "rules/mistakes.md",
+          "heading": "2026-06-25",
+          "sha256": "405a72d3fbb09975c1e4bee4137752b7188fbac18a663765a8c0fc87a4070db6"
+        }
+      }
+    ]
+  },
+  "requiredChange": {
+    "action": "strengthen",
+    "ruleTargets": [
+      "rules/figma-spec-pipeline.md"
+    ],
+    "verifierTargets": [
+      "templates/verify/figma-gate.e2e.mjs",
+      "templates/verify/figma-gate.mjs"
+    ],
+    "negativeE2ERequired": true
+  },
+  "review": {
+    "loopEngineeringSpec": "C:\\AI\\loop-engineering\\spec\\06-self-improvement.md",
+    "requiresIndependentReview": true,
+    "requiresOwnerApproval": true,
+    "applyAllowed": false,
+    "promotionPlanRequired": true
+  }
+}

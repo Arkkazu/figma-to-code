@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "kind": "p3-r5-ordinal3-owner-zero-cost-constraint-supplement",
+  "recordState": "finalized-owner-constraint-only",
+  "appendOnly": true,
+  "effectiveForSelection": false,
+  "supersedesByReferenceOnly": {
+    "path": "tools/r5-ordinal3-owner-zero-cost-constraint.json",
+    "sha256": "4160d9537cd5cb79ab66b0cf9c065a211a9314873417f356dbbc6300dd3dec03",
+    "originalRecordRemainsImmutable": true
+  },
+  "source": {
+    "kind": "direct-owner-conversation",
+    "contentHash": "not-available",
+    "machineVerified": false,
+    "receivedAtDate": "2026-08-15"
+  },
+  "constraint": {
+    "currency": "JPY",
+    "maximumIncrementalSpend": 0,
+    "continuesOriginalConstraint": true
+  },
+  "bindings": [
+    {
+      "path": "tools/r5-ordinal3-external-verifier-boundary-requirements-draft.md",
+      "sha256": "f3a0ea86270038e62278f97f6d2fa4f75b6c85fb103052a16ae56571877688b3"
+    },
+    {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+      "sha256": "fdc8c45b6c81f4fe914ee554532ee7a032fe07ac08ffb9e8350862f31686cbe4"
+    },
+    {
+      "path": "tools/r5-ordinal3-zero-cost-external-boundary-feasibility.md",
+      "sha256": "22d50e6e3f38a39aa99c01a9c5258af0b06ef4ff73f7915b43dc1e5fad38a45c"
+    },
+    {
+      "path": "tools/r5-ordinal3-zero-cost-local-hardware-inventory.md",
+      "sha256": "f6641a3de0bbb6d6fa5a0519b6b34b5e5984942369a481f2e49287b03e7e049c"
+    }
+  ],
+  "interpretation": {
+    "noScreenedOrConcretelyIdentifiedLocalOptionMeetsStrictBoundaryAtZeroYen": true,
+    "doesNotClaimAbsenceOfUnenumeratedOrExternallyAdministeredHardware": true,
+    "doesNotSelectProviderOrDevice": true,
+    "requiresSeparateOwnerDecisionBeforeChangingAnyCostOrBoundaryConstraint": true
+  },
+  "doesNotAuthorize": [
+    "provider selection",
+    "external account access",
+    "purchase or subscription",
+    "networking change",
+    "physical device deployment",
+    "VM or sandbox creation",
+    "P-3 role delivery or launch",
+    "implementation or return handling",
+    "P-11 change"
+  ],
+  "p11Authorization": "NOT_AUTHORIZED"
+}

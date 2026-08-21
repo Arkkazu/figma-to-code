@@ -1,0 +1,120 @@
+{
+  "_comment": "Coordinator-only template. Copy outside role-visible staging, replace every REPLACE value, then remove this _comment before validation. The comparison-contract, gate-manifest, and preflight-state references are repository-relative to each actual worktree. The pair ledger is the absolute common-Git P-3 ledger derived from those actual worktrees, not a copied receipt. Preserve each pairPreflights.conditions[].preflightState SHA from the original pair-preflight ledger record; active.json legitimately changes after a checkpoint. Protocol, registry, packet-manifest, progress ledger, and checkpoint proofs remain coordinator-only. Both actual v13 pair-preflight records must already PASS before --check or --apply; v5 active state must bind each condition's run.implementation and responsive input split; version 12 and every earlier contract and v4/every earlier active state are rejected without migration. Required order is --apply, actual figma-gate checkpoint, --record-checkpoint, same-condition feedback artifact, --record-feedback, then the next plan. v5 replaces the v4 firstComponentFullCreate runtime field with scope-bound attemptOneCreatePaths; these paths must exactly match the v2 protocol component scope and may create only at attempt 1. derivedBootstrapDirectories must exactly equal the parent directories derived from those paths. If an attemptOneCreatePaths path uses shared-delimited-region policy, its file policy must include bootstrapDelimiterRegions for all six checkpoint elements in exact frozen order; this initializes every shared region before later delimiter-only returns. --apply is recovery-journal-backed, not a multi-file atomic or durable-filesystem transaction; an interrupted apply stays fail-closed in the progress ledger after recovery.",
+  "version": 5,
+  "kind": "p3-role-return-plan",
+  "authority": {
+    "pairId": "REPLACE-owner-approved-pair-id",
+    "condition": "baseline",
+    "comparisonContract": {
+      "path": "MyBrain/verify/REPLACE-final-v13-comparison-contract.json",
+      "sha256": "REPLACE-64-lowercase-hex-sha256"
+    },
+    "frozenScope": {
+      "checkpointPlan": [
+        "REPLACE-first-component-element-id"
+      ],
+      "changeTargets": [
+        "REPLACE-frozen-change-target"
+      ]
+    },
+    "pairPreflights": {
+      "ledger": {
+        "path": "REPLACE-absolute-common-git-directory/figma-p3-comparison-ledger.jsonl",
+        "sha256": "REPLACE-64-lowercase-hex-sha256"
+      },
+      "conditions": [
+        {
+          "condition": "baseline",
+          "worktreeRoot": "REPLACE-absolute-baseline-actual-worktree-root",
+          "comparisonContract": {
+            "path": "REPLACE-same-repository-relative-v13-contract-path.json",
+            "sha256": "REPLACE-64-lowercase-hex-sha256"
+          },
+          "gateManifest": {
+            "path": "REPLACE-repository-relative-frozen-gate-manifest-path.json",
+            "sha256": "REPLACE-64-lowercase-hex-sha256"
+          },
+          "preflightState": {
+            "path": ".figma-gate/active.json",
+            "sha256": "REPLACE-64-lowercase-hex-sha256"
+          },
+          "preflightId": "REPLACE-recorded-baseline-preflight-uuid"
+        },
+        {
+          "condition": "current",
+          "worktreeRoot": "REPLACE-absolute-current-actual-worktree-root",
+          "comparisonContract": {
+            "path": "REPLACE-same-repository-relative-v13-contract-path.json",
+            "sha256": "REPLACE-64-lowercase-hex-sha256"
+          },
+          "gateManifest": {
+            "path": "REPLACE-repository-relative-frozen-gate-manifest-path.json",
+            "sha256": "REPLACE-64-lowercase-hex-sha256"
+          },
+          "preflightState": {
+            "path": ".figma-gate/active.json",
+            "sha256": "REPLACE-64-lowercase-hex-sha256"
+          },
+          "preflightId": "REPLACE-recorded-current-preflight-uuid"
+        }
+      ]
+    },
+    "progress": {
+      "ledgerPath": "REPLACE-absolute-coordinator-only-return-progress.jsonl",
+      "checkpointProofDirectory": "REPLACE-absolute-coordinator-only-empty-or-real-checkpoint-proof-directory"
+    },
+    "handoff": {
+      "opaqueHandoffId": "REPLACE-random-nonsemantic-handoff-id",
+      "deliverySequence": 1,
+      "deliveryProgress": {
+        "version": 1,
+        "scope": "per-condition",
+        "initialDeliverySequence": 1,
+        "increment": 1
+      },
+      "protocol": {
+        "self": {
+          "path": "REPLACE-coordinator-only-this-condition-handoff-protocol.json",
+          "sha256": "REPLACE-64-lowercase-hex-sha256"
+        },
+        "peer": {
+          "path": "REPLACE-coordinator-only-other-condition-handoff-protocol.json",
+          "sha256": "REPLACE-the-same-64-lowercase-hex-sha256"
+        }
+      },
+      "registry": {
+        "path": "REPLACE-coordinator-only-handoff-registry.json",
+        "sha256": "REPLACE-64-lowercase-hex-sha256"
+      },
+      "packetManifest": {
+        "path": "REPLACE-coordinator-only-packet-manifest.json",
+        "sha256": "REPLACE-64-lowercase-hex-sha256"
+      }
+    }
+  },
+  "component": {
+    "elementId": "REPLACE-first-component-element-id",
+    "componentDecisionCodePath": "REPLACE-exact-code-path-from-handoff-protocol",
+    "attempt": 1,
+    "sequence": 1,
+    "inputStaging": {
+      "root": "REPLACE-coordinator-only-expanded-staging-directory",
+      "sha256": "REPLACE-64-lowercase-hex-sha256"
+    },
+    "allowedChangeTargets": [
+      "REPLACE-frozen-change-target"
+    ],
+    "attemptOneCreatePaths": [
+      "REPLACE-ordered-subset-of-allowed-change-targets-created-only-at-attempt-1"
+    ],
+    "derivedBootstrapDirectories": [
+      "REPLACE-deterministically-derived-relative-site-directory"
+    ],
+    "filePolicies": [
+      {
+        "path": "REPLACE-frozen-change-target",
+        "kind": "component-file"
+      }
+    ]
+  }
+}

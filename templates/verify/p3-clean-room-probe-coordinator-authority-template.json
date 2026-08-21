@@ -1,0 +1,77 @@
+{
+  "_comment": "Coordinator-only authority for p3-clean-room-probe v5. It is never role input. The helper resolves actual roots and P-12 source files with realpath, rejects overlap/reparse escape, derives deterministic opaque P-12 routes, then read/hash-checks each route and requires route realpath == its source realpath. roleStaging leaf must be role-staging-<16-64 lowercase hex>; P-12 route leaves must be p12-routes-<hex>. P-7 source paths are not aliases: the matrix derives them from each bootstrap role launch's actual TEMP/TMP output, compares their SHA-256/realpath, and rejects known pair/condition/workspace/actor/context/evidence identity fragments before delivery. P-10 mandatory paths must be the concrete .codex/history.jsonl, .codex/sessions, .codex/archived_sessions, .codex/memories, .codex/memories_1.sqlite, .codex/logs_2.sqlite, .codex/state_5.sqlite, .codex/rules, and .codex/skills stores. Add p10.targets.claudeProjectsJsonl only when runtime config declares Claude Projects used; it must be .claude/projects/*.jsonl. recipientCommitment is the helper stable SHA-256 of pairId + condition + roleKind + actor + contextId.",
+  "version": 1,
+  "kind": "p3-clean-room-probe-coordinator-authority-v1",
+  "authorityBinding": {
+    "ownerDecisionJ": { "path": "REPLACE-absolute-Decision-J-v2-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+    "conditionContracts": [
+      { "condition": "baseline", "path": "REPLACE-absolute-v13-baseline-contract-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      { "condition": "current", "path": "REPLACE-absolute-v13-current-contract-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    ],
+    "cleanRoomAuthorizationStableJsonSha256": "REPLACE-64-lowercase-hex"
+  },
+  "actualWorktrees": [
+    { "condition": "baseline", "path": "REPLACE-absolute-baseline-actual-worktreeRoot-from-J", "exists": true },
+    { "condition": "current", "path": "REPLACE-absolute-current-actual-worktreeRoot-from-J", "exists": true }
+  ],
+  "roleStaging": [
+    { "condition": "baseline", "roleKind": "implementation", "actor": "REPLACE-actor", "contextId": "REPLACE-context", "recipientCommitment": "REPLACE-64-lowercase-hex", "path": "REPLACE-absolute-role-staging-64hex-root", "exists": true },
+    { "condition": "baseline", "roleKind": "review", "actor": "REPLACE-actor", "contextId": "REPLACE-context", "recipientCommitment": "REPLACE-64-lowercase-hex", "path": "REPLACE-absolute-role-staging-64hex-root", "exists": true },
+    { "condition": "current", "roleKind": "implementation", "actor": "REPLACE-actor", "contextId": "REPLACE-context", "recipientCommitment": "REPLACE-64-lowercase-hex", "path": "REPLACE-absolute-role-staging-64hex-root", "exists": true },
+    { "condition": "current", "roleKind": "review", "actor": "REPLACE-actor", "contextId": "REPLACE-context", "recipientCommitment": "REPLACE-64-lowercase-hex", "path": "REPLACE-absolute-role-staging-64hex-root", "exists": true }
+  ],
+  "commonGit": { "path": "REPLACE-absolute-actual-common-git-directory", "exists": true },
+  "coordinatorScratch": { "path": "REPLACE-absolute-coordinator-only-scratch-directory", "exists": true },
+  "p10": {
+    "targets": {
+      "historyJsonl": { "id": "P-10-history-jsonl", "path": "REPLACE-absolute-history.jsonl", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "sessions": { "id": "P-10-sessions", "path": "REPLACE-absolute-sessions-directory", "exists": true },
+      "archivedSessions": { "id": "P-10-archived-sessions", "path": "REPLACE-absolute-archived_sessions-directory", "exists": true },
+      "memoriesDirectory": { "id": "P-10-memories-directory", "path": "REPLACE-absolute-memories-directory", "exists": true },
+      "memoriesSqlite": { "id": "P-10-memories-1-sqlite", "path": "REPLACE-absolute-memories_1.sqlite", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "logsSqlite": { "id": "P-10-logs-2-sqlite", "path": "REPLACE-absolute-logs_2.sqlite", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "stateSqlite": { "id": "P-10-state-5-sqlite", "path": "REPLACE-absolute-state_5.sqlite", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "rules": { "id": "P-10-rules", "path": "REPLACE-absolute-rules-directory", "exists": true },
+      "skills": { "id": "P-10-skills", "path": "REPLACE-absolute-skills-directory", "exists": true }
+    }
+  },
+  "redactedP12RouteRoot": { "path": "REPLACE-absolute-p12-routes-64hex-root", "exists": true },
+  "p12Sources": [
+    { "recipientCommitment": "REPLACE-role-1-64-lowercase-hex", "targets": [
+      { "id": "own-worktree", "rootKind": "own-worktree", "read": { "id": "P-12-read-own-worktree", "path": "REPLACE-actual-file-under-own-worktree", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-own-worktree", "path": "REPLACE-different-actual-file-under-own-worktree", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "other-worktree", "rootKind": "other-worktree", "read": { "id": "P-12-read-other-worktree", "path": "REPLACE-actual-file-under-other-worktree", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-other-worktree", "path": "REPLACE-different-actual-file-under-other-worktree", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-1", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-1", "path": "REPLACE-actual-file-under-peer-staging-1", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-1", "path": "REPLACE-different-actual-file-under-peer-staging-1", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-2", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-2", "path": "REPLACE-actual-file-under-peer-staging-2", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-2", "path": "REPLACE-different-actual-file-under-peer-staging-2", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-3", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-3", "path": "REPLACE-actual-file-under-peer-staging-3", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-3", "path": "REPLACE-different-actual-file-under-peer-staging-3", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "common-git", "rootKind": "common-git", "read": { "id": "P-12-read-common-git", "path": "REPLACE-actual-file-under-common-git", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-common-git", "path": "REPLACE-different-actual-file-under-common-git", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "coordinator-scratch", "rootKind": "coordinator-scratch", "read": { "id": "P-12-read-coordinator-scratch", "path": "REPLACE-actual-file-under-coordinator-scratch", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-coordinator-scratch", "path": "REPLACE-different-actual-file-under-coordinator-scratch", "sha256": "REPLACE-64-lowercase-hex", "exists": true } }
+    ] },
+    { "recipientCommitment": "REPLACE-role-2-64-lowercase-hex", "targets": [
+      { "id": "own-worktree", "rootKind": "own-worktree", "read": { "id": "P-12-read-own-worktree", "path": "REPLACE-role-2-actual-own-worktree-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-own-worktree", "path": "REPLACE-role-2-actual-own-worktree-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "other-worktree", "rootKind": "other-worktree", "read": { "id": "P-12-read-other-worktree", "path": "REPLACE-role-2-actual-other-worktree-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-other-worktree", "path": "REPLACE-role-2-actual-other-worktree-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-1", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-1", "path": "REPLACE-role-2-peer-1-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-1", "path": "REPLACE-role-2-peer-1-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-2", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-2", "path": "REPLACE-role-2-peer-2-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-2", "path": "REPLACE-role-2-peer-2-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-3", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-3", "path": "REPLACE-role-2-peer-3-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-3", "path": "REPLACE-role-2-peer-3-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "common-git", "rootKind": "common-git", "read": { "id": "P-12-read-common-git", "path": "REPLACE-role-2-common-git-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-common-git", "path": "REPLACE-role-2-common-git-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "coordinator-scratch", "rootKind": "coordinator-scratch", "read": { "id": "P-12-read-coordinator-scratch", "path": "REPLACE-role-2-scratch-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-coordinator-scratch", "path": "REPLACE-role-2-scratch-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } }
+    ] },
+    { "recipientCommitment": "REPLACE-role-3-64-lowercase-hex", "targets": [
+      { "id": "own-worktree", "rootKind": "own-worktree", "read": { "id": "P-12-read-own-worktree", "path": "REPLACE-role-3-actual-own-worktree-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-own-worktree", "path": "REPLACE-role-3-actual-own-worktree-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "other-worktree", "rootKind": "other-worktree", "read": { "id": "P-12-read-other-worktree", "path": "REPLACE-role-3-actual-other-worktree-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-other-worktree", "path": "REPLACE-role-3-actual-other-worktree-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-1", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-1", "path": "REPLACE-role-3-peer-1-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-1", "path": "REPLACE-role-3-peer-1-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-2", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-2", "path": "REPLACE-role-3-peer-2-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-2", "path": "REPLACE-role-3-peer-2-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-3", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-3", "path": "REPLACE-role-3-peer-3-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-3", "path": "REPLACE-role-3-peer-3-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "common-git", "rootKind": "common-git", "read": { "id": "P-12-read-common-git", "path": "REPLACE-role-3-common-git-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-common-git", "path": "REPLACE-role-3-common-git-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "coordinator-scratch", "rootKind": "coordinator-scratch", "read": { "id": "P-12-read-coordinator-scratch", "path": "REPLACE-role-3-scratch-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-coordinator-scratch", "path": "REPLACE-role-3-scratch-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } }
+    ] },
+    { "recipientCommitment": "REPLACE-role-4-64-lowercase-hex", "targets": [
+      { "id": "own-worktree", "rootKind": "own-worktree", "read": { "id": "P-12-read-own-worktree", "path": "REPLACE-role-4-actual-own-worktree-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-own-worktree", "path": "REPLACE-role-4-actual-own-worktree-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "other-worktree", "rootKind": "other-worktree", "read": { "id": "P-12-read-other-worktree", "path": "REPLACE-role-4-actual-other-worktree-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-other-worktree", "path": "REPLACE-role-4-actual-other-worktree-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-1", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-1", "path": "REPLACE-role-4-peer-1-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-1", "path": "REPLACE-role-4-peer-1-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-2", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-2", "path": "REPLACE-role-4-peer-2-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-2", "path": "REPLACE-role-4-peer-2-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "peer-staging-3", "rootKind": "peer-staging", "read": { "id": "P-12-read-peer-staging-3", "path": "REPLACE-role-4-peer-3-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-peer-staging-3", "path": "REPLACE-role-4-peer-3-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "common-git", "rootKind": "common-git", "read": { "id": "P-12-read-common-git", "path": "REPLACE-role-4-common-git-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-common-git", "path": "REPLACE-role-4-common-git-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } },
+      { "id": "coordinator-scratch", "rootKind": "coordinator-scratch", "read": { "id": "P-12-read-coordinator-scratch", "path": "REPLACE-role-4-scratch-read", "sha256": "REPLACE-64-lowercase-hex", "exists": true }, "write": { "id": "P-12-write-coordinator-scratch", "path": "REPLACE-role-4-scratch-write", "sha256": "REPLACE-64-lowercase-hex", "exists": true } }
+    ] }
+  ]
+}

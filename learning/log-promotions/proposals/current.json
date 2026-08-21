@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-21T07:21:16.109Z",
+  "note": "Mutable index. Proposal files stay immutable; this records the current proposal, superseded proposals, and completed-outside-promotion closures per recurrence key.",
+  "recurrenceKeys": {
+    "unverified-figma-value": {
+      "current": null,
+      "superseded": [
+        "figma-log-unverified-figma-value-4065dc958c9d424a",
+        "figma-log-unverified-figma-value-5a071e44b16503b1",
+        "figma-log-unverified-figma-value-66a72cdb86aa026a",
+        "figma-log-unverified-figma-value-8d8aa16d634fc8bd",
+        "figma-log-unverified-figma-value-b94f11bd4b566549"
+      ],
+      "closed": [
+        {
+          "closureId": "close-unverified-figma-value-66a72cdb-20260807",
+          "proposalId": "figma-log-unverified-figma-value-66a72cdb86aa026a",
+          "proposalPath": "learning/log-promotions/proposals/figma-log-unverified-figma-value-66a72cdb86aa026a.json",
+          "proposalSha256": "e9807da4d7eda907bed0e2412bcc5530949b73825f4a524f97b4477dfa8f9d91",
+          "disposition": "completed-outside-promotion",
+          "reason": "P-1aのowner直接指示で同じ強化と負のE2Eが完了済みであり、未実行のreviewやapplyを演出しないため。",
+          "ownerApproval": {
+            "status": "approved",
+            "owner": "tane",
+            "approvedAt": "2026-08-07T00:00:00+09:00"
+          },
+          "closedAt": "2026-08-07T00:01:16.043Z"
+        }
+      ]
+    }
+  }
+}

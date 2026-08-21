@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "id": "close-unverified-figma-value-66a72cdb-20260807",
+  "proposalId": "figma-log-unverified-figma-value-66a72cdb86aa026a",
+  "proposalPath": "learning/log-promotions/proposals/figma-log-unverified-figma-value-66a72cdb86aa026a.json",
+  "proposalSha256": "e9807da4d7eda907bed0e2412bcc5530949b73825f4a524f97b4477dfa8f9d91",
+  "disposition": "completed-outside-promotion",
+  "reason": "P-1aのowner直接指示で同じ強化と負のE2Eが完了済みであり、未実行のreviewやapplyを演出しないため。",
+  "ownerApproval": {
+    "status": "approved",
+    "owner": "tane",
+    "approvedAt": "2026-08-07T00:00:00+09:00"
+  }
+}

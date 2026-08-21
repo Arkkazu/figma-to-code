@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "catalogVersion": "2026-07-18.1",
+  "mode": "safe-auto",
+  "limits": {
+    "scopeElapsedMs": 1800000,
+    "maxDirectViewportRuns": 2
+  },
+  "signals": {
+    "scope-duration-exceeded": {
+      "title": "対象スコープの所要時間超過",
+      "action": "proposal",
+      "proposalTarget": "C:\\AI\\figma-to-code\\rules\\figma-spec-pipeline.md"
+    },
+    "out-of-scope-change": {
+      "title": "宣言外パスの変更",
+      "action": "safe-auto",
+      "controlId": "scope-freeze",
+      "proposalTarget": "C:\\AI\\figma-to-code\\rules\\figma-spec-pipeline.md"
+    },
+    "repeated-viewport-measurement": {
+      "title": "PC/SP実測の重複",
+      "action": "safe-auto",
+      "controlId": "single-batch-checkpoint",
+      "proposalTarget": "C:\\AI\\figma-to-code\\rules\\figma-spec-pipeline.md"
+    },
+    "html-validation-missing": {
+      "title": "HTML変更後のW3C記録不足",
+      "action": "proposal",
+      "proposalTarget": "C:\\AI\\web-development\\rules\\w3c-validation.md"
+    }
+  },
+  "safeControls": {
+    "scope-freeze": {
+      "effect": "strengthen",
+      "scope": "project-local",
+      "description": "次のFigma scopeでも宣言済みchangeTargetsだけを対象にし、宣言外の変更は別scopeまたは人間判断へ戻す。",
+      "requirements": {
+        "declaredTargetsOnly": true
+      },
+      "conflictsWith": []
+    },
+    "single-batch-checkpoint": {
+      "effect": "strengthen",
+      "scope": "project-local",
+      "description": "次のFigma scopeではPC/SPのcheckpoint撮影を同一Chrome sessionのbatch機能で実行できる検証器だけを使う。",
+      "requirements": {
+        "checkpointCaptureMode": "batch"
+      },
+      "conflictsWith": []
+    }
+  },
+  "stateRecord": {
+    "path": "STATE.md",
+    "mode": "on-finding"
+  }
+}

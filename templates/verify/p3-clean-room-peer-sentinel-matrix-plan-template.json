@@ -1,0 +1,29 @@
+{
+  "_comment": "Coordinator-only v5 P-7 matrix plan. It is never role input. matrixId/challengeId/probeId must be matrix-/challenge-/probe- plus 32-128 lowercase hex. For one full recipient, list exactly the three other role bootstrap plans and their before JSONL outputs. The helper derives source commitments, verifies both actual TEMP/TMP launch sentinels by SHA-256/realpath, rejects known identity fragments in their original absolute paths, and emits the source TEMP paths unchanged in challenge v3. There is no p7 route root or alias.",
+  "version": 3,
+  "kind": "p3-clean-room-peer-sentinel-matrix-plan-v3",
+  "matrixId": "matrix-REPLACE-32-to-128-lowercase-hex",
+  "challengeId": "challenge-REPLACE-32-to-128-lowercase-hex",
+  "coordinatorAuthority": {
+    "path": "REPLACE-absolute-coordinator-authority-path",
+    "sha256": "REPLACE-64-lowercase-hex-sha256"
+  },
+  "recipient": {
+    "probeId": "probe-REPLACE-32-to-128-lowercase-hex",
+    "recipientCommitment": "REPLACE-64-lowercase-hex-coordinator-derived-recipient-commitment"
+  },
+  "bootstrapEntries": [
+    {
+      "probePlan": { "path": "REPLACE-absolute-peer-bootstrap-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "output": { "path": "REPLACE-absolute-peer-bootstrap-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "probePlan": { "path": "REPLACE-absolute-peer-bootstrap-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "output": { "path": "REPLACE-absolute-peer-bootstrap-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    },
+    {
+      "probePlan": { "path": "REPLACE-absolute-peer-bootstrap-plan-path", "sha256": "REPLACE-64-lowercase-hex-sha256" },
+      "output": { "path": "REPLACE-absolute-peer-bootstrap-before-jsonl-path", "sha256": "REPLACE-64-lowercase-hex-sha256" }
+    }
+  ]
+}

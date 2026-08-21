@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "scopeId": "<stable-scope-id>",
+  "task": "<the owner-requested visual or component correction only>",
+  "ownerInstruction": "<verbatim or concise owner instruction that sets this scope>",
+  "repoPath": "<absolute repository root>",
+  "allowedPaths": [
+    "<exact relative source or generated file path>"
+  ]
+}

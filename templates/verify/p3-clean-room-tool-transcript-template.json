@@ -1,0 +1,5 @@
+{
+  "_comment": "RETIRED in probe v5. A transcript is a self-claim and is not P-11 evidence. The strict runtime-config schema is also not P-11 evidence. v5 validates finite P-7/P-9/P-10/P-12 observations only, returns p11Authorization=NOT_AUTHORIZED, and `--require-p11-authorization` fails closed. The separate p3-p11-app-server-spike is feasibility-only and never changes that result.",
+  "retired": true,
+  "replacement": "p3-clean-room-role-runtime-config-v3 plus p3-clean-room-probe-evidence-plan-v5 (P-11 remains unauthorized)"
+}

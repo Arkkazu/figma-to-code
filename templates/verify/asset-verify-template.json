@@ -1,0 +1,38 @@
+{
+  "url": "https://example.invalid/page/",
+  "reportPath": "MyBrain/verify/reports/assets-<scope>.json",
+  "viewport": {
+    "width": 1440,
+    "height": 1600
+  },
+  "viewportPolicy": {
+    "scrollbars": "hidden"
+  },
+  "assets": [
+    {
+      "id": "hero-illustration",
+      "kind": "raster",
+      "figmaExport": {
+        "path": "MyBrain/figma-exports/hero-illustration.png",
+        "sha256": "<Figma元書き出しの実SHA-256>",
+        "mime": "image/png",
+        "intrinsic": { "width": 1800, "height": 900 },
+        "alpha": "partial"
+      },
+      "output": {
+        "path": "assets/images/hero-illustration.webp",
+        "figmaExportSha256": "<figmaExport.sha256と同一>",
+        "sha256": "<登録済み変換出力の実SHA-256>",
+        "mime": "image/webp",
+        "intrinsic": { "width": 1800, "height": 900 },
+        "alpha": "partial"
+      },
+      "usage": {
+        "selector": ".hero__illustration img",
+        "render": "img",
+        "url": "/assets/images/hero-illustration.webp",
+        "css": { "width": 900, "height": 450, "tolerance": 0 }
+      }
+    }
+  ]
+}

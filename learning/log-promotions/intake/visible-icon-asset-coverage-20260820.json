@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "correction-visible-icon-asset-coverage-20260820",
+  "kind": "correction",
+  "occurredOn": "2026-08-20",
+  "failureClass": "visible-icon-asset-coverage",
+  "recurrenceKey": "visible-icon-asset-coverage",
+  "ruleTargets": [
+    "rules/figma-spec-pipeline.md"
+  ],
+  "verifierTargets": [
+    "templates/verify/figma-gate.mjs",
+    "templates/verify/figma-gate.e2e.mjs"
+  ],
+  "summary": "可視アイコンを外枠寸法だけで照合し、Figmaベクタの書き出し資産、描画inset、実装側のsrcと内容の対応を検証せずに合格としていた。",
+  "prevention": "Figmaの可視アイコンごとにレイヤーID、正規exportのSHA-256、描画inset、実DOMセレクタとsrc、個別画像差分範囲を台帳化し、台帳の欠落または不一致をpreflightとcheckpointでSPEC FAILにする。"
+}

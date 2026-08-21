@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "id": "figma-log-intake-9e8a6cdb52d57f4a",
+  "status": "pending-review",
+  "policyPath": "rules/log-promotion-policy.json",
+  "policySha256": "680b9017688fbf1b7d77d2547557292454a56b82ca999d0d3f0729db3a1c5de3",
+  "records": [
+    {
+      "id": "correction-browser-layout-static-verification-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: browser-layout-static-verification",
+        "line": 34,
+        "sha256": "f36a62f04c0d40654ab61ae2f96042d41d66acf1cecabf6e4a7ac50ff25c4762"
+      }
+    },
+    {
+      "id": "correction-component-section-spacing-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: component-section-spacing-ownership",
+        "line": 29,
+        "sha256": "37f458bd390e53958bce6ba9db6e9bb4e957dd90a925fceccacc9d7cffbe7610"
+      }
+    },
+    {
+      "id": "correction-log-feedback-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: log-to-rule-feedback-gap",
+        "line": 19,
+        "sha256": "e8d837fffdd97cc994e97b090dae8f60bbb3946125491fd648dd312b6398195e"
+      }
+    },
+    {
+      "id": "correction-owner-correction-receipt-gate-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: owner-correction-log-not-gated",
+        "line": 39,
+        "sha256": "2ab5df3884bf851044a3e2d436dd62ddfa466c7b736601c12d859d32b8cf742d"
+      }
+    },
+    {
+      "id": "correction-provenance-spec-20260709",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-09",
+        "line": 100,
+        "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+      }
+    },
+    {
+      "id": "mistake-provenance-spec-20260625",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-06-25",
+        "line": 84,
+        "sha256": "618fda7815a1235455ee581a5d7565ade1084c4f6551c2589f7535b9a7637945"
+      }
+    },
+    {
+      "id": "scope-expansion-during-scoped-fix-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: scope-expansion-during-scoped-fix",
+        "line": 24,
+        "sha256": "5945588c37e50074983e457b1abb1b086fa044209ef4e90728416e1fc3897812"
+      }
+    }
+  ],
+  "unclassified": [],
+  "proposalIds": [
+    "figma-log-unverified-figma-value-b94f11bd4b566549"
+  ]
+}

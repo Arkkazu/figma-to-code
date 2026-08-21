@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-role-read-boundary-guard-synthetic-tuple-allowlist",
+  "recordState": "review-only",
+  "effective": false,
+  "syntheticOnly": true,
+  "tuples": [
+    {
+      "sequence": 1,
+      "actorOpaqueId": "synthetic-guard",
+      "surfaceClass": "runtime-base",
+      "targetOpaqueId": "synthetic-runtime-base",
+      "operation": "stat",
+      "outcome": "allowed"
+    },
+    {
+      "sequence": 2,
+      "actorOpaqueId": "synthetic-implementation-identity",
+      "surfaceClass": "exact-attachments",
+      "targetOpaqueId": "synthetic-attachment-descriptor-set",
+      "operation": "read",
+      "outcome": "allowed"
+    },
+    {
+      "sequence": 3,
+      "actorOpaqueId": "synthetic-implementation-identity",
+      "surfaceClass": "ephemeral-scratch",
+      "targetOpaqueId": "synthetic-ephemeral-scratch",
+      "operation": "open",
+      "outcome": "allowed"
+    },
+    {
+      "sequence": 4,
+      "actorOpaqueId": "synthetic-guard",
+      "surfaceClass": "guard-dependencies",
+      "targetOpaqueId": "synthetic-guard-dependency",
+      "operation": "exec",
+      "outcome": "allowed"
+    }
+  ],
+  "requiredFinalStatement": "synthetic tuple allowlist only; no real runtime, role delivery, role launch, implementation, return, measurement, or P-11 authorization is created."
+}

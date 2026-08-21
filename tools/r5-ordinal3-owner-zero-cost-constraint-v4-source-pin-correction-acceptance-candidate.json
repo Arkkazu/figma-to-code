@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-owner-zero-cost-constraint-source-pin-correction-acceptance-candidate",
+  "recordState": "owner-stage2-finalization-candidate",
+  "candidateOnly": true,
+  "ownerApproved": false,
+  "ownerApprovalState": "REQUIRED_STAGE2_FINALIZATION_APPROVAL",
+  "effective": false,
+  "effectiveForSelection": false,
+  "stage2Sequence": 2,
+  "stage1Approval": {
+    "path": "tools/r5-ordinal3-owner-stage1-content-approval-v2-correction.json",
+    "sha256": "23331c129b87657f7515d8bd91a15b13f77781b6bd7bc25ce2316d6bf2ba0bd8"
+  },
+  "acceptedCorrectionDraft": {
+    "path": "tools/r5-ordinal3-owner-zero-cost-constraint-v4-correction-draft.json",
+    "sha256": "e69043ad4708c16a383b7ce2f8a4f2d69956705b180decee3be56044beb66c18"
+  },
+  "predecessorZeroCostConstraint": {
+    "path": "tools/r5-ordinal3-owner-zero-cost-constraint-v3.json",
+    "sha256": "ba5b5200a572f49bad245b9d343f4983a0f994249eb1d2e6db89a0586fc35b18",
+    "predecessorRemainsUnmodified": true,
+    "predecessorRemainsReferenceOnlyHistory": true
+  },
+  "replacedTemplateBinding": {
+    "path": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+    "sha256": "b7ac0c19c4669a4695e760860552058fc2967ddbe9d5766b4df86af7059029f6",
+    "predecessorRemainsReferenceOnlyHistory": true
+  },
+  "reboundTemplateCorrectionCandidate": {
+    "path": "tools/r5-ordinal3-external-boundary-owner-decision-template-v2-source-pin-correction-acceptance-candidate.json",
+    "sha256": "9d2806d017746b69463832368ad73d54abdaf285a152696e3d3abf403d98dba3"
+  },
+  "constraintState": {
+    "currency": "JPY",
+    "maximumIncrementalSpend": 0,
+    "doesNotSelectProviderOrTopology": true,
+    "candidateCannotBeUsedAsSelectionInputBeforeFinalizedOwnerSuccessor": true
+  },
+  "noAuthority": {
+    "doesNotFinalizeOwnerDecision": true,
+    "doesNotAuthorizePublication": true,
+    "doesNotCreateRuntimeVmOrSandbox": true,
+    "doesNotAuthorizeP3RoleAction": true,
+    "doesNotAuthorize": [
+      "provider selection",
+      "external account access",
+      "purchase or subscription",
+      "networking change",
+      "physical device deployment",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "accessibility validation",
+      "motion validation",
+      "gate execution",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "p11Authorization": "NOT_AUTHORIZED"
+}

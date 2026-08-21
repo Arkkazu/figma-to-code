@@ -1,0 +1,20 @@
+{
+  "_comment": "Coordinator-only same-condition feedback artifact. This is produced only after p3-role-return.mjs --record-checkpoint succeeds. It is not a P-3 runtime record, comparison-contract input, or role packet. Replace every REPLACE value, retain only the literal same-condition gate result, remove this _comment, then run --record-feedback before preparing the next return attempt.",
+  "version": 1,
+  "kind": "p3-role-return-feedback",
+  "handoffId": "REPLACE-opaque-handoff-id-from-the-applied-return",
+  "component": {
+    "elementId": "REPLACE-element-id-from-checkpoint-proof",
+    "componentDecisionCodePath": "REPLACE-code-path-from-checkpoint-proof",
+    "sequence": 1,
+    "attempt": 1
+  },
+  "checkpointProofSha256": "REPLACE-64-lowercase-hex-sha256-from-record-checkpoint-output",
+  "outcome": "FAIL",
+  "failureClass": "REPLACE-SPEC-LAYOUT-VISUAL-OR-OTHER-for-fail-or-null-for-pass",
+  "sameCondition": true,
+  "feedback": {
+    "kind": "same-condition-gate-result",
+    "message": "REPLACE-verbatim-same-condition-gate-result-only"
+  }
+}

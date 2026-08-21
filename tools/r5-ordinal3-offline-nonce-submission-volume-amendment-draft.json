@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-offline-nonce-submission-volume-amendment",
+  "status": "owner-review-only-draft",
+  "effective": false,
+  "purpose": "Propose a one-time offline submission transport for a future external runtime without exposing the canonical persistent output to the implementation identity. This draft does not alter the current ordinal-3 candidate, schema, or any runtime authority.",
+  "sourceDocuments": [
+    {
+      "path": "tools/r5-baseline-reissue-3-candidate-design.json",
+      "sha256": "811a84bb656bf43f168a3ae9e4d7a756d06a51fcab9e16304340d0271d9fe007"
+    },
+    {
+      "path": "tools/r5-ordinal3-os-isolation-proof-schema.json",
+      "sha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403"
+    },
+    {
+      "path": "tools/r5-ordinal3-nonattached-output-contract-amendment-draft.json",
+      "sha256": "b7960c5509ea50ed27d18ad636f0f12c5c712444a84de0765068f416b27b28a0"
+    },
+    {
+      "path": "tools/r5-ordinal3-hyperv-capability-probe-design.md",
+      "sha256": "c4a2d4c684e9768a3af7bc150452a19e2a834e45ee220341d7acf378cea58228"
+    },
+    {
+      "path": "tools/r5-ordinal3-hyperv-evidence-collector-decision.md",
+      "sha256": "b62fcf92f152ba16f9ebc6c6ec30e58dd32ddad02dc28503525dd6b82cea1353"
+    }
+  ],
+  "topology": {
+    "workScratch": {
+      "root": "/p3/scratch/work",
+      "persistence": "ephemeral-not-host-backed-destroyed-with-runtime",
+      "implementationIdentityAccess": "read-write",
+      "canonicalPersistentOutputAccess": "none"
+    },
+    "nonceSubmissionVolume": {
+      "guestMount": "/p3/submission",
+      "submissionPath": "/p3/submission/return.ustar.tar",
+      "backing": "fresh-nonce-owned-single-use-differencing-vhdx",
+      "isCanonicalPersistentOutput": false,
+      "implementationIdentityAccess": "none",
+      "fixedGuestSupervisorAccess": "fixed-file-create-after-role-termination-only",
+      "lifecycle": [
+        "create-after-nonce",
+        "attach-only-to-fresh-runtime",
+        "implementation-role-and-children-terminate",
+        "fixed-guest-supervisor-copies-only-fixed-submission",
+        "guest-clean-shutdown",
+        "vm-off-without-saved-state",
+        "detach",
+        "isolated-readonly-extractor",
+        "fixed-exporter-after-separate-validation",
+        "destroy-or-host-only-forensic-retention-with-separate-authority"
+      ]
+    },
+    "canonicalPersistentOutput": {
+      "implementationIdentityAccess": "none",
+      "guestMountOrLocator": "prohibited",
+      "exporterOnly": true
+    }
+  },
+  "requiredInvariants": [
+    "The submission VHDX is created only after the nonce and is neither an OS disk, a checkpoint disk, a saved-state disk, nor a reusable data disk.",
+    "The implementation identity cannot list, mount, raw-read, raw-write, rename, delete, or resolve the submission volume. It can write only the fixed archive in ephemeral work scratch.",
+    "A byte-pinned guest supervisor distinct from the implementation identity may copy only /p3/scratch/work/return.ustar.tar to the predeclared submission pathname, and only after all implementation processes have terminated.",
+    "Before offline extraction, the host verifier proves role termination, VM Off state, no saved state, no checkpoint, exact detach, no writer handle, expected VHD chain, and a nonce-bound VHDX hash.",
+    "The extractor is a separate identity and isolated parser environment. It mounts no untrusted submission filesystem on the main coordinator host and accepts no role-authored pathname, option, destination, or configuration.",
+    "The extractor may emit only the fixed submission archive into a private spool. The fixed exporter may create only the canonical fixed archive pathname after separate validation and no-replace atomic creation.",
+    "The VHDX child is never reused. Success requires a disposal receipt; failure cannot create canonical output and requires host-only forensic retention or disposal under separate authority.",
+    "No guest evidence collection claim, default-deny model egress claim, typed evidence validation claim, or P-11 claim is supplied by this amendment."
+  ],
+  "mandatoryStateMachine": [
+    "CREATED",
+    "ATTACHED",
+    "RUNNING",
+    "ROLE_TERMINATED",
+    "SUPERVISOR_SUBMITTED",
+    "VM_OFF",
+    "DETACHED",
+    "ISOLATED_READONLY_EXTRACTION",
+    "VALIDATED",
+    "EXPORTED_OR_FORENSIC_RETAINED",
+    "DISPOSED_OR_RETAINED"
+  ],
+  "forbiddenTransitions": [
+    "detach-before-vm-off",
+    "host-mount-before-detach",
+    "extract-before-role-termination",
+    "canonical-output-create-before-validation",
+    "reuse-of-child-vhdx",
+    "merge-or-modify-sealed-parent",
+    "saved-state-or-checkpoint-recovery",
+    "host-main-filesystem-mount-of-untrusted-submission",
+    "using-the-submission-volume-for-guest-evidence-collection"
+  ],
+  "knownUnresolvedBlockers": [
+    "Current native Hyper-V has no approved host-only collector for guest evidence without retaining a host-control channel.",
+    "A model-endpoint-only default-deny egress topology is unselected.",
+    "The current proof schema and pair-common protocol do not support this submission transport.",
+    "An isolated parser/extractor, typed validator, and independent audit are unimplemented.",
+    "Retention, backup, antivirus, encryption, and disposal evidence for raw submission bytes are unselected."
+  ],
+  "successorRequirements": {
+    "existingRecords": "immutable-and-not-reused",
+    "pairCommonProtocol": "new-successor-required",
+    "newOpaqueHandoffs": "required-for-both-conditions",
+    "newFreshRoleHomes": "required-only-if-later-delivery-is-separately-authorized",
+    "newRuntimeActivation": "required",
+    "independentValidation": "required-before-publication"
+  },
+  "noAuthority": {
+    "doesNotModifySchema": true,
+    "doesNotModifyCurrentCandidate": true,
+    "doesNotAuthorize": [
+      "reissue publication",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check",
+      "return apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "P-11 change",
+      "Hyper-V VM creation"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "ownerReviewRequired": [
+    "Accept or reject this separate submission-transport semantics without treating it as scratch replacement.",
+    "Select and independently audit an isolated readonly extractor and fixed guest supervisor.",
+    "Approve a successor pair-common protocol and typed validator only after exact final bytes are available.",
+    "Authorize any P-3-free synthetic VM probe separately."
+  ]
+}

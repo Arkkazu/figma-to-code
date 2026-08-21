@@ -1,0 +1,249 @@
+{
+  "_comment": "Coordinator-only P-3 clean-room protocol template. This is not a comparison contract, Decision J, clean-room evidence, gate manifest, or role attachment. It never becomes a P-3 runtime input.",
+  "schema": "p3-role-handoff-protocol/v2",
+  "recordState": "draft",
+  "executionState": false,
+  "ownerApproved": false,
+  "scopeId": "REPLACE-owner-approved-scope-id",
+  "pairId": "REPLACE-owner-approved-pair-id",
+  "aBIdentical": true,
+  "aBByteIdentical": true,
+  "deliveryMode": "attachment-only",
+  "coordinatorOnly": {
+    "actualWorktree": true,
+    "commonGitDirectory": true,
+    "p3Lifecycle": true,
+    "comparisonContract": true,
+    "ownerDecisionJ": true,
+    "cleanRoomEvidence": true,
+    "contractTemplate": true,
+    "p11FailureRecord": true
+  },
+  "rolePacket": {
+    "deliveryMode": "attachment-only",
+    "opaqueHandoffIdRequired": true,
+    "noConditionIdentity": true,
+    "stagingHasNoGitMetadata": true,
+    "selfContainedStagingArchiveRequired": true,
+    "allAttachmentsRequirePacketManifest": true,
+    "allAttachmentsRequirePacketCheck": true,
+    "packetCheckCommand": "node p3-role-packet.mjs --check <coordinator-only-plan.json>",
+    "packetManifestMustExactlyEnumerateDeliveryAttachments": true,
+    "excludedInputs": [
+      "comparison-contract",
+      "owner-decision-j",
+      "clean-room-evidence",
+      "fidelity-comparison-template",
+      "p3-contract-records",
+      "p3-evaluator-input-record",
+      "actual-worktree",
+      "common-git-directory",
+      "ledger",
+      "pair-lock",
+      "figma-gate-state",
+      "STATE.md",
+      "evaluator-baseline-record",
+      "raw-mybrain-verify-copy",
+      "git-metadata",
+      "host-path-instructions",
+      "coordinator-only-p11-fail-record",
+      "p11-feasibility-report",
+      "p11-helper-artifacts"
+    ],
+    "identityLeakScanRequired": true,
+    "packetValidator": {
+      "path": "p3-role-packet.mjs",
+      "planVersion": 3,
+      "acceptsArchiveAttachments": false,
+      "requiresCoordinatorSafeExpansionBeforeCheck": true,
+      "identityAuthority": [
+        "actual-v13-comparison-contract-path-and-byte-sha256",
+        "owner-approved-decision-j-v2-path-and-byte-sha256",
+        "recipient-condition"
+      ],
+      "derivesPeerIdentityFromBoundAuthorities": true,
+      "callerSuppliedForbiddenIdentityStringsAccepted": false
+    },
+    "forbiddenIdentityFields": [
+      "workspaceId",
+      "worktreeRoot",
+      "implementation.actor",
+      "implementation.contextId",
+      "review.actor",
+      "review.contextId",
+      "evidencePath",
+      "otherWorkspaceId"
+    ],
+    "attachmentManifestIsCoordinatorOnly": true
+  },
+  "lifecycleOrder": [
+    "baseline pair-readiness pre-begin while both actual worktrees are unimplemented",
+    "baseline pair-begin while both actual worktrees are unimplemented",
+    "baseline pair-preflight while both actual worktrees are unimplemented",
+    "current pair-preflight while both actual worktrees are unimplemented",
+    "only after both pair-preflight commands PASS: deliver role packets and begin condition implementation loops",
+    "run baseline and current loops sequentially",
+    "pair-readiness pre-close, pair-close, report, and compare only after the fixed loops complete"
+  ],
+  "implementationLoop": {
+    "checkpointPlanSource": "REPLACE-final-frozen-components-or-gate-input-sha256",
+    "submissionUnit": "one-component-one-attempt-one-return-archive",
+    "conditionIndependentAllocation": true,
+    "aBByteIdenticalProtocolRequired": true,
+    "attemptOneCreationPolicy": {
+      "attemptOneOnly": true,
+      "createPathsAreOwnedExactlyOnceAcrossCheckpointPlan": true,
+      "createPathsMustExactlyPartitionFrozenChangeTargets": true,
+      "createPathsMustBeOrderedSubsetsOfAllowedChangeTargets": true,
+      "bootstrapDirectoriesDerivedOnlyFromAttemptOneCreatePaths": true,
+      "siteRootOnly": true,
+      "laterAttemptsMayNotCreateTargets": true,
+      "laterSequencesMayNotRecreateTargets": true,
+      "p3OpenServiceTopHeroOwnership": {
+        "site/assets/hero/hero-laurel.png": {
+          "ownerSequence": 3,
+          "mustAppearInAttemptOneCreatePaths": true,
+          "mustNotAppearInSequence6AllowedChangeTargets": true,
+          "mustNotAppearInSequence6AttemptOneCreatePaths": true
+        }
+      }
+    },
+    "componentReturnScopes": [
+      {
+        "elementId": "REPLACE-checkpoint-element-id",
+        "sequence": 1,
+        "componentDecisionCodePath": "REPLACE-code-path",
+        "allowedChangeTargets": [
+          "REPLACE-frozen-change-target"
+        ],
+        "attemptOneCreatePaths": [
+          "REPLACE-ordered-subset-of-allowed-change-targets-created-only-at-attempt-1"
+        ],
+        "derivedBootstrapDirectories": [
+          "REPLACE-deterministically-derived-relative-site-directory"
+        ]
+      }
+    ],
+    "coordinatorChecks": [
+      "condition binding",
+      "elementId",
+      "component decision code path",
+      "attempt number",
+      "coordinator-only progress ledger expected component / attempt / deliverySequence",
+      "archive entry paths",
+      "file hash manifest",
+      "allowedChangeTargets",
+      "attemptOneCreatePaths exactly match the component return plan",
+      "derivedBootstrapDirectories exactly match the directories derived from attemptOneCreatePaths",
+      "attemptOneCreatePaths partition frozen changeTargets exactly once across the checkpoint plan",
+      "P-3 hero-laurel ownership: sequence 3 only; sequence 6 may not create or change it"
+    ],
+    "checkpointPerAppliedReturn": 1,
+    "progressOrder": [
+      "one checked return apply",
+      "one actual matching figma-gate checkpoint result in the actual worktree active state",
+      "p3-role-return --record-checkpoint coordinator proof",
+      "one same-condition feedback artifact and p3-role-return --record-feedback",
+      "only then the next component or retry delivery"
+    ],
+    "feedbackAllowed": [
+      "same-condition gate message verbatim",
+      "same-condition failureClass verbatim",
+      "same-condition diff artifact",
+      "same-condition scope violation paths"
+    ],
+    "feedbackForbidden": [
+      "coordinator analysis",
+      "coordinator advice",
+      "coordinator patch",
+      "other-condition information"
+    ],
+    "maxAttemptsPerComponent": "REPLACE-same-positive-integer-for-baseline-and-current",
+    "stopRule": "REPLACE-identical-baseline-current-stop-rule",
+    "reviewCannotPreCorrectAttempt": true,
+    "absoluteFirstTryPassRateComparableToNormalOperation": false,
+    "comparisonInterpretation": "A/B difference under this identical protocol only",
+    "negativeTestRequirements": [
+      "N-1: Creating a target outside this sequence's allowedChangeTargets fails.",
+      "N-2: Any new target creation at attempt 2 or later fails.",
+      "N-3: A target already created by one sequence cannot be created again by another sequence.",
+      "N-4: A target cannot be created twice within one sequence.",
+      "N-5: A bootstrap directory outside site/, absolute, traversal-bearing, or under a forbidden root fails.",
+      "N-6: protocol componentReturnScopes and return-plan allowedChangeTargets, attemptOneCreatePaths, or derivedBootstrapDirectories mismatch fails.",
+      "N-7: The union of all attemptOneCreatePaths is not an exact 28-target partition of frozen changeTargets fails.",
+      "N-8: Recovery finds a non-empty transaction-created directory, preserves it, reports it, and fails closed.",
+      "N-9: Recovery never deletes a directory absent from its journal.",
+      "N-10: A crash after mkdir and before the created-state write recovers an empty journal-intent-proven directory to a consistent rollback state; a non-empty or journal-unproven directory remains fail-closed.",
+      "N-11: A v1 journal recovers successfully through v2 code.",
+      "N-12: A v2 journal with a required field missing fails.",
+      "N-13: A condition-local return authority whose packet manifest, attachment hash, or identityLeakScan does not match fails.",
+      "N-14: sequence 6 attempts to create or change site/assets/hero/hero-laurel.png and fails.",
+      "N-15: baseline and current finalized handoff-protocol bytes differ and fail.",
+      "N-16: a registry or return plan without per-condition delivery progress, or whose first delivery sequence is not 1 for each condition, fails."
+    ],
+    "retainedLegacyV4NegativeTests": [
+      "A legacy firstComponentFullCreate field is rejected; it is a negative-test fixture only and is not a v2 runtime field.",
+      "A create path outside its component allowlist is rejected.",
+      "A shared delimiter-region return with any byte changed outside its declared delimiters is rejected."
+    ]
+  },
+  "returnPackage": {
+    "planTemplate": "p3-role-return-plan-template.json",
+    "manifestTemplate": "p3-role-return-manifest-template.json",
+    "feedbackTemplate": "p3-role-return-feedback-template.json",
+    "validator": "p3-role-return.mjs",
+    "planVersion": 5,
+    "manifestVersion": 4,
+    "archiveFormat": "plain-ustar-regular-files-only",
+    "returnManifestPath": "return-manifest.json",
+    "checkBeforeApplyRequired": true,
+    "pairPreflightAuthority": "absolute actual common-Git ledger plus baseline/current actual-worktree v13 contract, frozen gate manifest, v5 active preflight state with condition implementationIdentity/responsive input bindings, and preflightId bindings",
+    "applyAllowedOnlyAfter": "both-condition-pair-preflight-pass-mechanically-verified-from-the-frozen-actual-ledger",
+    "progressLedger": "coordinator-only hash-chained JSONL; applies write an intent before worktree mutation and an applied record only after the recovery journal completes",
+    "checkpointProof": "--record-checkpoint reads the actual .figma-gate/active.json and one newly appended matching benchmark attempt; PASS additionally binds the actual checkpoint evidence files",
+    "sameConditionFeedback": "--record-feedback requires an opaque-handoff-bound artifact whose outcome and failure class equal the coordinator checkpoint proof",
+    "nextDeliveryGuard": "the progress ledger rejects a second apply before checkpoint/feedback, skipped attempts, wrong checkpoint order, reused handoff IDs, and replay after completion",
+    "sharedFilePolicy": "one-predeclared-delimited-region-with-outside-bytes-unchanged",
+    "newFilePolicy": "only-explicit-scope-bound-attempt-one-create-paths",
+    "recoveryJournal": {
+      "version": 2,
+      "writeDirectoryIntentBeforeMkdir": true,
+      "recordCreatedByThisTransaction": true,
+      "rollbackDeletesInReverseCreationOrder": true,
+      "rollbackDeletesOnlyEmptyDirectoriesCreatedByThisTransaction": true,
+      "unknownOrNonEmptyDirectoriesArePreservedAndFailClosed": true,
+      "v1RecoveryCompatibilityRequired": true
+    },
+    "multiFileAtomicTransactionGuaranteed": false,
+    "durableFilesystemCommitGuaranteed": false,
+    "interruptedApplyCaveat": "after an interrupted apply, --recover may restore files but cannot silently advance or clear the progress intent; later returns remain fail-closed pending separate coordinator review"
+  },
+  "attachmentOnlyEvidence": {
+    "mode": "attachment-only",
+    "filesystemProbes": {
+      "p7": { "run": false, "countable": false },
+      "p9": { "run": false, "countable": false },
+      "p10": { "run": false, "countable": false },
+      "p12": { "run": false, "countable": false }
+    },
+    "filesystemDenialMayBeClaimed": false,
+    "p11": {
+      "literalFailure": "P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE",
+      "literalFailureRecordCoordinatorOnly": true,
+      "recordIsNeverRoleAttachment": true,
+      "p11Authorization": "NOT_AUTHORIZED",
+      "status": "BLOCKED",
+      "p11PassRequiredForFinalization": false,
+      "p11HelperRequiredForFinalization": false
+    },
+    "ownerOperationalBoundary": "All role attachments are enumerated, hash-bound, and packet-checked by the coordinator. This records an owner-operated procedural boundary and does not claim filesystem denial or technical isolation."
+  },
+  "finalizationRequired": [
+    "independent-review-pass",
+    "owner-approved-pair-specific-records",
+    "four-fresh-role-contexts",
+    "attachment-only-manifest-and-packet-check-for-every-delivery",
+    "checked-return-plan-manifest-and-recovery-evidence",
+    "coordinator-only-literal-p11-fail-record-not-authorized-blocked"
+  ]
+}

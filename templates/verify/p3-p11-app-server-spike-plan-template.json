@@ -1,0 +1,148 @@
+{
+  "_comment": "P-11 App Server feasibility-only spike input. Every REPLACE value must be changed before use. outputRoot must already exist and be empty, must be a child of coordinatorOutputRoot, and must be disjoint from sourceRoot, both actual worktrees, commonGit, pairLock, fixedLedger, and figmaGate. Every launch cwd must be an existing child of coordinatorScratchRoot. timeoutMs is per RPC and post-stdin close only; overallTimeoutMs bounds the public supervisor worker, defaults to 360000 when omitted for v1 compatibility, and may produce a coordinatorOutputRoot timeout receipt outside outputRoot. sandboxProfile is only the App Server wire value read-only. This helper always reports p11Authorization NOT_AUTHORIZED and must not be supplied to pair-begin, role attachment, or P-3 runtime input.",
+  "version": 1,
+  "kind": "p3-p11-app-server-spike-v1",
+  "coordinatorOnly": true,
+  "coordinatorScratchRoot": "REPLACE-absolute-coordinator-scratch-root",
+  "coordinatorOutputRoot": "REPLACE-absolute-coordinator-output-root",
+  "outputRoot": "REPLACE-absolute-empty-child-of-coordinator-output-root",
+  "forbiddenRoots": {
+    "sourceRoot": "REPLACE-absolute-source-root-containing-templates-verify",
+    "actualWorktrees": [
+      "REPLACE-absolute-baseline-actual-worktree-root",
+      "REPLACE-absolute-current-actual-worktree-root"
+    ],
+    "commonGit": "REPLACE-absolute-common-git-directory",
+    "pairLock": "REPLACE-absolute-pair-lock-path",
+    "fixedLedger": "REPLACE-absolute-fixed-ledger-path",
+    "figmaGate": "REPLACE-absolute-figma-gate-path"
+  },
+  "timeoutMs": 30000,
+  "overallTimeoutMs": 360000,
+  "catalog": {
+    "mcpServers": [
+      "GitKraken",
+      "node_repl",
+      "figma",
+      "openaiDeveloperDocs"
+    ],
+    "pluginApps": [
+      "documents",
+      "spreadsheets",
+      "presentations",
+      "browser-use",
+      "pdf",
+      "chrome",
+      "template-creator",
+      "sites",
+      "visualize",
+      "browser"
+    ],
+    "projectStates": [
+      "p3-open-service-top-hero-pilot"
+    ]
+  },
+  "candidate": {
+    "launch": {
+      "id": "candidate",
+      "executable": "REPLACE-absolute-codex-executable",
+      "args": [
+        "app-server"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "cwd": "REPLACE-absolute-existing-child-of-coordinator-scratch-root",
+      "codeHome": {
+        "path": "REPLACE-absolute-real-or-disposable-CODEX_HOME",
+        "profile": "real-profile"
+      },
+      "sandboxProfile": "read-only",
+      "model": "REPLACE-model-id"
+    }
+  },
+  "controls": {
+    "negativeToolName": "p11-intentionally-absent-control",
+    "mcp": {
+      "launch": {
+        "id": "mcp-control",
+        "executable": "REPLACE-absolute-codex-executable",
+        "args": [
+          "app-server"
+        ],
+        "versionArgs": [
+          "--version"
+        ],
+        "cwd": "REPLACE-absolute-existing-child-of-coordinator-scratch-root",
+        "codeHome": {
+          "path": "REPLACE-absolute-disposable-CODEX_HOME-with-only-p11-health-MCP",
+          "profile": "disposable-profile"
+        },
+        "sandboxProfile": "read-only",
+        "model": "REPLACE-model-id"
+      },
+      "healthServerName": "p11-health",
+      "healthToolName": "ping"
+    },
+    "pluginApp": {
+      "launch": {
+        "id": "plugin-control",
+        "executable": "REPLACE-absolute-codex-executable",
+        "args": [
+          "app-server"
+        ],
+        "versionArgs": [
+          "--version"
+        ],
+        "cwd": "REPLACE-absolute-existing-child-of-coordinator-scratch-root",
+        "codeHome": {
+          "path": "REPLACE-absolute-disposable-CODEX_HOME-with-only-safe-app-control",
+          "profile": "disposable-profile"
+        },
+        "sandboxProfile": "read-only",
+        "model": "REPLACE-model-id"
+      },
+      "expectedAppId": "p11-safe-app"
+    },
+    "projectState": {
+      "trusted": {
+        "id": "project-trusted",
+        "executable": "REPLACE-absolute-codex-executable",
+        "args": [
+          "app-server"
+        ],
+        "versionArgs": [
+          "--version"
+        ],
+        "cwd": "REPLACE-absolute-existing-child-of-coordinator-scratch-root",
+        "codeHome": {
+          "path": "REPLACE-absolute-CODEX_HOME-for-trusted-project-control",
+          "profile": "disposable-profile"
+        },
+        "sandboxProfile": "read-only",
+        "model": "REPLACE-model-id"
+      },
+      "untrusted": {
+        "id": "project-untrusted",
+        "executable": "REPLACE-absolute-codex-executable",
+        "args": [
+          "app-server"
+        ],
+        "versionArgs": [
+          "--version"
+        ],
+        "cwd": "REPLACE-absolute-existing-child-of-coordinator-scratch-root",
+        "codeHome": {
+          "path": "REPLACE-absolute-CODEX_HOME-for-untrusted-project-control",
+          "profile": "disposable-profile"
+        },
+        "sandboxProfile": "read-only",
+        "model": "REPLACE-model-id"
+      },
+      "observable": {
+        "origin": "mcp",
+        "name": "REPLACE-safe-marker-present-only-in-trusted-control"
+      }
+    }
+  }
+}

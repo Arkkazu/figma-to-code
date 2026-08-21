@@ -1,0 +1,120 @@
+{
+  "schema": "p3-role-return-authority-candidate-design/v2",
+  "status": "candidate-only",
+  "candidateOnly": true,
+  "runtimeEligible": false,
+  "ownerApproved": false,
+  "pairId": "open-service-top-hero-v1-20260809",
+  "supersedes": {
+    "candidateBundleId": "400acd6c1c1e3d8bd7449310b2e0e55c59b8bb2e5bd2358ee5fd7d1ca6d1da14",
+    "reason": "Claude independent design audit rejected sequence 1 / attempt 1 creation of all 28 targets because it defeats per-sequence scope isolation and contaminates firstTryPassRate."
+  },
+  "executionBoundary": {
+    "pairReadiness": false,
+    "pairBegin": false,
+    "pairPreflight": false,
+    "rolePacket": false,
+    "roleDelivery": false,
+    "roleLaunch": false,
+    "implementation": false,
+    "browserMeasurement": false,
+    "figmaMeasurement": false,
+    "p11": false
+  },
+  "perSequenceBootstrap": {
+    "model": "scope-preserving-per-sequence-bootstrap",
+    "status": "PENDING_EXACT_PER_SEQUENCE_TARGET_ALLOCATION",
+    "rejectedModel": "sequence-1-attempt-1-all-28-firstComponentFullCreate",
+    "conditionInvariant": true,
+    "constraints": [
+      "Each createTargets list must be an ordered subset of that sequence's final allowedChangeTargets.",
+      "The union of all createTargets lists must exactly equal Decision J scope.changeTargets.",
+      "No target may occur in more than one createTargets list.",
+      "A later sequence may modify an already-created target only when that target is in its allowedChangeTargets; it must not create it again.",
+      "The exact per-sequence allocation remains unresolved in this candidate and requires independent review plus a separate owner approval before finalization.",
+      "No firstComponentFullCreate field is permitted in v2."
+    ],
+    "sequences": [
+      {
+        "sequence": 1,
+        "createTargets": [],
+        "allocationStatus": "OWNER_INPUT_REQUIRED",
+        "requirement": "Resolve this sequence's exact ordered createTargets from its final allowedChangeTargets."
+      },
+      {
+        "sequence": 2,
+        "createTargets": [],
+        "allocationStatus": "OWNER_INPUT_REQUIRED",
+        "requirement": "Resolve this sequence's exact ordered createTargets from its final allowedChangeTargets."
+      },
+      {
+        "sequence": 3,
+        "createTargets": [],
+        "allocationStatus": "OWNER_INPUT_REQUIRED",
+        "requirement": "Resolve this sequence's exact ordered createTargets from its final allowedChangeTargets."
+      },
+      {
+        "sequence": 4,
+        "createTargets": [],
+        "allocationStatus": "OWNER_INPUT_REQUIRED",
+        "requirement": "Resolve this sequence's exact ordered createTargets from its final allowedChangeTargets; an empty allocation is allowed only when the final proof still partitions all frozen targets."
+      },
+      {
+        "sequence": 5,
+        "createTargets": [],
+        "allocationStatus": "OWNER_INPUT_REQUIRED",
+        "requirement": "Resolve this sequence's exact ordered createTargets from its final allowedChangeTargets."
+      },
+      {
+        "sequence": 6,
+        "createTargets": [],
+        "allocationStatus": "OWNER_INPUT_REQUIRED",
+        "requirement": "Resolve this sequence's exact ordered createTargets from its final allowedChangeTargets; an empty allocation is allowed only when the final proof still partitions all frozen targets."
+      }
+    ]
+  },
+  "bootstrapDirectories": {
+    "model": "derived-from-createTargets-dirname",
+    "status": "PENDING_FINAL_TARGET_ALLOCATION",
+    "constraints": [
+      "Derive directories from the ordered createTargets list for the return; do not accept an independently entered bootstrap directory list.",
+      "Every derived directory must be relative and either equal site or be under site/.",
+      "MyBrain/, .git, .figma-gate, p3-drafts, absolute paths, and parent traversals are forbidden.",
+      "The final return plan and handoff protocol must bind the same derived directory policy."
+    ]
+  },
+  "journalV2": {
+    "status": "CANDIDATE_CONTRACT_ONLY",
+    "v1RecoveryCompatibilityRequired": true,
+    "constraints": [
+      "Write the intended per-directory journal entry before mkdir; never create a directory before its rollback intent is journaled.",
+      "Record createdByThisTransaction for every directory actually created by the transaction.",
+      "Rollback processes journaled directories in reverse order.",
+      "Rollback may remove a directory only when createdByThisTransaction is true and the directory is empty at rollback time.",
+      "If a rollback candidate directory is non-empty, leave it in place, report it, and fail closed; do not force-delete it.",
+      "A directory not recorded in the journal is unknown and must never be deleted by recovery, including after a mkdir-before-journal crash."
+    ]
+  },
+  "negativeTestRequirements": [
+    "N-1: The retained v4 fixture with firstComponentFullCreate.paths outside that sequence's allowedChangeTargets fails; v2 also fails if a legacy firstComponentFullCreate field is supplied.",
+    "N-2: The retained v4 fixture where sequence >= 2 creates a file fails; under v2, a sequence >= 2 may create only a target in its approved createTargets allocation, and every other creation fails.",
+    "N-3: The retained v4 fixture that enables firstComponentFullCreate at sequence 1 / attempt >= 2 fails; under v2, any bootstrap creation at attempt >= 2 fails.",
+    "N-4: createTargets do not partition all 28 frozen changeTargets exactly once fails.",
+    "N-5: A derived bootstrap directory outside site/ or containing traversal/forbidden roots fails.",
+    "N-6: Protocol and return-plan createTargets/derived-directory policies differ fails.",
+    "N-7: Rollback finds a non-empty transaction-created directory, preserves it, reports it, and fails.",
+    "N-8: Recovery never deletes a directory absent from the journal.",
+    "N-9: A crash after mkdir but before the journal state is complete leaves unknown directories untouched and fails closed.",
+    "N-10: v1 journal recovery through v2 code passes.",
+    "N-11: A v2 journal missing required fields fails.",
+    "N-12: Condition-local return authority packet manifest, attachment hash, or identityLeakScan mismatch fails.",
+    "N-13: Baseline and current finalized handoff protocols that are not byte-identical fail."
+  ],
+  "finalizationRequirements": [
+    "Obtain a new independent design review of this v2 candidate before helper or protocol implementation.",
+    "Resolve the exact per-sequence allowedChangeTargets and createTargets allocation in final records; this candidate intentionally contains none.",
+    "Add and pass the listed pure-validation/fixture negative tests without lifecycle, role launch, browser, Figma, or P-11 execution.",
+    "Obtain a separate owner approval for the actual final bytes and approval timestamp before setting ownerApproved:true.",
+    "Keep baseline and current finalized protocol bytes identical and preserve attachment-only boundaries."
+  ]
+}

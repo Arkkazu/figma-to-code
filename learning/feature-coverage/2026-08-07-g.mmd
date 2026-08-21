@@ -1,0 +1,93 @@
+flowchart LR
+  feature_node_structure["ノード構造・座標・寸法"]
+  feature_node_structure --> feature_node_structure_acquisition["取得: covered"]
+  class feature_node_structure_acquisition pass
+  feature_node_structure_acquisition --> feature_node_structure_specification["spec化: covered"]
+  class feature_node_structure_specification pass
+  feature_node_structure_specification --> feature_node_structure_conversion["変換: covered"]
+  class feature_node_structure_conversion pass
+  feature_node_structure_conversion --> feature_node_structure_verification["検証: covered"]
+  class feature_node_structure_verification pass
+  feature_auto_layout["Auto Layout・Grid・制約"]
+  feature_auto_layout --> feature_auto_layout_acquisition["取得: covered"]
+  class feature_auto_layout_acquisition pass
+  feature_auto_layout_acquisition --> feature_auto_layout_specification["spec化: covered"]
+  class feature_auto_layout_specification pass
+  feature_auto_layout_specification --> feature_auto_layout_conversion["変換: covered"]
+  class feature_auto_layout_conversion pass
+  feature_auto_layout_conversion --> feature_auto_layout_verification["検証: covered"]
+  class feature_auto_layout_verification pass
+  feature_text_typography["テキスト・タイポグラフィ"]
+  feature_text_typography --> feature_text_typography_acquisition["取得: covered"]
+  class feature_text_typography_acquisition pass
+  feature_text_typography_acquisition --> feature_text_typography_specification["spec化: covered"]
+  class feature_text_typography_specification pass
+  feature_text_typography_specification --> feature_text_typography_conversion["変換: covered"]
+  class feature_text_typography_conversion pass
+  feature_text_typography_conversion --> feature_text_typography_verification["検証: covered"]
+  class feature_text_typography_verification pass
+  feature_variables_and_styles["Variables・Styles（デザイントークン）"]
+  feature_variables_and_styles --> feature_variables_and_styles_acquisition["取得: covered"]
+  class feature_variables_and_styles_acquisition pass
+  feature_variables_and_styles_acquisition --> feature_variables_and_styles_specification["spec化: covered"]
+  class feature_variables_and_styles_specification pass
+  feature_variables_and_styles_specification --> feature_variables_and_styles_conversion["変換: covered"]
+  class feature_variables_and_styles_conversion pass
+  feature_variables_and_styles_conversion --> feature_variables_and_styles_verification["検証: covered"]
+  class feature_variables_and_styles_verification pass
+  feature_rendered_reference["Figmaレンダリング基準画像"]
+  feature_rendered_reference --> feature_rendered_reference_acquisition["取得: covered"]
+  class feature_rendered_reference_acquisition pass
+  feature_rendered_reference_acquisition --> feature_rendered_reference_specification["spec化: covered"]
+  class feature_rendered_reference_specification pass
+  feature_rendered_reference_specification --> feature_rendered_reference_conversion["変換: covered"]
+  class feature_rendered_reference_conversion pass
+  feature_rendered_reference_conversion --> feature_rendered_reference_verification["検証: covered"]
+  class feature_rendered_reference_verification pass
+  feature_raster_and_vector_assets["ラスター・ベクターアセット"]
+  feature_raster_and_vector_assets --> feature_raster_and_vector_assets_acquisition["取得: covered"]
+  class feature_raster_and_vector_assets_acquisition pass
+  feature_raster_and_vector_assets_acquisition --> feature_raster_and_vector_assets_specification["spec化: covered"]
+  class feature_raster_and_vector_assets_specification pass
+  feature_raster_and_vector_assets_specification --> feature_raster_and_vector_assets_conversion["変換: covered"]
+  class feature_raster_and_vector_assets_conversion pass
+  feature_raster_and_vector_assets_conversion --> feature_raster_and_vector_assets_verification["検証: covered"]
+  class feature_raster_and_vector_assets_verification pass
+  feature_component_instance_mapping["コンポーネント・インスタンス・既存実装対応"]
+  feature_component_instance_mapping --> feature_component_instance_mapping_acquisition["取得: covered"]
+  class feature_component_instance_mapping_acquisition pass
+  feature_component_instance_mapping_acquisition --> feature_component_instance_mapping_specification["spec化: covered"]
+  class feature_component_instance_mapping_specification pass
+  feature_component_instance_mapping_specification --> feature_component_instance_mapping_conversion["変換: covered"]
+  class feature_component_instance_mapping_conversion pass
+  feature_component_instance_mapping_conversion --> feature_component_instance_mapping_verification["検証: covered"]
+  class feature_component_instance_mapping_verification pass
+  feature_responsive_constraints["レスポンシブ制約・中間幅"]
+  feature_responsive_constraints --> feature_responsive_constraints_acquisition["取得: covered"]
+  class feature_responsive_constraints_acquisition pass
+  feature_responsive_constraints_acquisition --> feature_responsive_constraints_specification["spec化: covered"]
+  class feature_responsive_constraints_specification pass
+  feature_responsive_constraints_specification --> feature_responsive_constraints_conversion["変換: covered"]
+  class feature_responsive_constraints_conversion pass
+  feature_responsive_constraints_conversion --> feature_responsive_constraints_verification["検証: covered"]
+  class feature_responsive_constraints_verification pass
+  feature_keyframe_motion["キーフレームモーション"]
+  feature_keyframe_motion --> feature_keyframe_motion_acquisition["取得: covered"]
+  class feature_keyframe_motion_acquisition pass
+  feature_keyframe_motion_acquisition --> feature_keyframe_motion_specification["spec化: covered"]
+  class feature_keyframe_motion_specification pass
+  feature_keyframe_motion_specification --> feature_keyframe_motion_conversion["変換: covered"]
+  class feature_keyframe_motion_conversion pass
+  feature_keyframe_motion_conversion --> feature_keyframe_motion_verification["検証: covered"]
+  class feature_keyframe_motion_verification pass
+  feature_prototype_interactions["プロトタイプ遷移・トリガー"]
+  feature_prototype_interactions --> feature_prototype_interactions_acquisition["取得: covered"]
+  class feature_prototype_interactions_acquisition pass
+  feature_prototype_interactions_acquisition --> feature_prototype_interactions_specification["spec化: covered"]
+  class feature_prototype_interactions_specification pass
+  feature_prototype_interactions_specification --> feature_prototype_interactions_conversion["変換: covered"]
+  class feature_prototype_interactions_conversion pass
+  feature_prototype_interactions_conversion --> feature_prototype_interactions_verification["検証: covered"]
+  class feature_prototype_interactions_verification pass
+  classDef pass fill:#d9f7e8,stroke:#1d7a46,color:#123d25
+  classDef gap fill:#ffe8e8,stroke:#b42318,color:#5c1111

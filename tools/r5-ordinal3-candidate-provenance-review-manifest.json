@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-candidate-provenance-review-manifest",
+  "recordState": "review-only",
+  "effective": false,
+  "scope": {
+    "workspaceOnly": true,
+    "candidateValidationOnly": true,
+    "externalP3ArtifactReads": false,
+    "externalP3ArtifactWrites": false,
+    "runtimeExecution": false
+  },
+  "bindingModel": {
+    "manifestPinsVerifier": false,
+    "verifierPinsManifestSha256": true,
+    "reason": "The verifier is intentionally excluded from this manifest to avoid a self-hash cycle."
+  },
+  "roots": {
+    "candidateDesign": {
+      "workspacePath": "tools/r5-baseline-reissue-3-candidate-design.json",
+      "sha256": "4c56ecb4a75f12b9fedf2e5b1ac676fdc60dad877c4eead15e76a630eff05955"
+    },
+    "candidateDryRunGenerator": {
+      "workspacePath": "tools/r5-baseline-reissue-3-candidate-dry-run.mjs",
+      "sha256": "18287ba29f74dee61963cbd9eace696b64bf9d3d6c0725ea9a5fb331a821c87d"
+    }
+  },
+  "dependencyClosure": {
+    "uniqueWorkspaceInputCountExcludingRoots": 24,
+    "allFilesAreWorkspaceRelativeRegularNonLinkFiles": true,
+    "files": [
+      {
+        "workspacePath": "templates/verify/p3-role-return.mjs",
+        "sha256": "d9723895c308b3f87f27f7f8cd1e06409a4104ac4b2b5ba1e910d7630b36d2cc"
+      },
+      {
+        "workspacePath": "templates/verify/p3-role-return.e2e.mjs",
+        "sha256": "216cfdafb7221e2e5539c3581ebf82aeb7bc25ec3f7a2e1cec8d3fafaec8b74a"
+      },
+      {
+        "workspacePath": "tools/r5-return-helper-e2e-evidence-d9723895.json",
+        "sha256": "22584e4f6eea6454b318b1f57b4e76e97156845938879f098f97b83f35241e90"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-os-isolation-proof-schema.json",
+        "sha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-readonly-capability-probe-plan.md",
+        "sha256": "5a8fad287a9da97b62f428fa055b1892c9d577559c377283dccca766e35f4dd1"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-role-read-boundary-guard-contract.json",
+        "sha256": "c874c8d60908168522935bbc82ffcf09bb9ac28663ba7911f9a6863f6d6873d7"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-role-read-boundary-guard-synthetic-tuple-allowlist.json",
+        "sha256": "6625915372c44f54693f06d93fe9b516b9ad375e59ff101f6caad46588e1bb57"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-role-read-boundary-guard-contract-release-draft.json",
+        "sha256": "e59245a2b0974ea008c0396f738e1c0aaac60c50bb7ca177e8a7c5a4cb555112"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-ambient-input-provenance-synthetic-probe-design.md",
+        "sha256": "14b2e343ed3652704f6b14a6be8f68648098fdb5f851e6775b6d48c61f12f6ad"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-ambient-input-provenance-synthetic-validator.mjs",
+        "sha256": "553529e63e660977c30cc29b049a9ccfe9c6cde47fa225d0c263ca5856af776f"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-ambient-input-provenance-synthetic-validator.e2e.mjs",
+        "sha256": "e7af9037e12c2a1c9ce73d7ca791d5f2439000b6fe3b64e96f3d9e6fa775d1f6"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-contract-amendment-draft.json",
+        "sha256": "b7960c5509ea50ed27d18ad636f0f12c5c712444a84de0765068f416b27b28a0"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-hyperv-capability-probe-design.md",
+        "sha256": "c4a2d4c684e9768a3af7bc150452a19e2a834e45ee220341d7acf378cea58228"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-fixed-exporter-design.md",
+        "sha256": "8a1ce2913f14e55a823ee59c2e140a88b8f328550efaa6bc3415d5d4e995951a"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-contract-amendment-owner-acceptance.json",
+        "sha256": "a35ccd16bd8a911879614f04807a6d17d745e3de0491a1ee71350cfba2077e8e"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-evidence-validator.mjs",
+        "sha256": "87ff3f44ae9dbf5c735ccff4f239824600e9da2e0ea610b1f36fad731def6a23"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-evidence-validator.e2e.mjs",
+        "sha256": "b665a18c995f8b868aa657995650739e974aea0deee94c673eea4e05679f5b53"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-owner-zero-cost-constraint.json",
+        "sha256": "4160d9537cd5cb79ab66b0cf9c065a211a9314873417f356dbbc6300dd3dec03"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-owner-zero-cost-constraint-v2.json",
+        "sha256": "707c5535c1f04713e99951962be989e30d1d65a7a26300caca8d00e68d2906b4"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-owner-zero-cost-constraint-v3.json",
+        "sha256": "ba5b5200a572f49bad245b9d343f4983a0f994249eb1d2e6db89a0586fc35b18"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-external-verifier-boundary-requirements-draft.md",
+        "sha256": "f3a0ea86270038e62278f97f6d2fa4f75b6c85fb103052a16ae56571877688b3"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+        "sha256": "b7ac0c19c4669a4695e760860552058fc2967ddbe9d5766b4df86af7059029f6"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-zero-cost-external-boundary-feasibility.md",
+        "sha256": "22d50e6e3f38a39aa99c01a9c5258af0b06ef4ff73f7915b43dc1e5fad38a45c"
+      },
+      {
+        "workspacePath": "tools/r5-ordinal3-zero-cost-local-hardware-inventory.md",
+        "sha256": "f6641a3de0bbb6d6fa5a0519b6b34b5e5984942369a481f2e49287b03e7e049c"
+      }
+    ]
+  },
+  "expectedGeneratorChecks": {
+    "syntaxCheck": true,
+    "selfTest": {
+      "schema": "p3-r5-pair-reissue-3-candidate-self-test/v1",
+      "status": "pass-workspace-only-no-external-action",
+      "externalWritesPerformed": false,
+      "roleDeliveryPerformed": false,
+      "roleLaunchPerformed": false,
+      "implementationPerformed": false,
+      "returnCheckOrApplyPerformed": false,
+      "browserOrFigmaMeasurementPerformed": false,
+      "p11Changed": false,
+      "checks": [
+        "positive-design-and-derived-identifiers",
+        "derived-identifiers-null-bypass",
+        "external-os-gate-false",
+        "runtime-selected",
+        "p11-promoted",
+        "injected-future-delivery-authorization",
+        "injected-future-launch-authorization",
+        "delivery-now-authorized",
+        "launch-now-authorized",
+        "authority-boundary-launch-now",
+        "recovery-exception-extra-authorization",
+        "candidate-root-extra-authorization",
+        "predecessor-application-state-promoted",
+        "predecessor-extra-authorization",
+        "identity-algorithm-weakened",
+        "identity-extra-authorization",
+        "protocol-byte-identity-weakened",
+        "protocol-future-publication-weakened",
+        "candidate-scope-broadened",
+        "no-reuse-weakened",
+        "topology-extra-authorization-key",
+        "helper-release-extra-authorization",
+        "fresh-destination-policy-weakened",
+        "zero-cost-cap-increased",
+        "noncanonical-json",
+        "duplicate-json-key",
+        "duplicate-nested-json-key",
+        "duplicate-escaped-json-key",
+        "json-bom",
+        "json-nul"
+      ]
+    },
+    "dryRun": {
+      "schema": "p3-r5-pair-reissue-3-candidate/v2",
+      "status": "dry-run-pass-not-published",
+      "mode": "workspace-only-read-only-dry-run",
+      "externalWritesPerformed": false,
+      "roleDeliveryPerformed": false,
+      "roleLaunchPerformed": false,
+      "externalPredecessorArtifactsReadByDryRun": false,
+      "externalPredecessorArtifactsModifiedByDryRun": false,
+      "freshDestinationAbsenceVerifiedByDryRun": false,
+      "canonicalCandidateSha256": "e29b9791633cb25a998e367281f0026aafd62b0fb85603836ac9504bc96a0f91",
+      "actionsPermittedByThisDryRun": []
+    }
+  },
+  "nonAuthorizingResult": {
+    "candidatePublicationAuthorized": false,
+    "roleDeliveryAuthorized": false,
+    "roleLaunchAuthorized": false,
+    "implementationAuthorized": false,
+    "returnCheckAuthorized": false,
+    "returnApplyAuthorized": false,
+    "measurementAuthorized": false,
+    "accessibilityAuthorized": false,
+    "motionAuthorized": false,
+    "gateAuthorized": false,
+    "p11Authorization": "NOT_AUTHORIZED",
+    "providerOrRuntimeProvisioningAuthorized": false,
+    "actionsPermittedByThisVerification": []
+  },
+  "requiredFinalStatement": "This is a workspace-only review of candidate bytes and deterministic dry-run output. It reads no external P-3 artifact, creates no runtime, and authorizes no publication, delivery, launch, implementation, return, measurement, gate, or P-11 change."
+}

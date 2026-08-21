@@ -1,0 +1,584 @@
+{
+  "version": 1,
+  "id": "figma-log-intake-d2ed99fd2816dc68",
+  "status": "waiting-human",
+  "policyPath": "rules/log-promotion-policy.json",
+  "policySha256": "680b9017688fbf1b7d77d2547557292454a56b82ca999d0d3f0729db3a1c5de3",
+  "records": [
+    {
+      "id": "correction-20260730-scoped-fix-execution-fence",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-30: scoped-fix-execution-drift",
+        "line": 231,
+        "sha256": "12c4d23d2b90db34c74a0a0b7736ed2593c5fec77686037642952ebfb010e34f"
+      }
+    },
+    {
+      "id": "correction-browser-layout-static-verification-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: browser-layout-static-verification",
+        "line": 221,
+        "sha256": "250b6d8569916af459f581dfeba3af7e1e8e48e2262ae6514a7213aab440e9e4"
+      }
+    },
+    {
+      "id": "correction-close-contract-version-20260803",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: close-report に契約バージョンを刻む",
+        "line": 89,
+        "sha256": "be473dcbc6df5d3ea7136c38a540c91c056a1e6b44d005300d68e64b79e4471a"
+      }
+    },
+    {
+      "id": "correction-comparison-overlay-export-scale-20260819",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-19: inconsistent-comparison-export-scale",
+        "line": 241,
+        "sha256": "9f24167d3c9566fb1613d1b7880314fd736cf89b5ea89c43784543d8f45d32ae"
+      }
+    },
+    {
+      "id": "correction-component-section-spacing-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: component-section-spacing-ownership",
+        "line": 216,
+        "sha256": "0b7d33495a8dbd2d5a00e72e0c32244ccd85630458389b76ae3ce4b88e36c5d4"
+      }
+    },
+    {
+      "id": "correction-exception-to-mechanism-20260804",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 抜け穴が常用され始めたら、正当なケースを機械判定に変える",
+        "line": 68,
+        "sha256": "d54e5ac0efc9836359b7d6e2a18d9e384f2e4c75c1c0258e7dba849ae4a8daf0"
+      }
+    },
+    {
+      "id": "correction-execution-evidence-20260804",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 「実施済みか」の判定は、実施の証跡を見て決める",
+        "line": 27,
+        "sha256": "6a4d60c5d6dcaf9af5da070d395c9ea3980cf1e8119cdf5390005fd49e3b0456"
+      }
+    },
+    {
+      "id": "correction-log-feedback-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: log-to-rule-feedback-gap",
+        "line": 206,
+        "sha256": "571c62d0fef12ae0912174e475778a53ee9d76b01157630d8ca0c75f6509dcfb"
+      }
+    },
+    {
+      "id": "correction-node-map-real-id-20260804",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: node map の figmaNodeId は実IDだけを使う",
+        "line": 21,
+        "sha256": "fe96fea6eba79002765b0be1bf741cd96e6855e5888f1a9df71e08b9a8467ce4"
+      }
+    },
+    {
+      "id": "correction-owner-correction-receipt-gate-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: owner-correction-log-not-gated",
+        "line": 226,
+        "sha256": "951dcc71dfbbe4421679ce857b1b9bb85165b87913733dd1614723d37789df44"
+      }
+    },
+    {
+      "id": "correction-page-coverage-inventory-20260802",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-02: page coverageを inventory と scope contract に分離する",
+        "line": 165,
+        "sha256": "66aff58db2522475d2fe8b878ef9ea1470b857ab5e5a3603814265529b17a826"
+      }
+    },
+    {
+      "id": "correction-page-coverage-semantic-evidence-20260802",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-02（2）: page coverageの証跡は「文字列があること」で満たさない",
+        "line": 156,
+        "sha256": "7e99816e4bbd59f77791d8dc753850b011f8d942785afa909395faaba0523ee9"
+      }
+    },
+    {
+      "id": "correction-provenance-spec-20260709",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-09",
+        "line": 317,
+        "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+      }
+    },
+    {
+      "id": "correction-required-check-must-stop-20260804",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 「検出はするが止めない」検査は、検出していないのと同じ扱いになる",
+        "line": 32,
+        "sha256": "9829f43db197e893b7b601a4bd644cda8b03681d6ec92f7dd96a22464ac6014e"
+      }
+    },
+    {
+      "id": "correction-spec-expectation-required-20260804",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 期待値を持たないspec要素は「検証したふり」になる",
+        "line": 51,
+        "sha256": "ff97b9fdfc7fe305647da744036b1fc216d7bf352409adc4b2dd68955bc938db"
+      }
+    },
+    {
+      "id": "correction-text-node-content-20260804",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: Figmaのテキストノードは文言を検証対象にする",
+        "line": 45,
+        "sha256": "1fc7e7597f01d41a7b35dbdb9ce29137b1d4379b73dd527b8fe3e35f0fce2ca3"
+      }
+    },
+    {
+      "id": "correction-visible-icon-asset-coverage-20260820",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-20: visible-icon-asset-coverage",
+        "line": 246,
+        "sha256": "295978ac55cf0145050927e531070c47497725c40dfc0376ecadd76af2fc3e9c"
+      }
+    },
+    {
+      "id": "correction-visual-threshold-basis-20260803",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 画像差分の閾値は実測した下限に基づいて宣言する",
+        "line": 122,
+        "sha256": "f637db0f1ceb2caaac978f8127472f7b5e4b05341b72f58845a0216677bb4198"
+      }
+    },
+    {
+      "id": "figma-full-page-verification-required-20260821",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-21: partial-page-verification",
+        "line": 256,
+        "sha256": "1a8b1081022d4daa69cfeae0bb2110adb53055d0f1d123f6eedbb6ac06f6cdba"
+      }
+    },
+    {
+      "id": "figma-subproperty-reporting-discipline-20260821",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-21: partial-visual-verification",
+        "line": 251,
+        "sha256": "f28809f2e2f3f5f70fbeecf08520dfdf838aec5a0f975a958629da581d6750d3"
+      }
+    },
+    {
+      "id": "mistake-provenance-spec-20260625",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-06-25",
+        "line": 142,
+        "sha256": "405a72d3fbb09975c1e4bee4137752b7188fbac18a663765a8c0fc87a4070db6"
+      }
+    },
+    {
+      "id": "scope-expansion-during-scoped-fix-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: scope-expansion-during-scoped-fix",
+        "line": 211,
+        "sha256": "5730d8a17d2662199f96cdd2b5d256caba4d3d334688b95b80602764992b6546"
+      }
+    }
+  ],
+  "nonPromotable": [
+    {
+      "id": "correction-archived-evidence-obligation-20260804",
+      "kind": "correction",
+      "failureClass": "archived-evidence-obligation",
+      "recurrenceKey": "archived-evidence-obligation",
+      "reason": "許可済み検証器には退避後の運用義務を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 証跡を退避するときは、残る義務を同じ出力に載せる",
+        "line": 57,
+        "sha256": "76a17c008988a1a34e5f33bd5e5f01a7e5c2b84e4998e2a2a4233fb827ab50b1"
+      }
+    },
+    {
+      "id": "correction-card-dom-identity-20260805",
+      "kind": "correction",
+      "failureClass": "card-dom-identity",
+      "recurrenceKey": "card-dom-identity",
+      "reason": "許可済み検証器ではカード実DOM同一性の負のE2Eを現状再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-05: 反復カードのリンク先・画像同一性はDOM属性で照合する",
+        "line": 11,
+        "sha256": "f1f5f2ccf6f1aea73dcc78a297ef37640ea409a935efccd3c2834b0778028fc2"
+      }
+    },
+    {
+      "id": "correction-component-reuse-asset-check-20260731",
+      "kind": "correction",
+      "failureClass": "component-reuse-asset-check",
+      "recurrenceKey": "component-reuse-asset-check",
+      "reason": "許可済み検証器ではreuse部品の色・状態・asset照合欠落を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-31: 共通部品流用前の色・アセット照合",
+        "line": 187,
+        "sha256": "92e060c04b7315fa71381bb5aae23807595030124b48629276125e524bcfce6d"
+      }
+    },
+    {
+      "id": "correction-contract-upgrade-audit-20260803",
+      "kind": "correction",
+      "failureClass": "contract-upgrade-audit",
+      "recurrenceKey": "contract-upgrade-audit",
+      "reason": "許可済み検証器には旧契約scopeの棚卸し全体を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 契約を強化したら旧契約scopeの棚卸しを同時に行う",
+        "line": 101,
+        "sha256": "5093a010d941c21fdcc284cf76b4665885894911cadbd2fd67014c24c0db0d8e"
+      }
+    },
+    {
+      "id": "correction-copied-evidence-scope-content-20260803",
+      "kind": "correction",
+      "failureClass": "copied-evidence-scope-content",
+      "recurrenceKey": "copied-evidence-scope-content",
+      "reason": "許可済み検証器には文章の意味的なscope適合を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 先行scopeの証跡を複製したら、scope固有の記述を全件書き換える",
+        "line": 83,
+        "sha256": "6ed40db42b303c9e04048eb60c664a891c1273214e3f31b6b804eddae103788f"
+      }
+    },
+    {
+      "id": "correction-cross-project-rulebook-20260729",
+      "kind": "correction",
+      "failureClass": "cross-project-rulebook",
+      "recurrenceKey": "cross-project-rulebook",
+      "reason": "許可済み検証器には案件横断の情報配置原則を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-29: figma-to-code-is-cross-project-rulebook",
+        "line": 197,
+        "sha256": "e240a05a98dbbc4400423a49557ac9457dc91ddc66dd8674cc79ec2c4a5e21b6"
+      }
+    },
+    {
+      "id": "correction-current-design-reference-20260804",
+      "kind": "correction",
+      "failureClass": "current-design-reference",
+      "recurrenceKey": "current-design-reference",
+      "reason": "許可済み検証器には参照デザインの現行性を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 旧契約の棚卸しでは、参照デザインが現行かを先に見る",
+        "line": 62,
+        "sha256": "42e2b8fa526f4b9c9b9ca00cbe8b2991a0f38c48a34b6b488e894048a0bbde0d"
+      }
+    },
+    {
+      "id": "correction-diff-coordinate-diagnosis-20260803",
+      "kind": "correction",
+      "failureClass": "diff-coordinate-diagnosis",
+      "recurrenceKey": "diff-coordinate-diagnosis",
+      "reason": "許可済み検証器には差分画素の原因座標特定を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 画像差分の原因は面積ではなく差分画素の座標で特定する",
+        "line": 114,
+        "sha256": "43ca905208ade02089e10c6f7c7e7249dd01a567f9c57feddaa64984ba976e27"
+      }
+    },
+    {
+      "id": "correction-figma-line-height-rounding-20260803",
+      "kind": "correction",
+      "failureClass": "figma-line-height-rounding",
+      "recurrenceKey": "figma-line-height-rounding",
+      "reason": "許可済み検証器ではFigma由来line-heightの丸め規則を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: Figmaの行送りは整数pxへ丸められる",
+        "line": 105,
+        "sha256": "5515ea65afa7b3dae728f8ab6d7b6590d339ed5314cb52845e157ef7b61b7ac3"
+      }
+    },
+    {
+      "id": "correction-hidden-readiness-20260805",
+      "kind": "correction",
+      "failureClass": "hidden-readiness",
+      "recurrenceKey": "hidden-readiness",
+      "reason": "許可済み検証器ではhidden要素の実装準備状態を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-05: 非表示を期待するspec要素をreadiness待機へ含めない",
+        "line": 16,
+        "sha256": "a7ee4a37928a7312b28ed47f3bf66ad4190d4f2d88321690bf42997a34a23fd2"
+      }
+    },
+    {
+      "id": "correction-honest-contract-fields-20260804",
+      "kind": "correction",
+      "failureClass": "honest-contract-fields",
+      "recurrenceKey": "honest-contract-fields",
+      "reason": "許可済み検証器では契約フィールドの意味的な正直さを負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 契約が「埋められない欄」を必須にすると捏造を強いる",
+        "line": 38,
+        "sha256": "4a3087e59b6a50faa4fa98a5cd9febf40c54117a88947f13a66b73e657c0a529"
+      }
+    },
+    {
+      "id": "correction-line-art-diff-limit-20260804",
+      "kind": "correction",
+      "failureClass": "line-art-diff-limit",
+      "recurrenceKey": "line-art-diff-limit",
+      "reason": "許可済み検証器には線画の視覚差分限界を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: 画素差分は線画のサイズ誤りをほぼ検出できない",
+        "line": 73,
+        "sha256": "eae72313a31b518fd16a7106fb753921a245447a5eb15aedec219e0bb2862761"
+      }
+    },
+    {
+      "id": "correction-machine-enforcement-first-20260731",
+      "kind": "correction",
+      "failureClass": "machine-enforcement-first",
+      "recurrenceKey": "machine-enforcement-first",
+      "reason": "許可済み検証器では全規則の機械強制対応という抽象原則を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-31（2）: 規則の追加ではなく機械強制で塞ぐ",
+        "line": 171,
+        "sha256": "292dff5827745b022e9f92ea8a111adda3e5dc582c2496590e43b59e00ecbd05"
+      }
+    },
+    {
+      "id": "correction-nongeometric-spec-property-20260803",
+      "kind": "correction",
+      "failureClass": "nongeometric-spec-property",
+      "recurrenceKey": "nongeometric-spec-property",
+      "reason": "許可済み検証器ではFigma必須の非幾何プロパティ欠落を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 矩形に出ない性質はspecへ明示しないと素通りする",
+        "line": 110,
+        "sha256": "07789405765500cd1d3a292f67ef6c1a492539a9258e74b2e914584032e36fdf"
+      }
+    },
+    {
+      "id": "correction-one-shot-fidelity-goal-20260729",
+      "kind": "correction",
+      "failureClass": "one-shot-fidelity-goal",
+      "recurrenceKey": "one-shot-fidelity-goal",
+      "reason": "許可済み検証器には初回忠実度を目的とする判断そのものを再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-29: one-shot-fidelity-is-the-product-goal",
+        "line": 201,
+        "sha256": "00e33a8d9c93bbd4b74d28682a034cf1926331dfa6aee64ccfe634927dbea077"
+      }
+    },
+    {
+      "id": "correction-p3-clean-room-boundary-evidence-20260810",
+      "kind": "correction",
+      "failureClass": "clean-room-boundary-overclaim",
+      "recurrenceKey": "clean-room-boundary-evidence",
+      "reason": "The access boundary depends on the actual host sandbox and session permissions, which the approved static verifiers cannot model without a real per-context access probe.",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-10: clean-room-boundary-overclaim",
+        "line": 236,
+        "sha256": "ce75df8711471eb2b8b3ef7ae26fa7ff2472b6102cddf885b43fc8dac8cc94cb"
+      }
+    },
+    {
+      "id": "correction-proactive-fidelity-improvement-20260729",
+      "kind": "correction",
+      "failureClass": "proactive-fidelity-improvement",
+      "recurrenceKey": "proactive-fidelity-improvement",
+      "reason": "許可済み検証器には予防的監査の必要性を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-29: proactive-fidelity-improvement",
+        "line": 193,
+        "sha256": "b77acf98e373f14c6e0f500703582d36d7e4d1ec41ef575b3ec82cd1d8300726"
+      }
+    },
+    {
+      "id": "correction-repeat-card-complete-order-20260731",
+      "kind": "correction",
+      "failureClass": "repeat-card-complete-order",
+      "recurrenceKey": "repeat-card-complete-order",
+      "reason": "許可済み検証器では反復カード全件順序照合の欠落を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-31: 反復カードの値・順序の全件照合",
+        "line": 181,
+        "sha256": "24059dc04a314c9b24d5e849541ce9d6a9b06f8b45598e061998d1bc91cdcfc3"
+      }
+    },
+    {
+      "id": "correction-repeat-text-leaf-measurement-20260731",
+      "kind": "correction",
+      "failureClass": "repeat-text-leaf-measurement",
+      "recurrenceKey": "repeat-text-leaf-measurement",
+      "reason": "許可済み検証器では反復テキストleaf全件測定の欠落を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-31: 反復componentのテキストleaf実測",
+        "line": 177,
+        "sha256": "b453fec77c259d24fe76216468e0def92c68975899a132d27c3fbca5604c96b7"
+      }
+    },
+    {
+      "id": "correction-shared-header-route-condition-20260817",
+      "kind": "correction",
+      "failureClass": "shared-header-route-condition",
+      "recurrenceKey": "shared-header-route-condition",
+      "reason": "共有部品の選択条件と実DOMの関係は案件ごとのルーティング実装に依存し、共通fixtureだけでは負のE2Eを正確に再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-17: 共有ヘッダーの選択条件を変更するscopeではcontextに置かない",
+        "line": 6,
+        "sha256": "e3d0b62409f800be81f0f4532697fb32e2be23d1682ad2212727f163b8e4d4d5"
+      }
+    },
+    {
+      "id": "correction-subpixel-diff-nonmonotonic-20260803",
+      "kind": "correction",
+      "failureClass": "subpixel-diff-nonmonotonic",
+      "recurrenceKey": "subpixel-diff-nonmonotonic",
+      "reason": "許可済み検証器にはサブピクセル差分の非単調性を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: サブピクセル領域では画素差分とレイアウトの正しさが単調に対応しない",
+        "line": 118,
+        "sha256": "1813492abf55d0f64dfb08dd38f0ce7770bc51678d606cde730c861741bad442"
+      }
+    },
+    {
+      "id": "correction-text-ellipsis-contract-20260731",
+      "kind": "correction",
+      "failureClass": "text-ellipsis-contract",
+      "recurrenceKey": "text-ellipsis-contract",
+      "reason": "許可済み検証器ではFigma必須のellipsis契約欠落を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-31: Text nodeの行数と省略表示を一組で検証",
+        "line": 126,
+        "sha256": "dcc2149042d07cfe67524877802b8ee02db99d14bcb77e5b8a13f34f4461b5d5"
+      }
+    },
+    {
+      "id": "correction-vector-contain-sizing-20260804",
+      "kind": "correction",
+      "failureClass": "vector-contain-sizing",
+      "recurrenceKey": "vector-contain-sizing",
+      "reason": "許可済み検証器には書き出しベクタの実効表示寸法を検証する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-04: Figmaの書き出しベクタを contain で敷かない",
+        "line": 77,
+        "sha256": "da2c134475312d14fbd1474ed53aaccb9de81944a577e63837c935e750719df8"
+      }
+    },
+    {
+      "id": "correction-visible-line-count-20260731",
+      "kind": "correction",
+      "failureClass": "visible-line-count",
+      "recurrenceKey": "visible-line-count",
+      "reason": "許可済み検証器では可視行数の仕様欠落を負のE2Eで再現できないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-31: テキストの可視行数はoverflow後を測る",
+        "line": 130,
+        "sha256": "5228c2267cb628d7b7d87819cad8b9b75c5dc6ac2be9221eb0ec232c7dfd9095"
+      }
+    },
+    {
+      "id": "correction-wait-budget-separation-20260803",
+      "kind": "correction",
+      "failureClass": "wait-budget-separation",
+      "recurrenceKey": "wait-budget-separation",
+      "reason": "許可済み検証器には環境依存の待機上限分離を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 検証の待機上限はプロトコル往復とページ読み込みで分ける",
+        "line": 93,
+        "sha256": "5d1046416a9a43d1080d03ce0cb3164d4acbd8aa96530427187e8604e8c9d7b4"
+      }
+    },
+    {
+      "id": "correction-windows-process-tree-20260803",
+      "kind": "correction",
+      "failureClass": "windows-process-tree",
+      "recurrenceKey": "windows-process-tree",
+      "reason": "許可済み検証器にはWindowsの子プロセス終了を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-08-03: 子プロセスを持つツールはプロセスツリーごと終了させる（Windows）",
+        "line": 97,
+        "sha256": "bebea7c7553bc2a1d13c34ead6303879172d0774861cbd3f5cc479cb757d4a55"
+      }
+    },
+    {
+      "id": "mistake-copied-evidence-semantic-drift-20260803",
+      "kind": "mistake",
+      "failureClass": "copied-evidence-semantic-drift",
+      "recurrenceKey": "copied-evidence-semantic-drift",
+      "reason": "許可済み検証器には文章の意味的な証跡ずれを再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-08-03: 証跡ファイルの複製で、前scopeの記述をそのまま提出した",
+        "line": 17,
+        "sha256": "fd5629db6ef80b191cd0630a213583c6bfa0243c6e786153dab7221e5a7eee4f"
+      }
+    },
+    {
+      "id": "mistake-powershell-selector-quoting-20260805",
+      "kind": "mistake",
+      "failureClass": "powershell-selector-quoting",
+      "recurrenceKey": "powershell-selector-quoting",
+      "reason": "許可済み検証器にはPowerShellの引用解釈を再現する負のE2Eが存在しないため。",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-08-05 PowerShellが未引用セレクタの`>`をリダイレクトとして解釈し、scope外ファイルを作成した",
+        "line": 42,
+        "sha256": "2da33cfb7933c628a86c34211a17c68d5d62ab76690eb26721d8c8e153400fcf"
+      }
+    }
+  ],
+  "unclassified": [
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-08-19: 比較画像は取得経路と内容を別々に照合する",
+      "line": 1,
+      "sha256": "d6597db964cdbc7ec3b69c9eea605af57646ce59cc549eb47eb27dbd743a0f2c"
+    }
+  ],
+  "proposalIds": [],
+  "closedProposalIds": []
+}

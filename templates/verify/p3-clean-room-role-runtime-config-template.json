@@ -1,0 +1,18 @@
+{
+  "_comment": "p3-clean-room-probe v5 parses this strict empty probe-input schema. This JSON is NOT P-11 evidence and never authorizes a role launch: it cannot prove an external agent host honored it, has no hidden/managed tool, or attempted an unavailable MCP. `p3-clean-room-probe.mjs --require-p11-authorization` therefore fails closed with P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE. The separate p3-p11-app-server-spike is feasibility-only, always NOT_AUTHORIZED, and neither changes this schema nor authorizes P-11. probeId must be probe- plus 32-128 lowercase hex. Any tool entry, enabled flag, unknown field, non-empty connector/MCP list, or different format fails closed. If claudeProjects.state is used, p10.targets.claudeProjectsJsonl is mandatory and must point to .claude/projects/*.jsonl; otherwise it is forbidden.",
+  "version": 3,
+  "kind": "p3-clean-room-role-runtime-config-v3",
+  "context": {
+    "probeId": "probe-REPLACE-32-to-128-lowercase-hex",
+    "stage": "full",
+    "recipientCommitment": "REPLACE-64-lowercase-hex-coordinator-derived-recipient-commitment"
+  },
+  "toolSurface": {
+    "mode": "all-disabled",
+    "mcpServers": [],
+    "connectors": []
+  },
+  "claudeProjects": {
+    "state": "absent"
+  }
+}

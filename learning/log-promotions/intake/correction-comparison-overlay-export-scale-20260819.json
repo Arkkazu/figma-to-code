@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-comparison-overlay-export-scale-20260819",
+  "kind": "correction",
+  "occurredOn": "2026-08-19",
+  "failureClass": "inconsistent-comparison-export-scale",
+  "recurrenceKey": "comparison-overlay-export-scale",
+  "ruleTargets": ["rules/figma-image-export.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "比較用Figma画像の書き出し倍率が等倍と2倍で混在し、選択根拠も証跡に残っていなかった。",
+  "prevention": "比較用画像はFigma設計座標の等倍で要求し、要求倍率・設計寸法・実画像寸法・書き出し上限による縮小有無をgate証跡へ残す。"
+}

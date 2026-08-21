@@ -1,0 +1,33 @@
+{
+  "_comment": "component decision manifest — component manifestの全elementIdを1件ずつ記録する。Figma COMPONENT/INSTANCEはreuse/extend/newのいずれかを選び、既存コード検索の証跡を必須とする。newはindependentApproved、reviewerActor、reviewerContextId、reviewedAt、reviewEvidencePathを必須とし、実装actor/contextと同一組合せならpreflightを通らない。OTHERはnot-applicableだけを使う。",
+  "version": 1,
+  "decisions": [
+    {
+      "elementId": "example-heading",
+      "figmaNodeId": "123:456",
+      "figmaNodeType": "OTHER",
+      "decision": "not-applicable",
+      "codePath": "page-example.php",
+      "searchEvidencePath": "MyBrain/verify/evidence/component-search.json",
+      "rationale": "通常テキスト要素であり、Figma COMPONENT/INSTANCEではない。"
+    },
+    {
+      "elementId": "example-card",
+      "figmaNodeId": "123:457",
+      "figmaNodeType": "INSTANCE",
+      "decision": "reuse",
+      "codePath": "template-parts/example-card.php",
+      "searchEvidencePath": "MyBrain/verify/evidence/component-search.json",
+      "rationale": "DOM構造が同一で、文言・画像・リンク先だけが異なる。"
+    },
+    {
+      "elementId": "example-cta",
+      "figmaNodeId": "123:458",
+      "figmaNodeType": "INSTANCE",
+      "decision": "extend",
+      "codePath": "template-parts/example-cta.php",
+      "searchEvidencePath": "MyBrain/verify/evidence/component-search.json",
+      "rationale": "既存DOMを維持し、modifier 1件で状態差分を表せる。"
+    }
+  ]
+}

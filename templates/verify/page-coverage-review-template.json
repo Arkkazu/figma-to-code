@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "status": "approved",
+  "reviewerRole": "independent-reviewer",
+  "reviewerActor": "<実装役と異なるagent、または別contextであることを記録する識別子>",
+  "reviewerContextId": "<実装contextと異なるスレッドまたはrunの識別子>",
+  "reviewedAt": "YYYY-MM-DDTHH:MM:SS+09:00",
+  "pageCoverageSha256": "<sha256-of-page-coverage-json>"
+}

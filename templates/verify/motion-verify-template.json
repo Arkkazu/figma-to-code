@@ -1,0 +1,109 @@
+{
+  "url": "https://example.invalid/page/",
+  "reportPath": "MyBrain/verify/reports/motion-<scope>.json",
+  "viewport": {
+    "width": 1440,
+    "height": 1600
+  },
+  "viewportPolicy": {
+    "scrollbars": "hidden"
+  },
+  "states": [
+    {
+      "id": "menu-closed",
+      "kind": "closed",
+      "expected": [
+        {
+          "selector": "#global-menu-toggle",
+          "attributes": {
+            "aria-expanded": "false"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cta-hover",
+      "kind": "hover",
+      "settleMs": 300,
+      "action": {
+        "type": "hover",
+        "selector": ".cta-link"
+      },
+      "expected": [
+        {
+          "selector": ".cta-link",
+          "computed": {
+            "opacity": "0.7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "menu-open",
+      "kind": "open",
+      "action": {
+        "type": "click",
+        "selector": "#global-menu-toggle"
+      },
+      "waitFor": {
+        "selector": "#global-menu-toggle",
+        "attribute": "aria-expanded",
+        "equals": "true"
+      },
+      "expected": [
+        {
+          "selector": "#global-menu-toggle",
+          "attributes": {
+            "aria-expanded": "true"
+          }
+        }
+      ]
+    },
+    {
+      "id": "menu-opening-80ms",
+      "kind": "intermediate",
+      "sampleAtMs": 80,
+      "transitionSelector": "#global-menu-panel",
+      "maxSampleLagMs": "<初回実測で記録した上限ms>",
+      "action": {
+        "type": "click",
+        "selector": "#global-menu-toggle"
+      },
+      "expected": [
+        {
+          "selector": "#global-menu-panel",
+          "computed": {
+            "opacity": {
+              "min": 0.1,
+              "max": 0.9
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pricing-route",
+      "kind": "open",
+      "action": {
+        "type": "click",
+        "selector": ".pricing-link"
+      },
+      "destination": {
+        "timeoutMs": "<案件で実測した到達待機上限ms>",
+        "location": {
+          "pathname": "/pricing",
+          "search": "",
+          "hash": "#plans"
+        }
+      },
+      "expected": [
+        {
+          "selector": "#plans",
+          "computed": {
+            "display": "block"
+          }
+        }
+      ]
+    }
+  ]
+}

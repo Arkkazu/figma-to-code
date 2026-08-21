@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "correction-log-feedback-20260718",
+  "kind": "correction",
+  "occurredOn": "2026-07-18",
+  "failureClass": "log-to-rule-feedback-gap",
+  "recurrenceKey": "log-to-rule-feedback-gap",
+  "ruleTargets": [
+    "rules/correction-log-promotion.md",
+    "rules/self-improvement.md"
+  ],
+  "verifierTargets": [
+    "tools/figma-log-promote.mjs",
+    "tools/figma-log-promote.e2e.mjs"
+  ],
+  "summary": "保存済みの横断ログがルール改訂へ接続されず再発防止が提案で止まった",
+  "prevention": "機械可読な記録から提案、独立レビュー、承認済み限定差分までを同じ昇格契約で追跡する"
+}

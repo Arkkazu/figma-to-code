@@ -1,0 +1,83 @@
+{
+  "version": 2,
+  "kind": "p3-r5-ordinal3-external-boundary-owner-decision-template-correction-draft",
+  "recordState": "owner-review-only-draft",
+  "effective": false,
+  "appendOnlySuccessorRequiredIfFinalized": true,
+  "supersedesByReferenceOnly": {
+    "path": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+    "sha256": "b7ac0c19c4669a4695e760860552058fc2967ddbe9d5766b4df86af7059029f6",
+    "predecessorRemainsUnmodified": true
+  },
+  "purpose": "Review-only correction draft for the stale Hyper-V preflight source pin in the owner-input-required external-boundary decision template. It neither selects a topology nor authorizes any action.",
+  "correction": {
+    "field": "sourceDocuments[2].sha256",
+    "path": "tools/r5-ordinal3-hyperv-capability-preflight.ps1",
+    "predecessorDeclaredSha256": "0a3cb848af0b6eb3106c7fc33d53ec1c5d92057b81fad79bb0f8c7fb67b4dbec",
+    "currentWorkspaceSha256": "f379daf025cb79e093660cf85aed6429f2f2eaf6d8d62c571165de6c47b2cde7",
+    "historicalBytesRecovered": false,
+    "requiresOwnerFinalizationBeforeUse": true
+  },
+  "sourceDocuments": [
+    {
+      "path": "tools/r5-ordinal3-external-verifier-boundary-requirements-draft.md",
+      "sha256": "f3a0ea86270038e62278f97f6d2fa4f75b6c85fb103052a16ae56571877688b3"
+    },
+    {
+      "path": "tools/r5-ordinal3-nonattached-output-evidence-validator.mjs",
+      "sha256": "87ff3f44ae9dbf5c735ccff4f239824600e9da2e0ea610b1f36fad731def6a23"
+    },
+    {
+      "path": "tools/r5-ordinal3-hyperv-capability-preflight.ps1",
+      "sha256": "f379daf025cb79e093660cf85aed6429f2f2eaf6d8d62c571165de6c47b2cde7"
+    }
+  ],
+  "requiredOwnerDecisions": {
+    "externalVerifier": {
+      "providerOrOperator": "REQUIRED_UNSET",
+      "trustAnchorAndKeyCustody": "REQUIRED_UNSET",
+      "dataResidencyAndJurisdiction": "REQUIRED_UNSET",
+      "accountAndCostAuthority": "REQUIRED_UNSET"
+    },
+    "transmitOnlyTransport": {
+      "deviceOrIndependentlyAuditedService": "REQUIRED_UNSET",
+      "independentAdministrationBoundary": "REQUIRED_UNSET",
+      "injectionDenialTestAuthority": "REQUIRED_UNSET"
+    },
+    "runtimeAndMeasurement": {
+      "attesterAndProtectedMeasurementAgentSubstrate": "REQUIRED_UNSET",
+      "trustedTimeSource": "REQUIRED_UNSET",
+      "allRuntimeInputPlaneClosurePlan": "REQUIRED_UNSET"
+    },
+    "evidenceAndRetention": {
+      "coverageManifestOwnerAndAudit": "REQUIRED_UNSET",
+      "metadataRetentionBackupDeletionPolicy": "REQUIRED_UNSET",
+      "independentAuditBudgetAndOperator": "REQUIRED_UNSET"
+    },
+    "scope": {
+      "p3FreeSyntheticProbeProvisioning": "REQUIRED_UNSET",
+      "explicitlyExcludesP3DeliveryLaunchImplementation": true,
+      "p11Authorization": "NOT_AUTHORIZED"
+    }
+  },
+  "noAuthority": {
+    "doesNotSelectProvider": true,
+    "doesNotAuthorize": [
+      "external account access",
+      "purchase or subscription",
+      "networking change",
+      "physical device deployment",
+      "VM or sandbox creation",
+      "reissue publication",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "acceptanceRule": "A future finalized owner decision must replace every REQUIRED_UNSET value, bind the final selected topology and all current source hashes, and separately state the exact authorized P-3-free synthetic action. It must not authorize a P-3 role action unless that action is separately named."
+}

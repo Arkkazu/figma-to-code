@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "figma-log-intake-376d4f2d604ca460-report",
+  "status": "pending-review",
+  "intakePath": "learning/log-promotions/intake/figma-log-intake-376d4f2d604ca460.json",
+  "recordCount": 2,
+  "unclassifiedCount": 0,
+  "proposalPaths": [
+    "learning/log-promotions/proposals/figma-log-unverified-figma-value-5a071e44b16503b1.json"
+  ],
+  "promotionRule": "Canonical rules and verifier code remain unchanged until independent review, negative E2E, and owner approval are recorded."
+}

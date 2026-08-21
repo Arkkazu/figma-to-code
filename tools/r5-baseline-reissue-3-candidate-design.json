@@ -1,0 +1,340 @@
+{
+  "schema": "p3-r5-pair-reissue-3-candidate-design/v2",
+  "recordState": "draft-not-published",
+  "scope": "P-3 R5 pair-wide baseline/current open-service-top-hero sequence-1 attempt-1 recovery reissue-3 candidate only",
+  "authorityBoundary": {
+    "candidateIsNotAnExternalRecord": true,
+    "candidateIsNotRoleDeliveryAuthority": true,
+    "candidateIsNotRoleLaunchAuthority": true,
+    "futureFinalRecordMayAuthorizeAttachmentOnlyDeliveryOnlyAfterExternalOsIsolationProof": true,
+    "futureFinalRecordMayAuthorizeRoleLaunchOnlyAfterExternalOsIsolationProof": true,
+    "roleLaunchEligibility": "pending a separately recorded external OS-isolation proof and fresh pre-launch checks for the relevant condition",
+    "prohibitedNow": [
+      "external publication",
+      "provider selection",
+      "external account access",
+      "purchase or subscription",
+      "networking change",
+      "physical device deployment",
+      "VM or sandbox creation",
+      "runtime provisioning",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "P-11 mutation"
+    ]
+  },
+  "execution": {
+    "workspaceWrites": true,
+    "externalWrites": false,
+    "providerSelection": false,
+    "externalAccountAccess": false,
+    "purchaseOrSubscription": false,
+    "networkingChange": false,
+    "physicalDeviceDeployment": false,
+    "vmOrSandboxCreation": false,
+    "runtimeProvisioning": false,
+    "roleDelivery": false,
+    "roleLaunch": false,
+    "implementation": false,
+    "returnCheck": false,
+    "returnApply": false,
+    "siteMutation": false,
+    "lifecycleMutation": false,
+    "browserOrFigmaMeasurement": false,
+    "p11Mutation": false
+  },
+  "pairIdentity": {
+    "pairId": "open-service-top-hero-v1-20260809",
+    "component": "open-service-top-hero",
+    "sequence": 1,
+    "attempt": 1,
+    "runtimeDeliverySequence": 1,
+    "coordinatorReissueOrdinal": 3,
+    "conditions": [
+      "baseline",
+      "current"
+    ]
+  },
+  "sourceBindings": {
+    "previousPairCommonProtocolSha256": "2cb05ebec90d7fefdf28cf51be8fb93e277e0bc7cec1a67ebcd458e1c686b342",
+    "previousBaseline": {
+      "opaqueHandoffId": "f92bcaa29c39e52eb6d5044638b41101",
+      "runtimeActivationId": "bb3077e21473ce4664e353cadc8e4fda44df87da6be9bf3839f4af818ab42165",
+      "deliveryReceiptSha256": "24574bae74a4d86df62c188237db228457dc2f91b3a052f8238487d813bfedf2",
+      "roleHome": "C:/Users/tane1/AppData/Local/p3-role-homes/a-impl-r4-reissue-2-f92bcaa29c39e52eb6d5044638b41101",
+      "state": "immutable-predecessor-not-reused"
+    },
+    "previousCurrent": {
+      "opaqueHandoffId": "b3f41c2108d65cf6c6ae7767b6e797d1",
+      "runtimeActivationId": "f06ba96a83153efac0d2b0e8f7e00a5548d747a36fccabf75787a05273d66375",
+      "deliveryReceiptSha256": "8450699e10cb18ad4068d72f657ef3c6e5c53a6c131629d0700fb528ad3de4c4",
+      "roleHome": "C:/Users/tane1/AppData/Local/p3-role-homes/b-impl-r4-reissue-2-b3f41c2108d65cf6c6ae7767b6e797d1",
+      "state": "immutable-superseded-for-protocol-compatibility",
+      "contaminationClassification": "not-contaminated",
+      "supersessionReason": "Ordinal-3 requires a new pair-common protocol that is byte-identical for baseline and current."
+    },
+    "failedBaselineAttempt": {
+      "terminalRecordId": "96f8b2a65957679bc8b58a0cff85915bc13c6e9205c2681803b490e996aae8fe",
+      "terminalRoot": "C:/Users/tane1/AppData/Local/p3-coordinator-records/open-service-top-hero-v1-20260809/r5-baseline-seq1-launch-terminal/v1/96f8b2a65957679bc8b58a0cff85915bc13c6e9205c2681803b490e996aae8fe",
+      "terminalRecord": {
+        "path": "baseline-seq1-launch-terminal.json",
+        "sha256": "4fd1da910b09559e448d21c6e61d9b244011e6baab4183accdb9c9eb1f990920"
+      },
+      "observation": {
+        "path": "baseline-seq1-launch-observation.json",
+        "sha256": "ff5b16bce79e4454ad8c8b8d3e2abb47f493102fb99fef8a2a9624c2c8138213"
+      },
+      "lease": {
+        "recordId": "c252cc94c12f3c565ac0d819d983f5e9cc1a1bee020721be53226615f21316f7",
+        "root": "C:/Users/tane1/AppData/Local/p3-coordinator-records/open-service-top-hero-v1-20260809/r5-pair-live-lease/v1/c252cc94c12f3c565ac0d819d983f5e9cc1a1bee020721be53226615f21316f7",
+        "path": "baseline-seq1-live-lease.json",
+        "sha256": "6e8f19d43ba081897d175f0735bc38086f7cd8b4bf6a043244c6d84933ea2f76"
+      },
+      "immutable": true,
+      "attemptConsumed": true,
+      "failureFacts": [
+        "attachment-only boundary breach",
+        "no return.ustar.tar produced"
+      ],
+      "mayBeReused": false,
+      "mayBeModified": false
+    },
+    "quarantinedDelivery1Archive": {
+      "sha256": "b9a96b6d68eb7282c65734971e40b8e7d30f8553a41f47cf2aad585695c70018",
+      "roleHome": "C:/Users/tane1/AppData/Local/p3-role-homes/a-impl",
+      "disposition": "quarantined",
+      "applicationState": "not-applied",
+      "mayBeRoleInput": false,
+      "mayBeApplied": false,
+      "mayBeCopiedIntoNewPacket": false,
+      "mayBeUsedForImplementation": false
+    }
+  },
+  "oneTimeRecoveryException": {
+    "ownerApproved": true,
+    "approvalEvidence": {
+      "kind": "user-message",
+      "content": "承認",
+      "contentSha256": "not-available"
+    },
+    "scope": "Only this pair-wide ordinal-3 recovery may create fresh sequence-1 / attempt-1 role contexts after the baseline ordinal-2 launch terminal consumed its attempt.",
+    "automaticRetry": false,
+    "doesNotReopenOrModifyPriorAttempt": true,
+    "doesNotReusePriorRoleHomesOrOutputs": true,
+    "doesNotAuthorizePublicationDeliveryOrLaunchBeforeExternalOsIsolationProof": true,
+    "doesNotAuthorizeImplementationApplyMeasurementOrP11": true
+  },
+  "identityDerivation": {
+    "algorithm": "sha256-canonical-json-v1",
+    "domain": "p3-r5-pair-reissue-3",
+    "inputFields": [
+      "pairIdentity",
+      "sourceBindings.previousPairCommonProtocolSha256",
+      "sourceBindings.previousBaseline.opaqueHandoffId",
+      "sourceBindings.previousCurrent.opaqueHandoffId",
+      "sourceBindings.failedBaselineAttempt terminal/observation/lease hashes",
+      "bytePinnedHelperRelease",
+      "oneTimeRecoveryException scope",
+      "pairCommonRuntimeProtocolSuccessor.guestTopology",
+      "topologyEvidenceSpecifications",
+      "fixedExporterRequirement",
+      "freshDestinationPolicy",
+      "futureIsolationGate"
+    ],
+    "expectedDerivedIdentifiers": {
+      "identitySeedSha256": "65983215efc2cb0d24ace6f5bb57d9e9e442323ae7af1123a1ced09aa2087e02",
+      "baselineOpaqueHandoffId": "27f8395d41ff465d058d51ed0caf32b0",
+      "currentOpaqueHandoffId": "992fe486b022ec24dde7e5a25fdd7e38",
+      "pairRuntimeActivationId": "b145d6cb768ba2fbf4efadc395aa3787d3b217cfd5824462466e89bed2e37dbc",
+      "helperReleaseId": "22c3289fafbec24de5747a4361f6b77dc2dac365ac7380f9b5ec90b20bff769f",
+      "pairCommonProtocolSha256": "6154d3c3c1854e46f9949031354f7a44d8084b8326ea6a7fd9ddef22bb935b33"
+    }
+  },
+  "pairCommonRuntimeProtocolSuccessor": {
+    "schema": "p3-role-handoff-protocol/v4",
+    "required": true,
+    "predecessorSha256": "2cb05ebec90d7fefdf28cf51be8fb93e277e0bc7cec1a67ebcd458e1c686b342",
+    "byteIdentityRequirement": "The same canonical protocol bytes and SHA-256 must be bound by both baseline and current ordinal-3 deliveries. The protocol payload contains no condition, opaque handoff, role-home, progress-store, or worktree field.",
+    "deliveryMode": "attachment-only",
+    "executionState": false,
+    "ownerApproved": false,
+    "guestTopology": {
+      "schema": "p3-role-guest-topology/v1",
+      "attachmentRoot": "/p3/attachments",
+      "attachmentAccess": "read-only",
+      "requiredAttachmentRelativePaths": [
+        "input/assignment.json",
+        "input/references/pc-first-view.png",
+        "input/references/sp-first-view.png",
+        "return-authority.json"
+      ],
+      "scratchRoot": "/p3/scratch",
+      "scratchWorkRoot": "/p3/scratch/work",
+      "scratchSubmissionPath": "/p3/scratch/return.ustar.tar",
+      "scratchPersistence": "ephemeral-not-host-backed-destroyed-with-runtime",
+      "persistentOutputRoot": "/p3/output",
+      "persistentOutputArchivePath": "/p3/output/return.ustar.tar",
+      "implementationIdentityPersistentOutputAccess": "none",
+      "persistentOutputAllowlist": [
+        "return.ustar.tar"
+      ],
+      "fixedExporter": {
+        "required": true,
+        "implementationIdentityMayInvoke": false,
+        "sourcePath": "/p3/scratch/return.ustar.tar",
+        "destinationPath": "/p3/output/return.ustar.tar",
+        "destinationWritePolicy": "single-fixed-name-atomic-create-only-when-empty",
+        "mustValidateBeforeExport": true,
+        "mustRejectAdditionalPersistentFiles": true
+      },
+      "hostPathsExposedToImplementationIdentity": false,
+      "attachmentInventoryBinding": "sealed-per-delivery-outside-pair-common-protocol",
+      "runnerInstructionBinding": "byte-pinned-before-final-publication"
+    },
+    "futurePublicationRequirement": "A later append-only publication must independently prove all fresh destinations, preserve the predecessor terminal and lease hashes, pin this exact protocol hash, pin a fixed exporter and runner, and leave delivery and launch disabled until the isolation gate passes."
+  },
+  "bytePinnedHelperRelease": {
+    "returnHelper": {
+      "workspacePath": "templates/verify/p3-role-return.mjs",
+      "sha256": "d9723895c308b3f87f27f7f8cd1e06409a4104ac4b2b5ba1e910d7630b36d2cc"
+    },
+    "returnHelperE2E": {
+      "workspacePath": "templates/verify/p3-role-return.e2e.mjs",
+      "sha256": "216cfdafb7221e2e5539c3581ebf82aeb7bc25ec3f7a2e1cec8d3fafaec8b74a"
+    },
+    "e2eEvidence": {
+      "workspacePath": "tools/r5-return-helper-e2e-evidence-d9723895.json",
+      "sha256": "22584e4f6eea6454b318b1f57b4e76e97156845938879f098f97b83f35241e90",
+      "scope": "isolated fixture verification only"
+    }
+  },
+  "freshDestinationPolicy": {
+    "runtimeActivationRootTemplate": "C:/docker-project/rpa-technologies/p3-open-service-top-hero-pilot/.git/p3-coordinator/open-service-top-hero-v1-20260809/runtime-activations/v3/<pairRuntimeActivationId>",
+    "externalProgressRootTemplate": "C:/Users/tane1/AppData/Local/p3-coordinator-records/open-service-top-hero-v1-20260809/r5-pair-reissue-3/v1/<pairRuntimeActivationId>/progress/<condition>",
+    "baselineAttachmentStagingRootTemplate": "C:/Users/tane1/AppData/Local/p3-role-attachment-staging/open-service-top-hero-v1-20260809/r5-reissue-3/baseline-impl-<baselineOpaqueHandoffId>",
+    "currentAttachmentStagingRootTemplate": "C:/Users/tane1/AppData/Local/p3-role-attachment-staging/open-service-top-hero-v1-20260809/r5-reissue-3/current-impl-<currentOpaqueHandoffId>",
+    "baselineOutputRoleHomeTemplate": "C:/Users/tane1/AppData/Local/p3-role-homes/a-impl-r5-reissue-3-output-<baselineOpaqueHandoffId>",
+    "currentOutputRoleHomeTemplate": "C:/Users/tane1/AppData/Local/p3-role-homes/b-impl-r5-reissue-3-output-<currentOpaqueHandoffId>",
+    "baselineIsolationEvidenceRootTemplate": "C:/Users/tane1/AppData/Local/p3-coordinator-records/open-service-top-hero-v1-20260809/r5-pair-reissue-3/v1/<pairRuntimeActivationId>/isolation-evidence/baseline",
+    "currentIsolationEvidenceRootTemplate": "C:/Users/tane1/AppData/Local/p3-coordinator-records/open-service-top-hero-v1-20260809/r5-pair-reissue-3/v1/<pairRuntimeActivationId>/isolation-evidence/current",
+    "attachmentStagingRequirement": "Each staging root has exactly the four declared regular attachment files at the declared relative paths and only their required parent directories. It is mounted read-only to the implementation identity and is not nested in an output home.",
+    "outputRoleHomeRequirement": "Each output role home is initially empty, contains no attachment, is not directly writable by the implementation identity, and may persist only return.ustar.tar through the fixed exporter.",
+    "scratchRequirement": "Guest scratch is a separate ephemeral filesystem; it is writable by the implementation identity but has no host-backed persistence and is destroyed with the runtime.",
+    "evidenceStoreRequirement": "Each evidence root is coordinator/verifier-controlled, separate from staging and output, and never visible to the implementation identity.",
+    "mustBeAbsentBeforePublication": true,
+    "mustNotReuse": [
+      "sourceBindings.previousBaseline.roleHome",
+      "sourceBindings.previousCurrent.roleHome",
+      "sourceBindings.quarantinedDelivery1Archive.roleHome",
+      "sourceBindings.failedBaselineAttempt.terminalRoot",
+      "sourceBindings.failedBaselineAttempt.lease.root"
+    ]
+  },
+  "futureIsolationGate": {
+    "externalOsIsolatedRuntimeRequired": true,
+    "localNestedCodexRuntimeProhibited": true,
+    "requiredBeforeExternalPublication": true,
+    "requiredBeforeRoleDelivery": true,
+    "requiredBeforeRoleLaunch": true,
+    "mustBeRecordedSeparately": true,
+    "runtimeImplementation": "not selected by this candidate; a later proof must identify the external OS-isolated runtime and its enforced boundary",
+    "minimumMachineEvidence": [
+      "each fresh attachment staging root contains exactly the four declared regular attachment files before launch",
+      "each fresh output role home is empty before launch and contains no attachment",
+      "the implementation identity receives the attachment staging root read-only, an ephemeral scratch filesystem, and no persistent-output read or write capability",
+      "the implementation identity has no readable path outside the declared runtime base, attachment staging root, and ephemeral scratch filesystem",
+      "the implementation identity exposes no filesystem, Git, network, browser, MCP, connector, plugin, or project-history route beyond the declared runtime base and attachments",
+      "a separately pinned fixed exporter is the only identity allowed to persist /p3/scratch/return.ustar.tar as /p3/output/return.ustar.tar",
+      "the exporter rejects every additional persistent output and the verifier proves scratch destruction after runtime termination"
+    ],
+    "ownerAttestationMaySupplementButNotReplaceMachineEvidence": true,
+    "p11State": "unchanged; P-11 remains outside this candidate scope"
+  },
+  "topologyEvidenceSpecifications": {
+    "osIsolationProofSchema": {
+      "workspacePath": "tools/r5-ordinal3-os-isolation-proof-schema.json",
+      "sha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403"
+    },
+    "readonlyCapabilityProbePlan": {
+      "workspacePath": "tools/r5-ordinal3-readonly-capability-probe-plan.md",
+      "sha256": "5a8fad287a9da97b62f428fa055b1892c9d577559c377283dccca766e35f4dd1"
+    },
+    "ambientInputReadBoundaryGuard": {
+      "contract": {
+        "workspacePath": "tools/r5-ordinal3-role-read-boundary-guard-contract.json",
+        "sha256": "c874c8d60908168522935bbc82ffcf09bb9ac28663ba7911f9a6863f6d6873d7"
+      },
+      "syntheticTupleAllowlist": {
+        "workspacePath": "tools/r5-ordinal3-role-read-boundary-guard-synthetic-tuple-allowlist.json",
+        "sha256": "6625915372c44f54693f06d93fe9b516b9ad375e59ff101f6caad46588e1bb57"
+      },
+      "release": {
+        "workspacePath": "tools/r5-ordinal3-role-read-boundary-guard-contract-release-draft.json",
+        "sha256": "e59245a2b0974ea008c0396f738e1c0aaac60c50bb7ca177e8a7c5a4cb555112"
+      },
+      "futureRuntimeEvidenceRule": "A final append-only publication must bind separately captured, runtime-specific evidence conforming to the pinned contract; the review-only contract, release, synthetic tuple allowlist, synthetic validator, and synthetic validator result are not external OS-isolation proof, P-11 authorization, or authority for publication, delivery, or launch. A real runtime must use a newly sealed runtime-specific tuple allowlist; this synthetic tuple allowlist must not be copied into a runtime."
+    },
+    "nonattachedPersistentOutputEvidence": {
+      "amendment": {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-contract-amendment-draft.json",
+        "sha256": "b7960c5509ea50ed27d18ad636f0f12c5c712444a84de0765068f416b27b28a0"
+      },
+      "ownerAcceptance": {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-contract-amendment-owner-acceptance.json",
+        "sha256": "a35ccd16bd8a911879614f04807a6d17d745e3de0491a1ee71350cfba2077e8e"
+      },
+      "syntheticValidator": {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-evidence-validator.mjs",
+        "sha256": "87ff3f44ae9dbf5c735ccff4f239824600e9da2e0ea610b1f36fad731def6a23"
+      },
+      "syntheticValidatorE2E": {
+        "workspacePath": "tools/r5-ordinal3-nonattached-output-evidence-validator.e2e.mjs",
+        "sha256": "b665a18c995f8b868aa657995650739e974aea0deee94c673eea4e05679f5b53"
+      },
+      "futureRuntimeEvidenceRule": "The finalized owner acceptance recognizes only P-3-free capability-probe preparation. The amendment remains non-effective and no schema replacement, external OS-isolation proof, P-11 authorization, reissue publication, delivery, launch, implementation, return, measurement, or runtime provisioning is authorized. A final record needs a separately selected runtime, fresh nonce, externally independent verifier evidence, and an independently approved successor validator."
+    },
+    "ownerZeroCostConstraint": {
+      "constraintRecord": {
+        "workspacePath": "tools/r5-ordinal3-owner-zero-cost-constraint-v3.json",
+        "sha256": "ba5b5200a572f49bad245b9d343f4983a0f994249eb1d2e6db89a0586fc35b18"
+      },
+      "futureRuntimeEvidenceRule": "The current constraint limits incremental spend to JPY 0; no provider, device, account, or runtime is selected or authorized. Changing either the cost cap or the external-boundary constraint requires a separate owner decision. This binding does not authorize provisioning, publication, delivery, launch, implementation, return, measurement, or P-11."
+    },
+    "bindingRule": "The final append-only publication must use separately captured real-runtime evidence conforming to these pinned workspace drafts. Review-only schemas, designs, release drafts, synthetic fixtures, tuple allowlists, validators, and their results are not external OS-isolation proof and cannot satisfy any publication, delivery, or launch gate. A separately approved successor requires new ordinal-3 identities."
+  },
+  "fixedExporterRequirement": {
+    "status": "required-but-not-selected-candidate-blocks-publication",
+    "mustRunAs": "coordinator-controlled identity distinct from the implementation identity",
+    "mustBeBytePinnedBeforeFinalPublication": true,
+    "requiredFutureReleaseFields": [
+      "exporterBinarySha256",
+      "exporterInvocationSha256",
+      "exporterConfigurationSha256",
+      "exporterUidAndAclEvidenceSha256",
+      "archiveValidationPolicySha256"
+    ],
+    "mustReadOnly": [
+      "/p3/scratch/return.ustar.tar"
+    ],
+    "mayWriteOnly": [
+      "/p3/output/return.ustar.tar"
+    ],
+    "mustReject": [
+      "direct implementation-identity writes to persistent output",
+      "output that is nonempty before export",
+      "additional persistent output paths",
+      "invalid or non-USTAR archive bytes"
+    ],
+    "publicationEligibility": "false until the exact exporter binary, invocation, configuration, UID/ACL boundary, and validation policy are separately byte-pinned and independently verified"
+  },
+  "noReusePolicy": {
+    "failedAttemptTerminalAndLease": "immutable forensic predecessors only",
+    "failedBaselineRoleHome": "never reused as a role home, packet source, archive source, or implementation source",
+    "previousCurrentDelivery": "immutable and superseded for protocol compatibility; not contaminated; never reused as a role home or peer input",
+    "quarantinedArchive": "never used as a role input, archive candidate, apply input, or implementation source"
+  }
+}

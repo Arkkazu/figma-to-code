@@ -1,0 +1,81 @@
+{
+  "_comment": "component manifest — 全件対応表とspecから機械的に作る。figma-gateはこれを正としてcheckpointPlanとの完全一致、specの全selectorの被覆、painted・閾値・viewport要件を検査する。paintedの判定規則とvisualThreshold（テキストなし0.01、テキストあり0.03）はspec/09-verification.mdを参照する。viewportsの既定は[pc, sp]。painted要素はviewportごとのFigma参照画像とSHA-256をpreflight前に登録する。比較不能な領域を除外する必要がある場合だけ、Figma根拠を持つalpha PNG maskのpath / SHA-256 / mode: excludeを同じviewportに登録する。空mask・全面mask・理由のないmaskは不可。sectionIdはpage coverageのtargetセクションと一致させる。 spacingOwnershipは必須。rootPaddingはnoneまたはinternalのみ、interSectionSpacingはparent-layoutまたはnot-applicableのみ。コンポーネントrootに外側のセクション間余白をpaddingとして持たせない。反復UIはrepeatItemsに全可視itemのPC/SP Figma nodeとviewport別spec selectorを列挙する。",
+  "components": [
+    {
+      "elementId": "example-heading",
+      "selector": ".example-section__title",
+      "figmaNodeId": "123:456",
+      "sectionId": "example-main",
+      "painted": false,
+      "spacingOwnership": {
+        "rootPadding": "internal",
+        "interSectionSpacing": "parent-layout"
+      },
+      "repeatItems": [],
+      "repeatItemsReason": "この見出しは単体要素であり、反復する可視itemを持たないため。"
+    },
+    {
+      "elementId": "example-card",
+      "selector": ".example-section__card",
+      "figmaNodeId": "123:457",
+      "sectionId": "example-main",
+      "painted": true,
+      "visualThreshold": 0.01,
+      "figmaImages": {
+        "pc": {
+          "path": "MyBrain/verify/checkpoints/replace-with-task-id/example-card-figma-pc.png",
+          "sha256": "replace-with-sha256",
+          "mask": {
+            "path": "MyBrain/verify/checkpoints/replace-with-task-id/example-card-mask-pc.png",
+            "sha256": "replace-with-mask-sha256",
+            "mode": "exclude"
+          }
+        },
+        "sp": {
+          "path": "MyBrain/verify/checkpoints/replace-with-task-id/example-card-figma-sp.png",
+          "sha256": "replace-with-sha256"
+        }
+      },
+      "spacingOwnership": {
+        "rootPadding": "internal",
+        "interSectionSpacing": "parent-layout"
+      },
+      "repeatItems": [
+        {
+          "itemId": "card-01",
+          "figmaNodeIds": {
+            "pc": "123:470",
+            "sp": "789:470"
+          },
+          "selectors": {
+            "pc": ".example-section__card:nth-child(1)",
+            "sp": ".example-section__card:nth-child(1)"
+          }
+        }
+      ]
+    },
+    {
+      "elementId": "example-cta",
+      "selector": ".example-section__cta",
+      "figmaNodeId": "123:458",
+      "sectionId": "example-main",
+      "painted": true,
+      "visualThreshold": 0.03,
+      "viewports": [
+        "pc"
+      ],
+      "figmaImages": {
+        "pc": {
+          "path": "MyBrain/verify/checkpoints/replace-with-task-id/example-cta-figma-pc.png",
+          "sha256": "replace-with-sha256"
+        }
+      },
+      "spacingOwnership": {
+        "rootPadding": "internal",
+        "interSectionSpacing": "parent-layout"
+      },
+      "repeatItems": [],
+      "repeatItemsReason": "このCTAは単体の操作要素であり、反復する可視itemを持たないため。"
+    }
+  ]
+}

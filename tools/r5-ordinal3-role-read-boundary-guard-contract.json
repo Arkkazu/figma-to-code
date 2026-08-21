@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-role-read-boundary-guard-contract",
+  "status": "review-only-synthetic-draft-not-evidence",
+  "recordState": "review-only",
+  "effective": false,
+  "validatorEnforcement": "synthetic-validator-release-only",
+  "purpose": "Define the fail-closed structural contract for a future role read-boundary guard. This draft records the minimum evidence shape for permitted local surfaces, complete trace lifetime, and ambient-input provenance bindings. It is not a runtime configuration, proof, launch instruction, or authorization.",
+  "derivedFrom": {
+    "fileName": "r5-ordinal3-ambient-input-provenance-synthetic-probe-design.md",
+    "sha256": "14b2e343ed3652704f6b14a6be8f68648098fdb5f851e6775b6d48c61f12f6ad"
+  },
+  "schemaRelation": {
+    "mode": "no-amendment",
+    "fileName": "r5-ordinal3-os-isolation-proof-schema.json",
+    "sha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403"
+  },
+  "scope": {
+    "workspaceOnly": true,
+    "p3Free": true,
+    "syntheticOnly": true,
+    "doesNotAmend": [
+      "r5-ordinal3-os-isolation-proof-schema.json",
+      "any existing candidate, authorization, receipt, lease, terminal, role-home, or progress record"
+    ],
+    "doesNotCreateOrConfigure": [
+      "sandbox",
+      "VM",
+      "role runtime",
+      "provider account",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return path",
+      "site or lifecycle",
+      "browser or Figma measurement",
+      "accessibility, motion, or gate work",
+      "P-11 change"
+    ]
+  },
+  "nonAuthorizingResult": {
+    "fixedResult": "SYNTHETIC_ONLY__NO_REAL_RUNTIME_OR_P11_AUTHORIZATION",
+    "capabilityProbePass": false,
+    "p11Authorization": "NOT_AUTHORIZED",
+    "roleDeliveryAuthorized": false,
+    "roleLaunchAuthorized": false,
+    "implementationAuthorized": false,
+    "returnCheckAuthorized": false,
+    "returnApplyAuthorized": false,
+    "measurementAuthorized": false,
+    "accessibilityAuthorized": false,
+    "motionAuthorized": false,
+    "gateAuthorized": false,
+    "reissuePublicationAuthorized": false,
+    "siteLifecycleMutationAuthorized": false,
+    "providerOrRuntimeProvisioningAuthorized": false
+  },
+  "guardContract": {
+    "knownSurfaceClasses": [
+      {
+        "id": "runtime-base",
+        "meaning": "Separately enumerated immutable OS/runtime inputs required only to execute the pinned runtime.",
+        "permittedOperationValues": [
+          "read",
+          "resolve",
+          "list",
+          "stat",
+          "readlink",
+          "open",
+          "mmap",
+          "exec",
+          "child-spawn",
+          "connect"
+        ]
+      },
+      {
+        "id": "exact-attachments",
+        "meaning": "The exact individually enumerated immutable input attachment set; no parent-directory or adjacent-file implication is allowed.",
+        "permittedOperationValues": [
+          "read",
+          "resolve",
+          "list",
+          "stat",
+          "readlink",
+          "open",
+          "mmap"
+        ]
+      },
+      {
+        "id": "ephemeral-scratch",
+        "meaning": "A separately enumerated isolated ephemeral scratch surface with no host-backed persistent output role.",
+        "permittedOperationValues": [
+          "read",
+          "resolve",
+          "list",
+          "stat",
+          "readlink",
+          "open",
+          "mmap"
+        ]
+      },
+      {
+        "id": "guard-dependencies",
+        "meaning": "The independently pinned dependencies required solely by the guard and capture components.",
+        "permittedOperationValues": [
+          "read",
+          "resolve",
+          "list",
+          "stat",
+          "readlink",
+          "open",
+          "mmap",
+          "exec",
+          "child-spawn"
+        ]
+      }
+    ],
+    "knownOperationValues": [
+      "read",
+      "resolve",
+      "list",
+      "stat",
+      "readlink",
+      "open",
+      "mmap",
+      "exec",
+      "child-spawn",
+      "connect"
+    ],
+    "writeAuthorization": "This is a read-boundary contract. It neither permits nor models writes; any write requires a separate pinned output-topology contract.",
+    "tupleAllowlistRequired": {
+      "requiredFields": [
+        "actorOpaqueId",
+        "surfaceClass",
+        "targetOpaqueId",
+        "operation"
+      ],
+      "rule": "A known surface class and operation value are insufficient by themselves. Every observed tuple must exactly match one pre-start sealed runtime-specific allowlist entry.",
+      "syntheticArtifact": {
+        "fileName": "r5-ordinal3-role-read-boundary-guard-synthetic-tuple-allowlist.json",
+        "sha256": "6625915372c44f54693f06d93fe9b516b9ad375e59ff101f6caad46588e1bb57",
+        "mode": "synthetic-fixture-fixed-policy-not-runtime-authorization"
+      }
+    },
+    "forbiddenSurfaceClass": "forbidden-nonruntime-data",
+    "unknownSurfaceClassDisposition": "fail",
+    "unknownOperationDisposition": "fail",
+    "forbiddenOrUnknownOperationDisposition": "fail even when a later event asserts access denial"
+  },
+  "traceLifetimeContract": {
+    "guardStartRequirement": "The independently controlled guard starts before any model-visible frame and before model start.",
+    "guardCoverageRequirement": "The guard remains live for every role/model process and child process through model stop.",
+    "guardStopRequirement": "The guard stops only after model stop and after the final guarded event has been recorded.",
+    "requiredLifecycleObservations": [
+      "modelStartObserved",
+      "modelStopObserved",
+      "guardStartedBeforeModelStart",
+      "guardStoppedAfterModelStop",
+      "traceCompleteness",
+      "eventGapCount",
+      "unknownChildCount",
+      "postStartInboundControlCount",
+      "unknownNetworkEndpointCount"
+    ],
+    "requiredValues": {
+      "modelStartObserved": true,
+      "modelStopObserved": true,
+      "guardStartedBeforeModelStart": true,
+      "guardStoppedAfterModelStop": true,
+      "traceCompleteness": "complete",
+      "eventGapCount": 0,
+      "unknownChildCount": 0,
+      "postStartInboundControlCount": 0,
+      "unknownNetworkEndpointCount": 0
+    },
+    "sequenceRules": {
+      "accessEventSequenceMustStartAt": 1,
+      "accessEventSequenceMustBeContiguous": true,
+      "missingEventDisposition": "fail",
+      "duplicateEventDisposition": "fail",
+      "reorderedEventDisposition": "fail",
+      "untrackedChildDisposition": "fail",
+      "partialOrUnreadableTraceDisposition": "fail"
+    }
+  },
+  "pathAndEvidenceSafety": {
+    "opaqueTargetRequirement": "Every access event names only a verifier-defined opaque target identifier; the identifier must not encode a host, workspace, role-home, user-profile, network, or provider locator.",
+    "permittedRoleVisibleEvidenceFields": [
+      "fixed schema/version/kind identifiers",
+      "opaque identifiers",
+      "SHA-256 values",
+      "fixed booleans, enums, and non-negative counts",
+      "proof nonce",
+      "source-artifact identities and byte-pinned hashes"
+    ],
+    "prohibitedRoleVisibleEvidenceContent": [
+      "absolute or relative host path",
+      "UNC path, drive mapping, URI, URL, socket address, DNS name, or provider locator",
+      "raw attachment bytes",
+      "raw prompt, instruction, session, history, tool, plugin, connector, MCP, or policy content",
+      "role stdout, role-authored arbitrary JSON, or implementation-authored self-report",
+      "credential, metadata, environment value, or raw filesystem listing"
+    ],
+    "artifactFilesystemSafety": {
+      "canonicalVerifierControlledRootRequired": true,
+      "rootMustNotResolveOutsideDeclaredEvidenceRoot": true,
+      "allAncestorComponentsMustBeNonLinkDirectories": true,
+      "artifactMustBeRegularNonLinkFile": true,
+      "artifactMustNotBeHardLinkedWhenLinkCountIsObservable": true,
+      "unobservableSafetyCheckDisposition": "fail"
+    },
+    "forbiddenLocatorLeakDisposition": "fail"
+  },
+  "requiredFutureRuntimeBindings": {
+    "independentVerifierRequirements": [
+      "The verifier and protected capture agent are outside the implementation identity and coordinator administration boundary.",
+      "The verifier signature is validated against a trust anchor outside the coordinator administration boundary.",
+      "The implementation identity cannot disable, replace, reconfigure, or route around the guard or capture agent."
+    ],
+    "oneSignedStatementMustBind": [
+      "proofNonce",
+      "runtimeInstanceMeasurementSha256",
+      "runtimeConfigurationSha256",
+      "runnerAndAdapterSha256",
+      "sourceCoverageManifestSha256",
+      "sealedInvocationEnvelopeSha256",
+      "toolSurfaceManifestSha256",
+      "localAccessTraceSha256",
+      "lifetimeTraceSha256",
+      "inputCaptureAgentSha256",
+      "guardDependencyManifestSha256"
+    ],
+    "proofNonceRequirements": {
+      "mustBeFresh": true,
+      "mustBeOneTimeConsumable": true,
+      "mustBindAllArtifactsToSameRuntimeLifetime": true,
+      "staleOrReusedNonceDisposition": "fail"
+    },
+    "preInvocationSourceCoverage": {
+      "mustBeVerifierOwned": true,
+      "mustBeCapturedBeforeFirstModelToken": true,
+      "mustEnumerateAllClasses": [
+        "platform-instructions",
+        "launch-and-bootstrap",
+        "session-and-history",
+        "configuration-and-extensions",
+        "tool-and-integration-definitions",
+        "os-and-device-surfaces",
+        "network-and-control-planes",
+        "attachments-and-runtime-base"
+      ],
+      "unobservableProviderAssertedOnlyPartialOrUnknownDisposition": "fail"
+    },
+    "sealedInvocationRequirements": {
+      "captureStartedBeforeModelStart": true,
+      "noUncapturedFramesObserved": true,
+      "everyDeliveredFrameMustMatchSourceCoverageManifest": true,
+      "extraMissingOrUnboundFrameDisposition": "fail"
+    },
+    "runtimeAcceptancePreconditions": [
+      "A separately byte-pinned typed validator and independently audited synthetic adversarial fixture suite exist.",
+      "The selected topology demonstrates denied hidden-instruction injection, session resumption, tool injection, and post-start control delivery without reading P-3 material.",
+      "A distinct owner authorization exists before any provider account, hardware, network, sandbox, VM, delivery, or role launch action."
+    ]
+  },
+  "failClosedConditions": [
+    "Any required binding, source artifact, hash, signature, trust-anchor validation, or lifecycle observation is absent, unreadable, stale, self-authored-only, or mismatched.",
+    "Any unknown or forbidden surface class, operation, target tuple, input frame, child process, tool definition, tool invocation, network endpoint, or post-start inbound control is observed.",
+    "The guard or capture starts late, stops early, contains a gap, omits a child, or is not independently controlled for the complete runtime lifetime.",
+    "A source coverage class, invocation frame, runtime/control-plane surface, or evidence-safety check is unobservable, provider-asserted-only, partial, truncated, or unknown.",
+    "Any evidence discloses a prohibited locator or raw content, or reaches the evidence root through a symlink, junction, reparse point, or hard link.",
+    "Any record uses this draft, a synthetic result, a model answer, a configuration flag, a canary nonappearance, or an owner/role self-report as a real-runtime clean-room PASS."
+  ],
+  "syntheticFixtureBoundary": {
+    "permittedInputs": [
+      "invented paths",
+      "invented opaque identifiers",
+      "invented fixed-length canaries",
+      "invented input-frame stream",
+      "non-model fixture process"
+    ],
+    "prohibitedInputs": [
+      "P-3 attachments",
+      "role homes",
+      "coordinator records",
+      "project material",
+      "site output",
+      "conversation or session history"
+    ],
+    "onlyPermittedConclusion": "The synthetic validator rejects the specified malformed fixtures."
+  },
+  "requiredFinalStatement": "role read-boundary guard contract: synthetic workspace-only draft; no real runtime was tested; P-11 remains NOT_AUTHORIZED; no delivery, launch, implementation, return, measurement, accessibility, motion, or gate action is authorized."
+}

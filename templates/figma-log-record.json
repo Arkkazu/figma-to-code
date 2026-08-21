@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-example-yyyymmdd",
+  "kind": "correction",
+  "occurredOn": "YYYY-MM-DD",
+  "failureClass": "generic-failure-class",
+  "recurrenceKey": "stable-recurrence-key",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "案件固有値を含めない失敗の要約",
+  "prevention": "検証または停止条件を強める再発防止策"
+}

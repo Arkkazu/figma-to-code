@@ -1,0 +1,127 @@
+{
+  "_comment": "Coordinator-only delivery registry template. Do not attach this registry to a role. It is not a P-3 runtime input and does not add fields to the comparison contract, Decision J, or clean-room evidence.",
+  "schema": "p3-role-handoff-registry/v2",
+  "recordState": "draft",
+  "executionState": false,
+  "ownerApproved": false,
+  "aBIdentical": true,
+  "aBByteIdentical": true,
+  "deliveryMode": "attachment-only",
+  "deliveryProgress": {
+    "version": 1,
+    "scope": "per-condition",
+    "initialDeliverySequence": 1,
+    "increment": 1
+  },
+  "protocol": {
+    "path": "REPLACE-coordinator-only-A-B-identical-handoff-protocol-path",
+    "sha256": "REPLACE-64-lowercase-hex-sha256"
+  },
+  "coordinatorOnly": true,
+  "packetValidation": {
+    "validator": "p3-role-packet.mjs",
+    "planVersion": 3,
+    "authoritySource": "actual-v13-comparison-contract-and-owner-approved-decision-j-v2",
+    "safeArchiveExpansionRequiredBeforeCheck": true,
+    "archiveAttachmentsAcceptedByValidator": false,
+    "packetManifestIsCoordinatorOnly": true,
+    "allAttachmentsRequirePacketManifest": true,
+    "allAttachmentsRequirePacketCheck": true,
+    "packetCheckCommand": "node p3-role-packet.mjs --check <coordinator-only-plan.json>",
+    "packetManifestMustExactlyEnumerateDeliveryAttachments": true
+  },
+  "attachmentOnlyEvidence": {
+    "filesystemProbes": {
+      "p7": { "run": false, "countable": false },
+      "p9": { "run": false, "countable": false },
+      "p10": { "run": false, "countable": false },
+      "p12": { "run": false, "countable": false }
+    },
+    "filesystemDenialMayBeClaimed": false,
+    "p11": {
+      "literalFailure": "P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE",
+      "recordIsCoordinatorOnly": true,
+      "recordIsNeverRoleAttachment": true,
+      "p11Authorization": "NOT_AUTHORIZED",
+      "status": "BLOCKED",
+      "p11PassRequiredForFinalization": false,
+      "p11HelperRequiredForFinalization": false
+    }
+  },
+  "returnValidation": {
+    "validator": "p3-role-return.mjs",
+    "planTemplate": "p3-role-return-plan-template.json",
+    "manifestTemplate": "p3-role-return-manifest-template.json",
+    "planVersion": 5,
+    "manifestVersion": 4,
+    "returnFormat": "plain-ustar-with-root-return-manifest-json",
+    "pairPreflightAuthority": "frozen actual common-Git P-3 ledger, fixed v13 pair lock, and both actual v13 preflight/v5 gate-state bindings",
+    "applyAfter": "both-condition-pair-preflight-pass-mechanically-verified-from-the-frozen-actual-ledger",
+    "recoveryJournal": {
+      "version": 2,
+      "reverseCreationOrderDeletionRequired": true,
+      "deleteOnlyEmptyDirectoriesCreatedByThisTransaction": true,
+      "unknownOrNonEmptyDirectoriesFailClosed": true,
+      "v1RecoveryCompatibilityRequired": true
+    },
+    "conditionIndependentAttemptOneCreateAllocationRequired": true,
+    "aBByteIdenticalProtocolRequired": true,
+    "multiFileAtomicTransactionGuaranteed": false
+  },
+  "recipientPackets": [
+    {
+      "opaqueHandoffId": "REPLACE-random-nonsemantic-id",
+      "roleKind": "implementation-or-review",
+      "coordinatorConditionBinding": "REPLACE-never-export-condition-binding",
+      "deliverySequence": 1,
+      "deliverAfter": "both-condition-pair-preflight-pass",
+      "deliveryMode": "attachment-only",
+      "allAttachmentsMustBeInPacketManifest": true,
+      "packetCheck": {
+        "command": "node p3-role-packet.mjs --check <coordinator-only-plan.json>",
+        "allAttachmentsCovered": true,
+        "result": "pending"
+      },
+      "attachments": [
+        {
+          "attachmentId": "REPLACE-opaque-attachment-id",
+          "logicalPath": "REPLACE-redacted-logical-path",
+          "origin": "REPLACE-coordinator-only-origin-description",
+          "sha256": "REPLACE-64-lowercase-hex-sha256"
+        }
+      ],
+      "identityLeakScan": {
+        "scanTargets": [
+          "attachment bytes",
+          "attachment names",
+          "archive entry names",
+          "archive entry bytes"
+        ],
+        "forbiddenValueSource": "final cleanRoomAuthorization coordinator-only fields",
+        "forbiddenFields": [
+          "workspaceId",
+          "worktreeRoot",
+          "implementation.actor",
+          "implementation.contextId",
+          "review.actor",
+          "review.contextId",
+          "otherWorkspaceId",
+          "evidencePath"
+        ],
+        "result": "pending"
+      },
+      "outsideHostPathInstructionReview": {
+        "method": "manual-coordinator-review",
+        "machineValidated": false,
+        "reviewer": "REPLACE-coordinator",
+        "reviewedAt": "REPLACE-RFC3339-UTC",
+        "result": "pending"
+      },
+      "packetManifest": {
+        "path": "REPLACE-coordinator-only-p3-role-packet-manifest-path",
+        "sha256": "REPLACE-64-lowercase-hex-sha256"
+      },
+      "coordinatorEvidencePath": "REPLACE-coordinator-only-attachment-manifest-path"
+    }
+  ]
+}

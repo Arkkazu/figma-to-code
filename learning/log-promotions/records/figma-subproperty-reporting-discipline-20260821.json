@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "figma-subproperty-reporting-discipline-20260821",
+  "kind": "correction",
+  "occurredOn": "2026-08-21",
+  "failureClass": "partial-visual-verification",
+  "recurrenceKey": "figma-visual-subproperty-unverified-report",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "視覚要素の一部プロパティだけを測定し、未検証の方向・変形・完了ゲートを残したまま修正済みとして報告した。",
+  "prevention": "報告対象の視覚要素は位置、寸法、色、方向、状態、ゲート状態を独立した必須証跡として列挙し、未取得項目が一つでもあれば設計一致や修正完了と報告しない。"
+}

@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "kind": "p3-r5-ordinal3-owner-stage1-content-approval-correction",
+  "recordState": "finalized-owner-stage1-content-approval-correction-only",
+  "appendOnly": true,
+  "referenceOnly": true,
+  "effectiveForOperationalUse": false,
+  "ownerApproved": true,
+  "ownerApprovalState": "GRANTED_STAGE1_CONTENT_ONLY",
+  "approvedAt": "2026-08-19T01:26:52.3847148Z",
+  "approvalSource": {
+    "kind": "direct-owner-conversation",
+    "contentHash": "not-available",
+    "machineVerified": false
+  },
+  "supersedesByReferenceOnly": {
+    "path": "tools/r5-ordinal3-owner-stage1-content-approval.json",
+    "sha256": "e865888db3cae0af43b83bfd5014975825cf1013e3e5a85494d2c265408a4bc7",
+    "predecessorRemainsUnmodified": true,
+    "predecessorRemainsReferenceOnlyHistory": true
+  },
+  "approvalScope": {
+    "stage": "stage-1-content-approval",
+    "correctionRecordOnly": true,
+    "approvesContentOnly": true,
+    "doesNotFinalizeCorrectionDrafts": true,
+    "doesNotPublishOrActivateRuntime": true,
+    "doesNotAuthorizeP3RoleAction": true
+  },
+  "approvedCorrectionDrafts": [
+    {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template-v2-correction-draft.json",
+      "sha256": "b5d39e0c3254d7b962f2e190b49b83647aa0d16d25c82ffb6022932e82e24da1"
+    },
+    {
+      "path": "tools/r5-ordinal3-owner-zero-cost-constraint-v4-correction-draft.json",
+      "sha256": "e69043ad4708c16a383b7ce2f8a4f2d69956705b180decee3be56044beb66c18"
+    },
+    {
+      "path": "tools/r5-ordinal3-offline-nonce-submission-volume-amendment-v2-correction-draft.json",
+      "sha256": "bdfa34fce0d5779f80cb8f7cc2af60169f45353d0853de8db987d520e90047c7"
+    }
+  ],
+  "adoptedAppendOnlyRule": {
+    "ruleId": "p3-r5-ordinal3-stage1-content-approval-append-only/v2",
+    "exactRule": "hash-pinned documents never in-place edited; changes create NEW VERSION-NUMBERED FILE; old bytes/record/pin remain reference-only history.",
+    "hashPinnedDocumentsNeverInPlaceEdited": true,
+    "changesCreateNewVersionNumberedFile": true,
+    "oldBytesRecordAndPinRemainReferenceOnlyHistory": true,
+    "separateOwnerFinalizedSuccessorRequired": true,
+    "stage1ContentApprovalDoesNotResolvePredecessorMismatches": true,
+    "stage1ContentApprovalDoesNotConferOperationalAuthority": true
+  },
+  "noAuthority": {
+    "doesNotModifyHashPinnedDocumentsOrPredecessors": true,
+    "doesNotFinalizeCorrectionDraftsOrSuccessors": true,
+    "doesNotCreateRuntimeVmOrSandbox": true,
+    "doesNotChangeProviderAccountNetworkOrPhysicalInfrastructure": true,
+    "doesNotAuthorizeP3RoleActions": true,
+    "doesNotAuthorizeMeasurementOrGate": true,
+    "doesNotAuthorize": [
+      "correction-draft finalization",
+      "append-only successor finalization",
+      "publication",
+      "runtime creation or activation",
+      "VM creation",
+      "sandbox creation",
+      "provider selection",
+      "external account access",
+      "networking change",
+      "physical device deployment",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "accessibility validation",
+      "motion validation",
+      "gate execution",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "p11Authorization": "NOT_AUTHORIZED"
+}

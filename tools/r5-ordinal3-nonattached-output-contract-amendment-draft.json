@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-nonattached-persistent-output-contract-amendment",
+  "status": "owner-review-only-draft",
+  "draftId": "r5-ordinal3-nonattached-persistent-output-amendment-v1",
+  "effective": false,
+  "purpose": "Propose fail-closed evidence semantics for a topology in which the actual persistent archive destination is never attached, mapped, named, or otherwise exposed to the implementation identity. This draft is an overlay for owner review; it does not modify the existing proof schema or authorize a runtime action.",
+  "sourceDocuments": [
+    {
+      "path": "tools/r5-ordinal3-os-isolation-proof-schema.json",
+      "sha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403",
+      "role": "target evidence contract"
+    },
+    {
+      "path": "tools/r5-ordinal3-hyperv-capability-probe-design.md",
+      "sha256": "c4a2d4c684e9768a3af7bc150452a19e2a834e45ee220341d7acf378cea58228",
+      "role": "non-attached Hyper-V topology candidate"
+    },
+    {
+      "path": "tools/r5-ordinal3-fixed-exporter-design.md",
+      "sha256": "8a1ce2913f14e55a823ee59c2e140a88b8f328550efaa6bc3415d5d4e995951a",
+      "role": "host-only exporter boundary candidate"
+    }
+  ],
+  "scope": {
+    "targetSchemaPath": "tools/r5-ordinal3-os-isolation-proof-schema.json",
+    "targetSchemaVersion": 1,
+    "targetSchemaSha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403",
+    "appliesOnlyWhen": [
+      "The actual persistent output root and archive pathname are absent from the implementation identity's namespace, mount table, ACL view, environment, process arguments, sockets, and filesystem trace.",
+      "The implementation identity can write only a fixed submission filename in an isolated ephemeral guest scratch filesystem.",
+      "A distinct coordinator-controlled fixed exporter is the only identity that can read that submission and atomically create the fixed persistent archive pathname after separate validation.",
+      "A coordinator-controlled verifier outside the role runtime produces the evidence bundle and keeps host location details outside the role-visible namespace."
+    ],
+    "doesNotChange": [
+      "The four-file attachment scope.",
+      "The requirement for a fresh sealed runtime, pinned runner, pinned probe, independent verifier, nonce binding, post-probe recheck, and fail-closed evidence.",
+      "The fixed exporter requirement that it can create only one validated archive at the fixed destination.",
+      "Any delivery, launch, implementation, return check, return apply, site, lifecycle, browser, Figma, or P-11 authorization."
+    ]
+  },
+  "noAuthority": {
+    "doesNotModifyTargetSchema": true,
+    "doesNotCreateEvidenceRecord": true,
+    "doesNotAuthorize": [
+      "reissue publication",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check",
+      "return apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "proposedInvariants": {
+    "actualPersistentOutputNonAttachment": "The implementation identity is not given the actual output root, archive pathname, location handle, mount, virtual device, share, ACL grant, credential, process argument, environment value, socket endpoint, or control channel. A guest-side not-found result alone is not evidence of this invariant.",
+    "hostSideProofRequired": "The verifier must prove non-attachment from hypervisor or runtime-manager configuration, host-side attachment inventory, host-side ACL and reparse analysis, and a guest namespace/process/socket/filesystem-access trace. Each source artifact is independently hash-pinned and bound to the same nonce.",
+    "guestProbeBoundary": "The implementation-identity probe must not receive, derive, log, or attempt the actual host output path. It may test only a synthetic non-mapped decoy or placeholder and must separately inventory its own mounts, ACLs, environment, arguments, process tree, sockets, and filesystem access trace.",
+    "canonicalEmptyInventory": "Before the probe, the verifier records a host-only canonical inventory of the designated output root with zero entries and no archive. After the probe, the verifier repeats that inventory and requires byte-identical emptiness. An empty-string hash, a hash of a nonexistent archive filename, or role-authored output metadata is not an acceptable substitute.",
+    "exporterBoundary": "The fixed exporter uses a coordinator-controlled identity distinct from the implementation identity. It receives the guest source, output root, fixed filename, validation policy, and invocation only from a sealed coordinator manifest. It accepts no role-authored path, destination, option, configuration, or control request.",
+    "fixedSubmissionOnly": "The implementation identity may submit only the fixed scratch pathname /p3/scratch/return.ustar.tar. Scratch is ephemeral, isolated from host-backed persistence, and destroyed with the runtime. Scratch is not the persistent output location.",
+    "noInferenceFromAbsence": "No record may claim actual-output isolation solely because the guest did not find a path, because a decoy denied access, or because the role states that output was unseen. Those observations are supplemental only."
+  },
+  "legacyFieldDisposition": [
+    {
+      "sourceField": "requiredEvidence.attachmentAndOutputTopology.requiredFields.implementationIdentityOutputDenialProbeSha256",
+      "disposition": "retire-for-nonattached-topology",
+      "reason": "A valid non-attached topology must not disclose or map the actual output target merely to provoke an implementation-identity denial.",
+      "replacementField": "implementationIdentityOutputNamespaceAbsenceProbeSha256"
+    },
+    {
+      "sourceField": "requiredEvidence.inputIntegrityAndReadOnlyProbe.requiredFields.outputHashBeforeSha256",
+      "disposition": "retire-for-nonattached-topology",
+      "reason": "Before export, no persistent archive exists, and the guest must not calculate or receive a hash for the actual output pathname.",
+      "replacementField": "persistentOutputCanonicalEmptyInventoryBeforeSha256"
+    },
+    {
+      "sourceField": "requiredEvidence.attachmentAndOutputTopology.requiredFields.persistentOutputInitiallyEmpty",
+      "disposition": "retire-for-nonattached-topology",
+      "reason": "A boolean cannot prove that the host-only output root is the intended root, empty, free of links or reparse points, and unchanged across the probe.",
+      "replacementField": "persistentOutputCanonicalEmptyInventoryBeforeSha256"
+    },
+    {
+      "sourceField": "requiredEvidence.inputIntegrityAndReadOnlyProbe.acceptance[1]",
+      "disposition": "replace-actual-output-denial-clause",
+      "reason": "The clause requiring the guest probe to read and write the actual persistent output conflicts with non-attachment.",
+      "replacementRequirement": "The host verifier records canonical empty output inventories before and after the probe, proves non-attachment outside the guest, and requires the guest probe to produce only namespace-absence, trace, and synthetic-decoy evidence."
+    },
+    {
+      "sourceField": "requiredEvidence.attachmentAndOutputTopology.requiredFields.fixedExporterUidAndAclEvidenceSha256",
+      "disposition": "retain-and-strengthen",
+      "reason": "Distinct exporter identity and ACL evidence remains required, but must additionally prove that the implementation identity cannot invoke, configure, or reach the exporter, spool, or output root.",
+      "replacementField": "fixedExporterIdentityAndBoundaryEvidenceSha256"
+    },
+    {
+      "sourceField": "requiredEvidence.attachmentAndOutputTopology.requiredFields.fixedExporterAtomicCreateEvidenceSha256",
+      "disposition": "retain-and-strengthen",
+      "reason": "Atomic creation remains required, with explicit destination-no-replace, validation-before-create, role-termination, and final-inventory semantics.",
+      "replacementField": "fixedExporterAtomicCreateEvidenceSha256"
+    }
+  ],
+  "proposedRequiredEvidence": {
+    "attachmentAndOutputTopology": {
+      "requiredFields": [
+        "attachmentInventory",
+        "attachmentInventorySha256",
+        "persistentOutputLocationId",
+        "persistentOutputCanonicalEmptyInventoryBeforeSha256",
+        "persistentOutputCanonicalEmptyInventoryAfterProbeSha256",
+        "actualPersistentOutputHostExistenceAndNonAttachEvidenceSha256",
+        "persistentOutputNonAttachmentConfigurationEvidenceSha256",
+        "persistentOutputHostAclAndReparseEvidenceSha256",
+        "outputLocatorNonDisclosureEvidenceSha256",
+        "implementationIdentityOutputNamespaceAbsenceProbeSha256",
+        "implementationIdentityOutputNamespaceTraceSha256",
+        "syntheticOutputDecoyDefinitionSha256",
+        "implementationIdentitySyntheticOutputDecoyDenialProbeSha256",
+        "fixedExporterIdentityAndBoundaryEvidenceSha256",
+        "fixedExporterAtomicCreateEvidenceSha256",
+        "mountTableBeforeSha256",
+        "mountTableAfterSha256",
+        "aclTableBeforeSha256",
+        "aclTableAfterSha256",
+        "reparseAndSymlinkScanSha256"
+      ],
+      "fieldSemantics": {
+        "persistentOutputLocationId": "An opaque coordinator-only identifier. It is stable only within the nonce-bound evidence bundle and is never the actual host pathname in a role-visible artifact.",
+        "persistentOutputCanonicalEmptyInventoryBeforeSha256": "Hash of the verifier-produced strict inventory of the designated host output root before the fixed probe. The inventory proves root identity, zero entries, archive absence, file-type state, ACL state, reparse/junction/symlink/hard-link state, and canonicalization method without placing its host path in role-visible data.",
+        "persistentOutputCanonicalEmptyInventoryAfterProbeSha256": "Hash of the same verifier-produced inventory after the fixed probe. It must represent the same output location identifier and be byte-identical to the before inventory except for verifier measurement metadata that is explicitly excluded from the canonical payload.",
+        "actualPersistentOutputHostExistenceAndNonAttachEvidenceSha256": "Hash of a verifier-produced bundle that proves the actual host output root exists and is the root represented by the opaque location identifier, while the implementation runtime has no attachment, mapping, handle, share, device, credential, or route to it. The bundle is host-only and is never replaced by a guest not-found response.",
+        "persistentOutputNonAttachmentConfigurationEvidenceSha256": "Hash of host or hypervisor manager evidence showing no output-root device, share, folder mapping, virtual socket, redirected device, integration service, credential, or other host-to-guest data/control attachment for the implementation runtime.",
+        "persistentOutputHostAclAndReparseEvidenceSha256": "Hash of verifier evidence showing the implementation identity has no host-side path, credential, ACL, traversal, link, reparse, overlay, or equivalent capability that resolves to the output root or archive.",
+        "outputLocatorNonDisclosureEvidenceSha256": "Hash of verifier evidence that the actual output root, parent, UNC/device locator, private spool, exporter configuration, and evidence store are absent from every role-visible attachment, runner configuration, probe input, environment entry, argument, current working directory, process handle, socket, and trace payload.",
+        "implementationIdentityOutputNamespaceAbsenceProbeSha256": "Hash of a pinned, non-role-authored guest probe that records absence of output-class mounts, mappings, environment entries, arguments, sockets, and routes. It never contains or probes the actual host output path and does not include a synthetic-decoy denial result.",
+        "implementationIdentityOutputNamespaceTraceSha256": "Hash of the independently collected implementation-identity filesystem/process/socket trace covering the probe. It must show no actual output resolve, read, write, list, traverse, reference, or access event and no unapproved host-control channel.",
+        "syntheticOutputDecoyDefinitionSha256": "Hash of the verifier-produced definition of the non-mapped guest placeholder or synthetic decoy, including its class identifier and proof that it is not the actual output root, parent, archive, private spool, or host locator. The definition contains no actual output pathname in role-visible form.",
+        "implementationIdentitySyntheticOutputDecoyDenialProbeSha256": "Hash of the pinned guest probe result for the defined decoy only. It is supplemental evidence and must never be interpreted as proof that the actual output root is non-attached.",
+        "fixedExporterIdentityAndBoundaryEvidenceSha256": "Hash of coordinator-produced evidence that the exporter is a distinct identity, cannot be invoked or configured by the role, can read only the fixed guest submission after role termination, and can write only its private spool and the fixed persistent archive pathname.",
+        "fixedExporterAtomicCreateEvidenceSha256": "Hash of evidence for a destination-no-replace atomic creation primitive, pre-create empty inventory, validation PASS prerequisite, post-create strict inventory, and no remaining spool hard link or alias at the output root."
+      }
+    },
+    "inputIntegrityAndReadOnlyProbe": {
+      "requiredFields": [
+        "inputHashBeforeSha256",
+        "inputHashAfterSha256",
+        "probeBinaryPath",
+        "probeBinarySha256",
+        "probeCommandSha256",
+        "probeTranscriptSha256",
+        "probeTraceSha256",
+        "persistentOutputCanonicalEmptyInventoryBeforeSha256",
+        "persistentOutputCanonicalEmptyInventoryAfterProbeSha256",
+        "implementationIdentityOutputNamespaceAbsenceProbeSha256",
+        "implementationIdentityOutputNamespaceTraceSha256",
+        "syntheticOutputDecoyDefinitionSha256",
+        "implementationIdentitySyntheticOutputDecoyDenialProbeSha256"
+      ],
+      "acceptance": [
+        "The fixed probe is run under the implementation identity before any role action and does not write inputs, scratch, runtime configuration, guest profile state, or persistent output.",
+        "Input hashes before and after match exactly. The host-side canonical output inventory is empty both before and after the probe. The guest probe does not receive or attempt the actual output pathname.",
+        "The probe records allowed attachment metadata access without serializing attachment contents. It records guest namespace absence and a separately defined synthetic-decoy denial without serializing host pathnames, host data, or evidence-store data. The decoy result is supplemental only.",
+        "The implementation-identity trace covers the probe lifetime and establishes no access outside the sealed runtime base, the four inputs, and ephemeral scratch. The trace is collected independently from the guest probe and role stdout."
+      ]
+    },
+    "independentBinding": {
+      "additionalRequiredFields": [
+        "nonattachedOutputAmendmentSha256",
+        "persistentOutputLocationBindingSha256",
+        "outputNonAttachmentPostProbeRecheckSha256"
+      ],
+      "acceptance": [
+        "The sealed launch manifest identifies this accepted amendment by its final byte hash and binds it to the same proof nonce as the runtime, attachments, runner, probe, exporter, and output location identifier.",
+        "The post-probe recheck repeats non-attachment configuration evidence, output-root ACL/reparse evidence, output inventory, and guest namespace trace before any separately authorized launch.",
+        "A changed runtime configuration, output location identifier, exporter identity, output inventory, or amendment byte hash invalidates the record."
+      ]
+    },
+    "futureAuthorizedExportPhaseOnly": {
+      "status": "not-authorized-by-this-draft",
+      "requiredFieldsIfAnExportPhaseIsSeparatelyAuthorized": [
+        "outputRootInventoryBeforeExportSha256",
+        "outputRootInventoryAfterExportSha256",
+        "roleTerminationReceiptSha256",
+        "fixedExporterSealedManifestSha256",
+        "fixedExporterAllowlistTraceSha256",
+        "fixedExporterValidationAdapterEvidenceSha256",
+        "fixedExporterAtomicNoReplaceEvidenceSha256"
+      ],
+      "acceptance": [
+        "The exporter may run only after all implementation-identity processes have terminated and its fixed guest submission has become immutable to that identity.",
+        "The exporter reads only the fixed guest scratch submission and writes only its private spool and, after validation PASS, the fixed persistent archive pathname using a no-replace atomic primitive.",
+        "The pre-export inventory is empty. The post-export inventory contains only the regular fixed archive filename with no link, reparse, hard-link, or ACL deviation. A failed cleanup or final inventory does not produce success and remains immutable forensic state until separate recovery authority exists.",
+        "This phase requires distinct owner authorization, a sealed manifest, a separately pinned validation adapter, and a post-probe configuration recheck. This draft grants none of them."
+      ]
+    }
+  },
+  "machineVerificationRules": [
+    "A non-attached-topology record is fail unless all proposed replacement fields are present, valid SHA-256 values, independently sourced, and bound to the same nonce.",
+    "A record is fail if it contains a retired legacy field as a stand-in for the replacement semantics, uses a guest not-found result or synthetic decoy result as sole proof, or exposes an actual host output pathname to the implementation identity.",
+    "A record is fail if the output root is nonempty before the probe, differs after the probe, has an unapproved link/reparse/ACL condition, or is attached by any runtime or host-control channel.",
+    "A record is fail if the fixed exporter can accept role-controlled input other than the one fixed scratch filename, can write any destination other than the fixed archive pathname, runs before role termination, or lacks a separately pinned validation adapter PASS.",
+    "A record is fail if the evidence collector, exporter, private spool, host output root, or host output path becomes reachable by the implementation identity through a mount, ACL, process, environment variable, socket, network route, inherited handle, or trace event.",
+    "Missing typed-schema validation, missing independent audit of the validator, or absent explicit owner acceptance of this exact final amendment byte hash leaves the record draft or fail; it cannot be pass."
+  ],
+  "requiredFinalStatement": "external OS-isolation capability probe: PASS only for the specific sealed runtime configuration, nonattached persistent-output topology, accepted amendment byte hash, and evidence nonce; P-11 remains NOT_AUTHORIZED; no role launch or implementation action is authorized by this record.",
+  "ownerReviewRequired": {
+    "requiredDecisions": [
+      "Approve or reject retirement of actual-output guest denial and pre-output-hash fields for the non-attached topology, with the replacement fields and semantics above.",
+      "Approve or reject use of host-side canonical empty inventory plus non-attachment evidence as the only acceptable proof of actual output non-exposure; synthetic decoy results remain supplemental only.",
+      "Approve or reject a separately scoped typed evidence-record validator and independent audit before any pass-capable record is created.",
+      "Approve or reject any future P-3-free capability probe separately; this draft does not supply that approval."
+    ],
+    "acceptanceConditions": [
+      "Owner acceptance must name the final amendment file hash, not merely this draft title or version.",
+      "The existing proof schema remains unchanged until a separately authorized, reviewed, and validated amendment application exists.",
+      "No accepted amendment may be read as P-11 authorization or as authorization for a role delivery, launch, or implementation."
+    ]
+  }
+}

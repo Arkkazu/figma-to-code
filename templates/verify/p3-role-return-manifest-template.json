@@ -1,0 +1,21 @@
+{
+  "_comment": "Role return archive template. Put the finalized manifest at the USTAR archive root as return-manifest.json, remove this _comment, and include exactly the declared regular files. handoffProtocolSha256, deliverySequence, and componentDecisionCodePath are copied verbatim from the coordinator-only return plan; they do not disclose a condition identity. A role submits only one archive for this delivery. The coordinator must apply it, record the actual matching figma-gate checkpoint and same-condition feedback before any next delivery. Use a plain uncompressed USTAR archive: no PAX/GNU extension, directory, symlink, hard link, special file, or undeclared entry.",
+  "version": 4,
+  "kind": "p3-role-return",
+  "handoffId": "REPLACE-opaque-handoff-id-from-role-packet",
+  "deliverySequence": 1,
+  "handoffProtocolSha256": "REPLACE-64-lowercase-hex-sha256-from-coordinator-return-plan",
+  "component": {
+    "elementId": "REPLACE-component-element-id",
+    "componentDecisionCodePath": "REPLACE-exact-code-path-from-coordinator-return-plan",
+    "sequence": 1,
+    "attempt": 1
+  },
+  "inputStagingSha256": "REPLACE-64-lowercase-hex-sha256",
+  "files": [
+    {
+      "path": "REPLACE-allowed-change-target",
+      "sha256": "REPLACE-64-lowercase-hex-sha256"
+    }
+  ]
+}

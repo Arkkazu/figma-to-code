@@ -1,0 +1,91 @@
+{
+  "_viewportPolicyNote": "scrollbars は測定幅の規約。hidden は --hide-scrollbars でスクロールバーの無い理想幅、visible は実ブラウザと同じスクロールバー幅を含む。margin:0 auto の中央寄せはこの差でx座標がずれるため宣言必須。",
+  "viewportPolicy": { "scrollbars": "hidden" },
+  "url": "http://localhost:8080/sample-page/",
+  "tolerance": 1.5,
+  "viewports": [
+    {
+      "width": 1440,
+      "page": {
+        "maxScrollWidth": 1440
+      },
+      "elements": [
+        {
+          "sel": ".sample-section__title",
+          "note": "Figma node XXXX:YYYY 見出し",
+          "left": 100,
+          "topInSection": 80,
+          "width": 721,
+          "height": 26,
+          "fontSize": "16px",
+          "letterSpacing": "0.48px",
+          "color": "rgb(54, 54, 53)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "lineHeight": "26px",
+          "text": "見出しテキスト",
+          "lineCount": 1,
+          "borderRadius": "0px",
+          "provenance": {
+            "left": "metadata",
+            "topInSection": "metadata",
+            "width": "metadata",
+            "height": "metadata",
+            "fontSize": "design_context",
+            "letterSpacing": "design_context",
+            "color": "variable_defs",
+            "backgroundColor": "variable_defs",
+            "lineHeight": "design_context",
+            "text": "design_context",
+            "lineCount": "screenshot",
+            "borderRadius": "design_context"
+          }
+        },
+        {
+          "sel": ".sample-section__lead",
+          "note": "Figma node XXXX:ZZZZ リード文。高さは行数ぶんの範囲指定",
+          "width": 640,
+          "height": [
+            52,
+            56
+          ],
+          "lineHeight": "28px",
+          "innerText": "1行目\n2行目",
+          "lineCount": 2,
+          "provenance": {
+            "width": "metadata",
+            "height": "metadata",
+            "lineHeight": "design_context",
+            "innerText": "design_context",
+            "lineCount": "screenshot"
+          }
+        }
+      ]
+    },
+    {
+      "width": 375,
+      "page": {
+        "maxScrollWidth": 375
+      },
+      "elements": [
+        {
+          "sel": ".sample-section__title",
+          "note": "SP。基準幅375pxで測ると1rem=1pxの案件ではFigma SP値と直接比較できる",
+          "left": 20,
+          "width": 335,
+          "fontSize": "14px",
+          "lineHeight": "22px",
+          "text": "見出しテキスト",
+          "lineCount": 1,
+          "provenance": {
+            "left": "metadata",
+            "width": "metadata",
+            "fontSize": "design_context",
+            "lineHeight": "design_context",
+            "text": "design_context",
+            "lineCount": "screenshot"
+          }
+        }
+      ]
+    }
+  ]
+}

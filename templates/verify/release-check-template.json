@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "status": "pending",
+  "ownerApproved": false,
+  "ownerApprovedAt": "YYYY-MM-DDTHH:MM:SS+09:00",
+  "deploymentId": "<公開デプロイを一意に識別する値>",
+  "publicUrl": "https://example.com/path/"
+}

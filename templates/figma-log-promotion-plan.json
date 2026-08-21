@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "id": "promotion-plan-example",
+  "proposalId": "figma-log-example",
+  "proposalPath": "learning/log-promotions/proposals/figma-log-example.json",
+  "proposalSha256": "replace-with-proposal-sha256",
+  "reviewReceiptPath": "learning/log-promotions/reviews/promotion-review-figma-log-example.json",
+  "reviewReceiptSha256": "replace-with-review-receipt-sha256",
+  "patches": [{
+    "path": "rules/figma-spec-pipeline.md",
+    "expectedSha256": "replace-with-current-target-sha256",
+    "find": "exact existing text",
+    "replace": "exact replacement text that strengthens the rule"
+  }]
+}

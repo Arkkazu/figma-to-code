@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-nonattached-output-contract-amendment-owner-acceptance",
+  "recordState": "finalized",
+  "ownerApproved": true,
+  "approvedAt": "2026-08-15T04:40:19.8343926Z",
+  "approvalSource": {
+    "kind": "direct-owner-conversation",
+    "contentHash": "not-available",
+    "machineVerified": false
+  },
+  "acceptedDraft": {
+    "path": "tools/r5-ordinal3-nonattached-output-contract-amendment-draft.json",
+    "sha256": "b7960c5509ea50ed27d18ad636f0f12c5c712444a84de0765068f416b27b28a0"
+  },
+  "acceptedScope": {
+    "nonattachedPersistentOutputEvidenceSemantics": true,
+    "p3FreeHyperVCapabilityProbePreparation": true,
+    "schemaReplacementAuthorized": false,
+    "typedValidatorStillRequiredForPass": true,
+    "separateRuntimeAndNonceStillRequired": true
+  },
+  "doesNotAuthorize": [
+    "reissue publication",
+    "role delivery",
+    "role launch",
+    "implementation",
+    "return check",
+    "return apply",
+    "site or lifecycle mutation",
+    "browser or Figma measurement",
+    "P-11 change"
+  ],
+  "p11Authorization": "NOT_AUTHORIZED"
+}

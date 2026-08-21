@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-external-os-isolation-proof-schema",
+  "status": "draft-not-evidence",
+  "purpose": "Define the machine-verifiable evidence required before any ordinal-3 role launch. This document is a schema and acceptance checklist, not an authorization, runtime configuration, launch instruction, or P-11 result.",
+  "scope": {
+    "roleDataVisibility": "Exactly four immutable attachment files are the only non-runtime data visible to the implementation identity. The designated persistent output is not visible or readable or writable by that identity; only the separately pinned fixed exporter may map its single archive path.",
+    "requiredAttachmentRelativePaths": [
+      "input/assignment.json",
+      "input/references/pc-first-view.png",
+      "input/references/sp-first-view.png",
+      "return-authority.json"
+    ],
+    "persistentOutputRelativePath": "output/return.ustar.tar",
+    "implementationIdentityPersistentOutputAccess": "none",
+    "fixedExporterPersistentOutputAccess": "write-only single fixed archive path after validation",
+    "allowedRuntimeBase": "A separately enumerated, read-only OS/runtime image is permitted only to execute the pinned runner. It must not expose a host user profile, project checkout, role home, history, plugin cache, skill directory, connector configuration, or any other host data volume.",
+    "notAuthorized": [
+      "reissue publication",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check",
+      "return apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "P-11 change"
+    ]
+  },
+  "evidenceRecordContract": {
+    "recordMustBeCreatedBy": "A coordinator-controlled verifier outside the role runtime. Role stdout, a role-authored manifest, and an owner self-report are insufficient by themselves.",
+    "statusValues": [
+      "draft",
+      "collected",
+      "pass",
+      "fail"
+    ],
+    "passRule": "A record is pass only when every required assertion has a machine-produced source artifact, every source artifact hash is pinned, all negative probes deny access, and no forbidden mount, ACL, inherited environment entry, process, endpoint, or trace event is found. Missing, unreadable, stale, or self-authored-only evidence is fail-closed.",
+    "p11Authorization": "NOT_AUTHORIZED",
+    "prohibitedClaims": [
+      "P-11 PASS",
+      "model context was empty",
+      "service-side tools were technically impossible unless separately proven by a dedicated authorization path",
+      "attachment-only is proven solely from the role's statement"
+    ]
+  },
+  "requiredEvidence": {
+    "verifier": {
+      "requiredFields": [
+        "verifierBinaryPath",
+        "verifierBinarySha256",
+        "verifierVersion",
+        "verificationStartedAtUtc",
+        "verificationCompletedAtUtc",
+        "evidenceBundleSha256"
+      ],
+      "acceptance": "The verifier identity and bytes are pinned before runtime creation; it writes evidence outside the guest and outside the future output location."
+    },
+    "freshRuntime": {
+      "requiredFields": [
+        "runtimeType",
+        "runtimeInstanceId",
+        "runtimeImageIdOrDigest",
+        "runtimeConfigurationSha256",
+        "createdAtUtc",
+        "startedAtUtc",
+        "baseSnapshotIdOrDigest",
+        "persistentDiskPolicy",
+        "hostSharePolicy",
+        "clipboardAndDeviceRedirectPolicy"
+      ],
+      "acceptance": [
+        "The runtime is created after the proof nonce is generated and is not restored from an interactive or previously used role session.",
+        "No prior user profile, home directory, conversation history, role-home directory, workspace checkout, or reusable writable disk is attached.",
+        "Host folders, host drives, clipboard files, redirected devices, shared sockets, and host user-profile integration are disabled or absent.",
+        "A fresh-runtime assertion is backed by the hypervisor/container manager event log, not merely a guest timestamp."
+      ]
+    },
+    "runner": {
+      "requiredFields": [
+        "runnerPathInsideRuntime",
+        "runnerSha256",
+        "runnerVersion",
+        "runnerInvocationSha256",
+        "runnerConfigurationSha256",
+        "allowedChildExecutableSha256s"
+      ],
+      "acceptance": [
+        "The exact executable, version output, invocation, configuration, and every permitted child executable are hash-pinned.",
+        "The runner configuration contains no plugin, skill, MCP, connector, browser, Web, project, Git, history, or host-home path.",
+        "The role cannot replace the runner, alter its configuration, or load unpinned extensions."
+      ]
+    },
+    "attachmentAndOutputTopology": {
+      "requiredFields": [
+        "attachmentInventory",
+        "attachmentInventorySha256",
+        "persistentOutputLocationId",
+        "persistentOutputInitiallyEmpty",
+        "implementationIdentityOutputDenialProbeSha256",
+        "fixedExporterUidAndAclEvidenceSha256",
+        "fixedExporterAtomicCreateEvidenceSha256",
+        "mountTableBeforeSha256",
+        "mountTableAfterSha256",
+        "aclTableBeforeSha256",
+        "aclTableAfterSha256",
+        "reparseAndSymlinkScanSha256"
+      ],
+      "attachmentInventoryRules": [
+        "The inventory names exactly the four required relative paths, their regular-file type, byte length, and SHA-256; it contains no attachment contents.",
+        "Each input file is mounted or ACL-exposed individually read-only. A parent directory mount is accepted only when the verifier proves it contains no additional reachable entries.",
+        "The designated persistent output location is empty before launch, is not mounted or ACL-readable or ACL-writable by the implementation identity, and has no reparse point, symlink, junction, hard link, overlay escape, or host-parent traversal path.",
+        "A separately byte-pinned fixed exporter runs under a coordinator-controlled identity distinct from the implementation identity. It may read only the declared scratch submission archive and may atomically create only the fixed persistent archive path when that destination is empty and archive validation passes.",
+        "Runtime scratch is an isolated ephemeral filesystem with no host backing, is destroyed with the runtime, and is listed explicitly. It cannot be treated as an additional persistent output location."
+      ],
+      "acceptance": "The guest-side mount and ACL views and the hypervisor/container-manager attachment configuration agree byte-for-byte with the sealed topology manifest."
+    },
+    "forbiddenSurfaceDenial": {
+      "forbiddenClasses": [
+        "global AGENTS.md, CLAUDE.md, and WORKFLOW.md",
+        "global or user skill directories",
+        "plugin caches and plugin manifests",
+        "MCP, connector, and browser configuration or socket endpoints",
+        "conversation, Codex, Claude, shell, and application history",
+        "host project checkouts and Git metadata",
+        "other role homes, peer artifacts, comparison contracts, and coordinator records",
+        "host user-profile and temporary directories"
+        ,"designated persistent output from the implementation identity"
+      ],
+      "requiredFields": [
+        "forbiddenPathListSha256",
+        "hostExistenceWitnessSha256",
+        "guestNegativeProbeTranscriptSha256",
+        "guestEnvironmentSnapshotSha256",
+        "guestProcessSnapshotSha256",
+        "guestSocketSnapshotSha256",
+        "guestMountAndAclSnapshotSha256",
+        "filesystemAccessTraceSha256"
+      ],
+      "acceptance": [
+        "Every prohibited path is known by the outside verifier to exist on the host or source environment. The guest must receive access-denied or not-mapped while the host witness proves the path was not merely nonexistent.",
+        "The guest environment contains no variable, drive mapping, UNC mapping, symlink, junction, mount, inherited working directory, configuration value, or process argument that resolves to a forbidden surface.",
+        "The process tree contains only the pinned runner, the fixed probe, and the declared OS/runtime dependencies. No browser, shell integration, connector, plugin host, MCP service, or extra agent process is permitted.",
+        "The network policy is deny-by-default and the socket snapshot and trace show no listener or outbound connection other than a verifier-declared control channel that is inaccessible to the role identity."
+      ]
+    },
+    "inputIntegrityAndReadOnlyProbe": {
+      "requiredFields": [
+        "inputHashBeforeSha256",
+        "inputHashAfterSha256",
+        "outputHashBeforeSha256",
+        "probeBinaryPath",
+        "probeBinarySha256",
+        "probeCommandSha256",
+        "probeTranscriptSha256",
+        "probeTraceSha256"
+      ],
+      "acceptance": [
+        "The fixed probe runs before any implementation role under the implementation identity and performs metadata/access checks only. It does not write inputs, scratch, persistent output, runtime configuration, or guest profile state.",
+        "Input hashes before and after are identical. The persistent output remains empty after the probe, and the probe records denied read and write attempts against it. Any probe side effect is fail.",
+        "The probe records allowed-path access without serializing attachment contents and records forbidden-path denial without copying data into the guest or evidence bundle.",
+        "The implementation-identity filesystem trace covers the probe lifetime and establishes that no access occurred outside the sealed runtime base, the four inputs, and ephemeral scratch; it establishes denied access to persistent output. The fixed-exporter trace is collected separately and may show only its declared scratch source and single persistent archive destination."
+      ]
+    },
+    "independentBinding": {
+      "requiredFields": [
+        "proofNonce",
+        "runtimeConfigurationAttestationSha256",
+        "sealedLaunchManifestSha256",
+        "evidenceBundleSignatureOrMac",
+        "postProbeConfigurationRecheckSha256"
+      ],
+      "acceptance": [
+        "The same proof nonce binds the verifier, runtime configuration, mount/ACL topology, runner, and capability-probe evidence.",
+        "The post-probe recheck proves that no mount, ACL, executable, runner configuration, or runtime identity changed between the probe and a later separately authorized launch.",
+        "A later role launch requires a distinct authorization record that references this pass record. This schema alone never supplies that authorization."
+      ]
+    }
+  },
+  "failureConditions": [
+    "A required field, hash, timestamp, signature, or source artifact is absent.",
+    "A host path is visible through any mount, ACL, environment variable, reparse point, inherited process argument, network endpoint, or trace event.",
+    "The persistent output location is not empty before the probe, the implementation identity can read or write it, the fixed exporter can write another path, or the probe changes any attachment, output, or runtime configuration byte.",
+    "The runtime is reused, its origin cannot be attested, or a persistent profile/disk/share is attached.",
+    "Runner or probe bytes/configuration are not exactly pinned.",
+    "The record relies on a role claim as the sole proof of isolation.",
+    "Any record labels P-11 as authorized, passed, or proved."
+  ],
+  "requiredFinalStatement": "external OS-isolation capability probe: PASS only for the specific sealed runtime configuration and evidence nonce; P-11 remains NOT_AUTHORIZED; no role launch or implementation action is authorized by this record."
+}

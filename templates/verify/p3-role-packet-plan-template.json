@@ -1,0 +1,43 @@
+{
+  "_comment": "Coordinator-only template. First run `node p3-role-packet.mjs --expand-ustar <plain-ustar.tar> <new-inspection-directory>`; it accepts only plain USTAR and rejects traversal, links, special/PAX/GNU entries, archives nested as attachments, and role-input exclusions. Then replace every REPLACE value and remove this _comment before `--check`. packetRoot is that newly expanded real directory; archive attachments are rejected by the validator. The validator also rejects `.git`, MyBrain/, AGENTS.md, CLAUDE.md, STATE.md, P3-CONTRACT-RECORDS.md, P-3 contract/J/evidence/evaluator records, .figma-gate, P-3 ledger/pair locks, and any actual-worktree overlap. identityAuthority must reference the actual v13 condition contract and owner-approved Decision J v2 outside packetRoot; version 12 and every earlier contract are rejected without migration.",
+  "version": 3,
+  "kind": "p3-role-packet-plan",
+  "packetRoot": "REPLACE-expanded-inspection-directory",
+  "roleAttachments": [
+    {
+      "logicalPath": "REPLACE-redacted-logical-path",
+      "path": "REPLACE-expanded-regular-file-path",
+      "sha256": "REPLACE-64-lowercase-hex-sha256",
+      "origin": "REPLACE-coordinator-only-origin-description"
+    }
+  ],
+  "identityAuthority": {
+    "comparisonContract": {
+      "path": "REPLACE-coordinator-only-actual-v13-comparison-contract.json",
+      "sha256": "REPLACE-64-lowercase-hex-sha256"
+    },
+    "ownerDecisionJ": {
+      "path": "REPLACE-coordinator-only-actual-owner-decision-j-v2.json",
+      "sha256": "REPLACE-64-lowercase-hex-sha256"
+    },
+    "recipientCondition": "REPLACE-baseline-or-current"
+  },
+  "forbiddenArtifacts": [
+    {
+      "id": "comparison-contract",
+      "description": "baseline/current comparison contract, including self-condition copies"
+    },
+    {
+      "id": "decision-j",
+      "description": "Owner Decision J v2 record"
+    },
+    {
+      "id": "clean-room-evidence",
+      "description": "baseline/current clean-room evidence v2, including self-condition copies"
+    },
+    {
+      "id": "template",
+      "description": "fidelity-comparison-template.json and P-3 comparison contract templates"
+    }
+  ]
+}

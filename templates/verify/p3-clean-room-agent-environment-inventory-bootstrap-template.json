@@ -1,0 +1,20 @@
+{
+  "_comment": "Coordinator-prepared bootstrap inventory for p3-clean-room-probe v5. probeId must be the opaque probe-<hex> value in the plan and ownStaging must be the same opaque role-staging-<hex> root. It contains no condition, actor, context, contract, Decision J, peer path, matrix plan, or bootstrap output. P-7 does not name a coordinator staging directory: the role helper uses the actual TEMP and TMP inherited by its launch.",
+  "version": 5,
+  "kind": "p3-clean-room-role-probe-inventory-v5",
+  "probeId": "probe-REPLACE-32-to-128-lowercase-hex",
+  "stage": "bootstrap",
+  "recipientCommitment": "REPLACE-64-lowercase-hex-coordinator-derived-recipient-commitment",
+  "coordinatorAuthoritySha256": "REPLACE-64-lowercase-hex-coordinator-authority-file-sha256",
+  "ownStaging": {
+    "path": "REPLACE-absolute-role-staging-64hex-root",
+    "exists": true
+  },
+  "p7": {
+    "self": {
+      "id": "P-7-own-temp-sentinel",
+      "coverage": "P-7",
+      "environmentVariables": ["TEMP", "TMP"]
+    }
+  }
+}

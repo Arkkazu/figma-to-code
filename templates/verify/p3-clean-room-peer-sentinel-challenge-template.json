@@ -1,0 +1,21 @@
+{
+  "_comment": "OUTPUT ONLY: p3-clean-room-probe.mjs --matrix emits this v3 challenge. Do not hand-author it. challengeId must be challenge- plus 32-128 lowercase hex and recipient.probeId must be probe- plus 32-128 lowercase hex; neither is a free-form identity carrier. Each sentinel path is the peer role's original absolute TEMP sentinel path, not a redacted alias. The coordinator matrix validates that path against known identity fragments, bootstrap TEMP/TMP launch output, SHA-256, and realpath before generation. sourceCommitment/provenance are rechecked by the coordinator validator.",
+  "version": 3,
+  "kind": "p3-clean-room-peer-sentinel-challenge-v3",
+  "challengeId": "challenge-REPLACE-32-to-128-lowercase-hex",
+  "recipient": {
+    "probeId": "probe-REPLACE-32-to-128-lowercase-hex",
+    "recipientCommitment": "REPLACE-64-lowercase-hex-recipient-commitment"
+  },
+  "sentinels": [
+    { "id": "P-7-peer-sentinel-1", "path": "REPLACE-original-absolute-peer-TEMP-sentinel-path", "sha256": "REPLACE-64-lowercase-hex-sentinel-content-sha256", "sourceCommitment": "REPLACE-64-lowercase-hex" },
+    { "id": "P-7-peer-sentinel-2", "path": "REPLACE-original-absolute-peer-TEMP-sentinel-path", "sha256": "REPLACE-64-lowercase-hex-sentinel-content-sha256", "sourceCommitment": "REPLACE-64-lowercase-hex" },
+    { "id": "P-7-peer-sentinel-3", "path": "REPLACE-original-absolute-peer-TEMP-sentinel-path", "sha256": "REPLACE-64-lowercase-hex-sentinel-content-sha256", "sourceCommitment": "REPLACE-64-lowercase-hex" }
+  ],
+  "provenance": {
+    "matrixPlanStableJsonSha256": "REPLACE-64-lowercase-hex-stable-json-hash",
+    "coordinatorAuthoritySha256": "REPLACE-64-lowercase-hex-coordinator-authority-file-hash",
+    "bootstrapEvidenceSetSha256": "REPLACE-64-lowercase-hex-derived-bootstrap-set-hash",
+    "recipientCommitment": "REPLACE-64-lowercase-hex-recipient-commitment"
+  }
+}

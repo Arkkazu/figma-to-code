@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "figma-log-intake-18a149a98d712b47",
+  "status": "pending-review",
+  "policyPath": "rules/log-promotion-policy.json",
+  "policySha256": "03cdcff4d14b72d29d67a404c1b0faa3365b6f570a422cea9dd64edc37841533",
+  "records": [
+    {
+      "id": "correction-log-feedback-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: log-to-rule-feedback-gap",
+        "line": 19,
+        "sha256": "d563e939bc01adc38bd40257cc267b66bf085b06f71b5c80c3711d3b4bf70dea"
+      }
+    },
+    {
+      "id": "correction-provenance-spec-20260709",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-09",
+        "line": 80,
+        "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+      }
+    },
+    {
+      "id": "mistake-provenance-spec-20260625",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-06-25",
+        "line": 84,
+        "sha256": "618fda7815a1235455ee581a5d7565ade1084c4f6551c2589f7535b9a7637945"
+      }
+    }
+  ],
+  "unclassified": [],
+  "proposalIds": [
+    "figma-log-unverified-figma-value-4065dc958c9d424a"
+  ]
+}

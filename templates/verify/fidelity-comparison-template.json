@@ -1,0 +1,337 @@
+{
+  "_comment": "P-3 comparison contract v13。v12およびそれ以前のcontractは移行なしに拒否する。pair-begin前に全placeholderを実測値へ置換する。baseline/currentは別clean worktreeの同じrepository-relative contract pathに置き、sharedはbyte-identicalにする。condition固有のrunだけが異なる。shared gate manifestはimplementation identityを一切持たず、pair-preflightだけがrun.implementationを--implementation-actor/--implementation-context-idとしてfigma-gateへ渡す。figma-gate active stateのimplementationIdentityはpreflight/close/reportでrun.implementationと一致しなければならない。nodeMapはv2 scoped-roots schemaであり、nodeMap.figma.canonicalRootNodeIdはshared.figma.rootNodeIdと一致しなければならない。v13のresponsiveHtmlはsourceFiles/deferredSourceFiles/exceptionsを明示し、deferredSourceFilesはpreflightで未存在のchangeTargetだけに限る。preflightは非deferred sourceを検査し、checkpoint/section-start/section-close/close/release-checkは全sourceを検査する。pair-beginはcommon Git directoryのmutex下でpairIdとcontract pathを一対一のimmutable lockへ予約し、いずれも再利用できない。shared.cleanRoomAuthorizationはA/B両条件のowner承認対象となる隔離planであり、Decision J v2はこのplanを完全に束縛する。ただしJはcondition evidenceのbyte SHA-256を持たない。condition別clean-room evidence v2がJのfile SHA-256とplanのstable JSON SHA-256へ一方向に結び付き、各condition contractがそのevidenceのbyte SHA-256を凍結するため、J/evidence間に循環参照はない。shared.environment.chromeはfinal CDP Browser.getVersionに対する閉じたpolicyだけを持つ。実値はcondition-local run.chromeFingerprintとしてfinal batch summariesから導出され、condition内一貫性とA/B一致を要求する。pre-implementation proof v2はfrozen changeTargetsを正確に列挙し、各targetはsource Git treeと両preflight直前worktreeに存在してはならない。A/Bは同一Git commit/treeとgit archive実バイトSHA-256を使うが、このcontractはworktree作成手段そのものを証明しない。frozen gate manifestがverifyUrlを所有し、canonical http://127.0.0.1:<port>/... でなければならない。",
+  "_preparation": {
+    "commands": [
+      "node MyBrain/verify/fidelity-benchmark.mjs p3-evaluator-plan <comparison-draft.json>",
+      "node MyBrain/verify/fidelity-benchmark.mjs p3-json-hash <owner-record.json>",
+      "node MyBrain/verify/fidelity-benchmark.mjs p3-decision-candidate-plan <draft-comparison.json> <draft-pre-implementation.json> <draft-evaluator-baseline.json>",
+      "node MyBrain/verify/fidelity-benchmark.mjs p3-decision-input-plan <comparison-draft.json>"
+    ],
+    "order": [
+      "評価器root・package-lock証跡と、A/B全条件を含むshared.cleanRoomAuthorizationを含むfrozen shared inputを先に固定する。cleanRoomAuthorizationのconditionはbaseline/currentの2件だけであり、workspace、worktree、4 context、相互のworkspace参照、evidence path、非参照境界を含める。",
+      "p3-evaluator-planでevaluator.baselineRecordを作成しowner承認後、p3-json-hashのfileSha256をcontractへ置く。draftまたはownerApproved: falseのrecordはruntime入力にしない。",
+      "frozen source/scopeからpreImplementationProofを作成しowner承認後、p3-json-hashのfileSha256をcontractへ置く。",
+      "draft preImplementationProofとdraft evaluator baselineを先に用意した場合だけ、schema p3-comparison-contract-draft/v13のenvelopeでp3-decision-candidate-planを実行し、read-onlyのDecision J candidateを作れる。candidateOnly:trueかつruntimeEligible:falseであり、pair-readiness、pair-begin、pair-preflight、pair-close、report、compareへの入力にはできない。承認済みnon-draft preImplementationProofとevaluator.baselineRecordを参照した状態でだけp3-decision-input-planを実行し、cleanRoomAuthorizationを含む最終Decision J v2を作る。owner承認後にJのfileSha256をcontractへ置く。Jはevidence SHAを参照しない。",
+      "pairId+condition固有のclean-room evidence v2をbaseline/current別に作る。各evidenceはowner承認、Jのpath/file SHA-256、JのcleanRoomAuthorization stable JSON SHA-256、当該conditionAuthorizationを持つ。別pair・別conditionとの共有または上書きはしない。Currentはこれに加えて既存意味論のevaluatedChange.approvalRecordを必要とする。path参照を持つ全recordをp3-json-hashで固定する。",
+      "read-onlyのpair-readiness <baseline contract> pre-beginを通してから、baseline contractだけでpair-beginを一度実行する。pair-readinessはledger、pair lock、gate stateを作成または変更しない。"
+    ]
+  },
+  "_schemaRequirements": "versionは13である。v12およびそれ以前のcontract、pair lock、active stateは移行せず拒否する。shared.figma.nodeMapはversion 2のscoped-roots schemaであり、nodeMap.figma.fileKeyとcanonicalRootNodeIdはshared.figma.fileKey/rootNodeIdと一致しなければならない。shared.cleanRoomAuthorizationはversion 1、top-level pairId、baseline/currentの順で一意な2 conditionsを持つ。各conditionはrepository-relativeで相互に異なるevidencePath、workspaceId、absolute worktreeRoot、implementation/review actor+contextId、相手workspaceId、isolationMechanism、otherConditionArtifactsAccessible: false、5件固定のprohibitedArtifactsを持つ。A/B workspaceId/worktreeRootは異なり、4 contextIdは全て異なり、otherWorkspaceIdは相互参照でなければならない。shared gate manifest scopeはimplementationActor、implementationContextId、implementationIdentity、implementationを持たない。scope.responsiveHtmlはsourceFiles/deferredSourceFiles/exceptionsだけを持ち、deferredSourceFilesの各pathはsourceFilesかつchangeTargetsに含まれpreflight時に未存在でなければならない。pair-preflightだけがrun.implementationをexactly one actor/context flag pairとして渡し、figma-gate active state version 5のimplementationIdentityへ固定する。checkpoint/close/release-checkへのidentity flagは拒否され、legacy stateのidentity欠落またはversion 4は拒否される。Decision J candidateはschema p3-comparison-contract-draft/v13のdraft入力からread-onlyに作成できるがcandidateOnly:true/runtimeEligible:falseであり、最終Decision Jの代替ではない。Decision Jはv2でこのplanとそのstable JSON SHA-256を承認するが、condition evidenceのbyte SHA-256は含めない。shared.pageProviderはkind、outputRoot、entryPathだけを受け付ける。shared.environment.nodeExecArgvは[]であり、NODE_OPTIONS、NODE_PATH、preserve-symlink系ambient変数なしのbare Nodeで実行する。shared.environment.chromeはversion:1、source:'CDP Browser.getVersion'、fields:['product','revision','userAgent']、equality:'within-final-batches-and-across-pair'だけを持つ。Chrome実値はsharedへ入れず、final batch summariesからcondition-local run.chromeFingerprintとして導出し、非空、condition内一貫性、A/B一致を要求する。run.closeはpathだけの宣言で、SHA-256はactive figma-gate stateとclose reportから得る。run.pageProviderReceiptPathはpair-close前に存在しないcondition固有repository-relative destinationである。run.cleanRoomはevidence(path/sha256)だけを持ち、そのpathはJの当該condition evidencePathと一致する。draft、ownerApproved: false、statusがapproved以外、J/evidence/path/plan/run identityの不一致はruntimeで拒否する。",
+  "_lifecycle": {
+    "activePairOrder": [
+      "pair-readiness <baseline contract> pre-begin (read-only)",
+      "pair-begin with the baseline contract only",
+      "pair-preflight in each clean worktree before source edits, passing that condition run.implementation as the required actor/context identity flag pair",
+      "implementation checkpoints in each worktree",
+      "pair-readiness <condition contract> pre-close in each worktree after its final static bundle exists (read-only)",
+      "pair-close in each worktree after its final static bundle exists",
+      "report in each worktree after its pair-close",
+      "compare after both reports, using the baseline contract"
+    ],
+    "terminalAlternative": "pair-abort may terminate an active pair at any point before compare; it is not a step after a completed comparison and requires a reason of at least 20 characters."
+  },
+  "_pageProviderRequirements": "shared.pageProvider must be hermetic-static-v1 with only kind, outputRoot, and entryPath. outputRoot must already exist before pair-close as a real, non-ignored source-side directory; MyBrain, .figma-gate, node_modules, symlinks, special files, external servers, and ignored/generated build outputs are ineligible. The complete frozen static bundle path set, joined below outputRoot, must exactly equal frozen scope.changeTargets: no missing or extra bundle files. entryPath must name an HTML regular file that is itself one of those changeTargets. The bundle must remain byte-identical while the P-3-owned provider measures it.",
+  "version": 13,
+  "pairId": "replace-with-one-owner-approved-pilot-id",
+  "condition": "baseline",
+  "shared": {
+    "figma": {
+      "fileKey": "replace-with-real-figma-file-key",
+      "rootNodeId": "replace-with-real-root-node-id",
+      "nodeMap": {
+        "path": "MyBrain/verify/node-map-REPLACE.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "metadata": {
+        "path": "MyBrain/verify/frozen-figma-metadata-REPLACE.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "designContexts": [
+        {
+          "path": "MyBrain/verify/frozen-figma-design-context-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "MyBrain/verify/frozen-figma-screenshot-REPLACE.png",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        }
+      ],
+      "assets": []
+    },
+    "sourceSnapshot": {
+      "archive": {
+        "path": "MyBrain/verify/p3-source-snapshot-REPLACE.tar",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "preImplementationProof": {
+        "path": "MyBrain/verify/p3-pre-implementation-REPLACE.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "git": {
+        "commit": "replace-with-source-commit-oid",
+        "tree": "replace-with-source-tree-oid"
+      }
+    },
+    "scope": {
+      "specs": [
+        {
+          "path": "MyBrain/verify/spec-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        }
+      ],
+      "pageCoverage": {
+        "path": "MyBrain/verify/page-coverage-REPLACE.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "masks": [],
+      "thresholds": {
+        "path": "MyBrain/verify/visual-thresholds-REPLACE.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      }
+    },
+    "gate": {
+      "manifestId": "replace-with-scope-manifest-id",
+      "inputs": {
+        "manifest": {
+          "path": "MyBrain/verify/gate-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "spec": {
+          "path": "MyBrain/verify/spec-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "components": {
+          "path": "MyBrain/verify/components-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "mapping": {
+          "path": "MyBrain/verify/mapping-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "nodeMap": {
+          "path": "MyBrain/verify/node-map-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "componentDecision": {
+          "path": "MyBrain/verify/component-decision-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "nodeEvidence": {
+          "path": "MyBrain/verify/node-evidence-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "layerEvidence": {
+          "path": "MyBrain/verify/layer-evidence-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "accessibility": {
+          "path": "MyBrain/verify/accessibility-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "motion": {
+          "path": "MyBrain/verify/motion-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        },
+        "axeSource": {
+          "path": "node_modules/axe-core/axe.min.js",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        }
+      }
+    },
+    "evaluator": {
+      "fidelityBenchmark": {
+        "path": "MyBrain/verify/fidelity-benchmark.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "figmaGate": {
+        "path": "MyBrain/verify/figma-gate.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "gateBrowserBatch": {
+        "path": "MyBrain/verify/gate-browser-batch.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "verifyLayout": {
+        "path": "MyBrain/verify/verify-layout.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "checkpointCapture": {
+        "path": "MyBrain/verify/checkpoint-capture.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "checkpointDiff": {
+        "path": "MyBrain/verify/checkpoint-diff.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "cdpBrowser": {
+        "path": "MyBrain/verify/cdp-browser.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "accessibilityVerify": {
+        "path": "MyBrain/verify/accessibility-verify.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "motionVerify": {
+        "path": "MyBrain/verify/motion-verify.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "lintUnits": {
+        "path": "MyBrain/verify/lint-units.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "loopLearn": {
+        "path": "MyBrain/verify/loop-learn.mjs",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "loopLearningPolicy": {
+        "path": "MyBrain/verify/loop-learning-policy.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "packageLock": {
+        "path": "package-lock.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      },
+      "baselineRecord": {
+        "path": "MyBrain/verify/p3-evaluator-baseline-REPLACE.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      }
+    },
+    "environment": {
+      "nodeVersion": "replace-with-output-of-node---version",
+      "nodeExecArgv": [],
+      "chrome": {
+        "version": 1,
+        "source": "CDP Browser.getVersion",
+        "fields": [
+          "product",
+          "revision",
+          "userAgent"
+        ],
+        "equality": "within-final-batches-and-across-pair"
+      }
+    },
+    "pageProvider": {
+      "kind": "hermetic-static-v1",
+      "outputRoot": "REPLACE-final-static-output-directory",
+      "entryPath": "index.html"
+    },
+    "cleanRoomAuthorization": {
+      "version": 1,
+      "pairId": "replace-with-one-owner-approved-pilot-id",
+      "conditions": [
+        {
+          "condition": "baseline",
+          "evidencePath": "MyBrain/verify/p3-clean-room-REPLACE-pair-id-baseline.json",
+          "workspaceId": "replace-with-baseline-isolated-clean-worktree-id",
+          "worktreeRoot": "C:/REPLACE/absolute-baseline-worktree-root",
+          "implementation": {
+            "actor": "replace-with-baseline-implementation-actor",
+            "contextId": "replace-with-baseline-isolated-implementation-context-id"
+          },
+          "review": {
+            "actor": "replace-with-baseline-independent-review-actor",
+            "contextId": "replace-with-baseline-isolated-review-context-id"
+          },
+          "otherWorkspaceId": "replace-with-current-isolated-clean-worktree-id",
+          "isolationMechanism": "Replace with the owner-controlled access boundary for this separate Git worktree and context.",
+          "otherConditionArtifactsAccessible": false,
+          "prohibitedArtifacts": [
+            "other-source",
+            "other-diffs",
+            "other-checkpoints",
+            "other-conversation",
+            "other-results"
+          ]
+        },
+        {
+          "condition": "current",
+          "evidencePath": "MyBrain/verify/p3-clean-room-REPLACE-pair-id-current.json",
+          "workspaceId": "replace-with-current-isolated-clean-worktree-id",
+          "worktreeRoot": "C:/REPLACE/absolute-current-worktree-root",
+          "implementation": {
+            "actor": "replace-with-current-implementation-actor",
+            "contextId": "replace-with-current-isolated-implementation-context-id"
+          },
+          "review": {
+            "actor": "replace-with-current-independent-review-actor",
+            "contextId": "replace-with-current-independent-review-context-id"
+          },
+          "otherWorkspaceId": "replace-with-baseline-isolated-clean-worktree-id",
+          "isolationMechanism": "Replace with the owner-controlled access boundary for this separate Git worktree and context.",
+          "otherConditionArtifactsAccessible": false,
+          "prohibitedArtifacts": [
+            "other-source",
+            "other-diffs",
+            "other-checkpoints",
+            "other-conversation",
+            "other-results"
+          ]
+        }
+      ]
+    },
+    "ownerDecisionJ": {
+      "path": "MyBrain/verify/p3-owner-decision-J-REPLACE.json",
+      "sha256": "replace-with-64-lowercase-hex-sha256"
+    }
+  },
+  "run": {
+    "workspaceId": "replace-with-isolated-clean-worktree-id",
+    "implementation": {
+      "actor": "replace-with-implementation-actor",
+      "contextId": "replace-with-isolated-implementation-context-id"
+    },
+    "review": {
+      "actor": "replace-with-independent-review-actor",
+      "contextId": "replace-with-isolated-review-context-id"
+    },
+    "initialSourceSnapshotSha256": "replace-with-the-same-sourceSnapshot-sha256",
+    "pageProviderReceiptPath": "MyBrain/verify/benchmark/REPLACE-baseline-provider-receipt.json",
+    "evaluatedChange": {
+      "id": "baseline"
+    },
+    "close": {
+      "path": "MyBrain/verify/checkpoints/REPLACE/close-report.json"
+    },
+    "release": {
+      "status": "not-applicable",
+      "reason": "Replace with why this isolated pilot is not a public release; public comparison requires an owner-approved passed release-check record."
+    },
+    "cleanRoom": {
+      "evidence": {
+        "path": "MyBrain/verify/p3-clean-room-REPLACE-pair-id-baseline.json",
+        "sha256": "replace-with-64-lowercase-hex-sha256"
+      }
+    }
+  },
+  "_currentVariant": {
+    "condition": "current",
+    "_shared": "pageProvider、nodeExecArgv: []、cleanRoomAuthorization、ownerDecisionJを含む全shared値をbaselineと完全に同一にし、sharedSha256を比較可能に保つ。",
+    "run": {
+      "workspaceId": "replace-with-a-different-isolated-clean-worktree-id",
+      "implementation": {
+        "actor": "replace-with-current-implementation-actor",
+        "contextId": "replace-with-a-current-implementation-context-id"
+      },
+      "review": {
+        "actor": "replace-with-current-independent-review-actor",
+        "contextId": "replace-with-a-current-independent-review-context-id"
+      },
+      "pageProviderReceiptPath": "MyBrain/verify/benchmark/REPLACE-current-provider-receipt.json",
+      "evaluatedChange": {
+        "id": "REPLACE-owner-approved-improvement-id",
+        "approvalRecord": {
+          "path": "MyBrain/verify/p3-current-change-approval-REPLACE.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        }
+      },
+      "cleanRoom": {
+        "evidence": {
+          "path": "MyBrain/verify/p3-clean-room-REPLACE-pair-id-current.json",
+          "sha256": "replace-with-64-lowercase-hex-sha256"
+        }
+      }
+    }
+  }
+}

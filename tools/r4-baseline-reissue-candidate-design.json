@@ -1,0 +1,68 @@
+{
+  "schema": "p3-r4-baseline-reissue-design/v1",
+  "status": "draft-not-a-record",
+  "scope": "same-pair baseline sequence-1 attempt-1 reissue candidate only",
+  "execution": {
+    "externalWrites": false,
+    "roleDelivery": false,
+    "roleLaunch": false,
+    "implementation": false,
+    "returnApply": false,
+    "lifecycleMutation": false,
+    "siteMutation": false,
+    "p11Mutation": false,
+    "ownerApprovedFinalRecord": false
+  },
+  "identitySeparation": {
+    "pairId": "open-service-top-hero-v1-20260809",
+    "condition": "baseline",
+    "component": "open-service-top-hero",
+    "attempt": 1,
+    "runtimeDeliverySequence": 1,
+    "coordinatorReissueOrdinal": 2,
+    "opaqueHandoff": "new-derived-value",
+    "roleHome": "new-fresh-derived-path"
+  },
+  "sourceArchivePolicy": {
+    "action": "quarantine-only",
+    "deliverySequence": 1,
+    "candidateDisposition": "quarantined",
+    "candidateApplicationState": "not-applied",
+    "archiveSha256": "b9a96b6d68eb7282c65734971e40b8e7d30f8553a41f47cf2aad585695c70018",
+    "mayBeRoleInput": false,
+    "mayBeApplied": false,
+    "mayBeCopiedIntoNewPacket": false,
+    "mayBeUsedForImplementation": false
+  },
+  "peerReachStatement": {
+    "recordingState": "required-before-append-only-publication",
+    "verificationStatus": "owner-accepted self-report, not machine-verifiable",
+    "meaning": "The record preserves an owner-accepted self-report about the contaminated role's reach. It does not turn that statement into a machine conclusion."
+  },
+  "atimeForensicRoute": {
+    "source": "known",
+    "state": "overwritten-by-audit",
+    "meaning": "The prior access-time route cannot establish access at the delivery-time window after the later audit read."
+  },
+  "r5KnownIssue": {
+    "classification": "R5-known-issue",
+    "reissuePublicationPrerequisite": false,
+    "meaning": "The delivery receipt is structurally outside its declared role-visible packet root and retains coordinator-only peer path material."
+  },
+  "runtimeReleasePolicy": {
+    "newAppendOnlyActivation": true,
+    "newBytePinnedHelperRelease": true,
+    "currentHelperAuditBinding": {
+      "status": "PASS",
+      "returnHelperSha256": "d9723895c308b3f87f27f7f8cd1e06409a4104ac4b2b5ba1e910d7630b36d2cc",
+      "returnHelperE2ESha256": "216cfdafb7221e2e5539c3581ebf82aeb7bc25ec3f7a2e1cec8d3fafaec8b74a"
+    },
+    "progressStorage": "external-to-worktrees-common-git-role-homes-and-runtime-roots",
+    "futureCheckAndApplyHelper": "new-activation/helper-release/p3-role-return.mjs"
+  },
+  "requiredOwnerGatesBeforePublication": [
+    "Record the owner-accepted self-report about contaminated-role reach with verificationStatus exactly set to owner-accepted self-report, not machine-verifiable. A statement that reports current-condition reach rejects this same-pair candidate.",
+    "Approve append-only publication of the quarantine record and the new runtime helper release and activation; this approval does not authorize role delivery, launch, implementation, apply, lifecycle, browser/Figma, or P-11 work.",
+    "Before any later launch, independently observe and attest the new role context and the attachment-only boundary."
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-role-read-boundary-guard-contract-release",
+  "recordState": "review-only",
+  "effective": false,
+  "syntheticOnly": true,
+  "scope": {
+    "workspaceOnly": true,
+    "p3Free": true
+  },
+  "sourceFiles": [
+    {
+      "fileName": "r5-ordinal3-role-read-boundary-guard-contract.json",
+      "sha256": "c874c8d60908168522935bbc82ffcf09bb9ac28663ba7911f9a6863f6d6873d7"
+    },
+    {
+      "fileName": "r5-ordinal3-role-read-boundary-guard-synthetic-tuple-allowlist.json",
+      "sha256": "6625915372c44f54693f06d93fe9b516b9ad375e59ff101f6caad46588e1bb57"
+    },
+    {
+      "fileName": "r5-ordinal3-ambient-input-provenance-synthetic-probe-design.md",
+      "sha256": "14b2e343ed3652704f6b14a6be8f68648098fdb5f851e6775b6d48c61f12f6ad"
+    },
+    {
+      "fileName": "r5-ordinal3-os-isolation-proof-schema.json",
+      "sha256": "c17a30f3fd2b84c897635b0f0eb645e3633d3b19418d99c41a7cd8fb5d031403"
+    },
+    {
+      "fileName": "r5-ordinal3-ambient-input-provenance-synthetic-validator.mjs",
+      "sha256": "553529e63e660977c30cc29b049a9ccfe9c6cde47fa225d0c263ca5856af776f"
+    },
+    {
+      "fileName": "r5-ordinal3-ambient-input-provenance-synthetic-validator.e2e.mjs",
+      "sha256": "e7af9037e12c2a1c9ce73d7ca791d5f2439000b6fe3b64e96f3d9e6fa775d1f6"
+    }
+  ],
+  "nonAuthorizingResult": {
+    "fixedResult": "SYNTHETIC_ONLY__NO_REAL_RUNTIME_OR_P11_AUTHORIZATION",
+    "capabilityProbePass": false,
+    "p11Authorization": "NOT_AUTHORIZED",
+    "roleDeliveryAuthorized": false,
+    "roleLaunchAuthorized": false,
+    "implementationAuthorized": false,
+    "returnCheckAuthorized": false,
+    "returnApplyAuthorized": false,
+    "measurementAuthorized": false,
+    "accessibilityAuthorized": false,
+    "motionAuthorized": false,
+    "gateAuthorized": false,
+    "reissuePublicationAuthorized": false,
+    "siteLifecycleMutationAuthorized": false,
+    "providerOrRuntimeProvisioningAuthorized": false
+  },
+  "doesNotAuthorize": [
+    "reissue publication",
+    "role delivery",
+    "role launch",
+    "implementation",
+    "return check",
+    "return apply",
+    "site or lifecycle mutation",
+    "browser or Figma measurement",
+    "accessibility work",
+    "motion work",
+    "gate work",
+    "P-11 change",
+    "provider or runtime provisioning",
+    "sandbox or VM configuration"
+  ],
+  "requiredFinalStatement": "role read-boundary guard contract: synthetic workspace-only draft; no real runtime was tested; P-11 remains NOT_AUTHORIZED; no delivery, launch, implementation, return, measurement, accessibility, motion, or gate action is authorized."
+}

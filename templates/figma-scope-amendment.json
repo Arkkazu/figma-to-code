@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "scopeId": "<active-scope-id>",
+  "addAllowedPaths": [
+    "<exact new relative file path>"
+  ],
+  "ownerApproval": {
+    "status": "approved",
+    "approvedBy": "owner",
+    "approvedAt": "<ISO-8601>",
+    "instruction": "<explicit owner instruction approving only this expansion>"
+  }
+}

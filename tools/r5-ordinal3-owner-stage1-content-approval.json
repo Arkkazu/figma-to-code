@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-owner-stage1-content-approval",
+  "recordState": "finalized-owner-stage1-content-approval-only",
+  "appendOnly": true,
+  "effectiveForOperationalUse": false,
+  "ownerApproved": true,
+  "ownerApprovalState": "GRANTED_STAGE1_CONTENT_ONLY",
+  "approvedAt": "2026-08-19T01:23:35.5512921Z",
+  "approvalSource": {
+    "kind": "direct-owner-conversation",
+    "contentHash": "not-available",
+    "machineVerified": false
+  },
+  "approvalScope": {
+    "stage": "stage-1-content-approval",
+    "approvesContentOnly": true,
+    "doesNotFinalizeCorrectionDrafts": true,
+    "doesNotPublishOrActivateRuntime": true,
+    "doesNotAuthorizeP3RoleAction": true
+  },
+  "approvedCorrectionDrafts": [
+    {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template-v2-correction-draft.json",
+      "sha256": "b5d39e0c3254d7b962f2e190b49b83647aa0d16d25c82ffb6022932e82e24da1"
+    },
+    {
+      "path": "tools/r5-ordinal3-owner-zero-cost-constraint-v4-correction-draft.json",
+      "sha256": "e69043ad4708c16a383b7ce2f8a4f2d69956705b180decee3be56044beb66c18"
+    },
+    {
+      "path": "tools/r5-ordinal3-offline-nonce-submission-volume-amendment-v2-correction-draft.json",
+      "sha256": "bdfa34fce0d5779f80cb8f7cc2af60169f45353d0853de8db987d520e90047c7"
+    }
+  ],
+  "adoptedAppendOnlyRule": {
+    "ruleId": "p3-r5-ordinal3-stage1-content-approval-append-only/v1",
+    "ruleText": "Stage-1 approval approves correction content only. Every predecessor and review-only draft remains immutable, and only a separately owner-finalized append-only successor with then-current exact source pins may adopt any approved correction.",
+    "predecessorAndDraftRecordsRemainImmutable": true,
+    "separateOwnerFinalizedSuccessorRequired": true,
+    "stage1ContentApprovalDoesNotResolvePredecessorMismatches": true,
+    "stage1ContentApprovalDoesNotConferOperationalAuthority": true
+  },
+  "noAuthority": {
+    "doesNotModifyApprovedDraftsOrPredecessors": true,
+    "doesNotFinalizeCorrectionDraftsOrSuccessors": true,
+    "doesNotAuthorize": [
+      "correction-draft finalization",
+      "append-only successor finalization",
+      "publication",
+      "runtime or VM activation",
+      "external account access",
+      "provider or topology selection",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "p11Authorization": "NOT_AUTHORIZED"
+}

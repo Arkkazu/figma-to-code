@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-external-boundary-owner-decision-template-source-pin-correction-acceptance-candidate",
+  "recordState": "owner-stage2-finalization-candidate",
+  "candidateOnly": true,
+  "ownerApproved": false,
+  "ownerApprovalState": "REQUIRED_STAGE2_FINALIZATION_APPROVAL",
+  "effective": false,
+  "stage2Sequence": 1,
+  "stage1Approval": {
+    "path": "tools/r5-ordinal3-owner-stage1-content-approval-v2-correction.json",
+    "sha256": "23331c129b87657f7515d8bd91a15b13f77781b6bd7bc25ce2316d6bf2ba0bd8"
+  },
+  "acceptedCorrectionDraft": {
+    "path": "tools/r5-ordinal3-external-boundary-owner-decision-template-v2-correction-draft.json",
+    "sha256": "b5d39e0c3254d7b962f2e190b49b83647aa0d16d25c82ffb6022932e82e24da1"
+  },
+  "predecessorTemplate": {
+    "path": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+    "sha256": "b7ac0c19c4669a4695e760860552058fc2967ddbe9d5766b4df86af7059029f6",
+    "predecessorRemainsUnmodified": true,
+    "predecessorRemainsReferenceOnlyHistory": true
+  },
+  "templateState": {
+    "acceptedTemplateRemainsOwnerInputRequired": true,
+    "templateOwnerDecisionFinalized": false,
+    "allRequiredOwnerDecisionsRemainUnset": true
+  },
+  "noAuthority": {
+    "doesNotFinalizeOwnerDecision": true,
+    "doesNotAuthorizePublication": true,
+    "doesNotCreateRuntimeVmOrSandbox": true,
+    "doesNotAuthorizeP3RoleAction": true,
+    "doesNotAuthorize": [
+      "provider selection",
+      "external account access",
+      "purchase or subscription",
+      "networking change",
+      "physical device deployment",
+      "role delivery",
+      "role launch",
+      "implementation",
+      "return check or apply",
+      "site or lifecycle mutation",
+      "browser or Figma measurement",
+      "accessibility validation",
+      "motion validation",
+      "gate execution",
+      "P-11 change"
+    ],
+    "p11Authorization": "NOT_AUTHORIZED"
+  },
+  "p11Authorization": "NOT_AUTHORIZED"
+}

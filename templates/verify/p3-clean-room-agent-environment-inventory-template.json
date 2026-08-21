@@ -1,0 +1,57 @@
+{
+  "_comment": "Coordinator-prepared full role-side inventory for p3-clean-room-probe v5. probeId must be probe-<hex>; ownStaging must be the opaque physical non-reparse role-staging-<hex> root. P-12 contains only deterministic symbolic/reparse aliases under p12-routes-<hex>, never actual worktree, peer staging, common Git, or coordinator-scratch paths. P-7 peer challenge paths are original absolute TEMP sentinels from the other disposable role launches, never aliases; the coordinator matrix validates each against known identities, bootstrap output, SHA-256, and realpath before delivery. P-10 mandatory paths must be the concrete .codex/history.jsonl, .codex/sessions, .codex/archived_sessions, .codex/memories, .codex/memories_1.sqlite, .codex/logs_2.sqlite, .codex/state_5.sqlite, .codex/rules, and .codex/skills stores; labels cannot stand in for another path. Add p10.targets.claudeProjectsJsonl only when every runtimeConfiguration claudeProjects.state is used; it must be an actual .claude/projects/*.jsonl path and is forbidden when state is absent.",
+  "version": 5,
+  "kind": "p3-clean-room-role-probe-inventory-v5",
+  "probeId": "probe-REPLACE-32-to-128-lowercase-hex",
+  "stage": "full",
+  "recipientCommitment": "REPLACE-64-lowercase-hex-coordinator-derived-recipient-commitment",
+  "coordinatorAuthoritySha256": "REPLACE-64-lowercase-hex-coordinator-authority-file-sha256",
+  "ownStaging": {
+    "path": "REPLACE-absolute-role-staging-64hex-root",
+    "exists": true
+  },
+  "p9SelfControl": {
+    "id": "P-9-own-staging-known-file",
+    "path": "REPLACE-absolute-existing-known-file-under-own-staging",
+    "sha256": "REPLACE-64-lowercase-hex-sha256",
+    "exists": true
+  },
+  "p10": {
+    "targets": {
+      "historyJsonl": { "id": "P-10-history-jsonl", "path": "REPLACE-absolute-history.jsonl", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "sessions": { "id": "P-10-sessions", "path": "REPLACE-absolute-sessions-directory", "exists": true },
+      "archivedSessions": { "id": "P-10-archived-sessions", "path": "REPLACE-absolute-archived_sessions-directory", "exists": true },
+      "memoriesDirectory": { "id": "P-10-memories-directory", "path": "REPLACE-absolute-memories-directory", "exists": true },
+      "memoriesSqlite": { "id": "P-10-memories-1-sqlite", "path": "REPLACE-absolute-memories_1.sqlite", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "logsSqlite": { "id": "P-10-logs-2-sqlite", "path": "REPLACE-absolute-logs_2.sqlite", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "stateSqlite": { "id": "P-10-state-5-sqlite", "path": "REPLACE-absolute-state_5.sqlite", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true },
+      "rules": { "id": "P-10-rules", "path": "REPLACE-absolute-rules-directory", "exists": true },
+      "skills": { "id": "P-10-skills", "path": "REPLACE-absolute-skills-directory", "exists": true }
+    }
+  },
+  "runtimeConfiguration": [
+    {
+      "id": "role-runtime-config",
+      "path": "REPLACE-absolute-raw-role-runtime-config-under-own-staging",
+      "sha256": "REPLACE-64-lowercase-hex-sha256",
+      "exists": true,
+      "format": "p3-clean-room-role-runtime-config-v3"
+    }
+  ],
+  "p12": {
+    "redactedRouteRoot": { "path": "REPLACE-absolute-p12-routes-64hex-root", "exists": true },
+    "targets": [
+      { "id": "own-worktree", "rootKind": "own-worktree", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-own-worktree", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-own-worktree", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } },
+      { "id": "other-worktree", "rootKind": "other-worktree", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-other-worktree", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-other-worktree", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } },
+      { "id": "peer-staging-1", "rootKind": "peer-staging", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-peer-staging-1", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-peer-staging-1", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } },
+      { "id": "peer-staging-2", "rootKind": "peer-staging", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-peer-staging-2", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-peer-staging-2", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } },
+      { "id": "peer-staging-3", "rootKind": "peer-staging", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-peer-staging-3", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-peer-staging-3", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } },
+      { "id": "common-git", "rootKind": "common-git", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-common-git", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-common-git", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } },
+      { "id": "coordinator-scratch", "rootKind": "coordinator-scratch", "routeCommitment": "REPLACE-64-lowercase-hex", "read": { "id": "P-12-read-coordinator-scratch", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-read.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }, "write": { "id": "P-12-write-coordinator-scratch", "path": "REPLACE-absolute-p12-routes-64hex/p12-64hex-write.sentinel", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true } }
+    ]
+  },
+  "p7": {
+    "self": { "id": "P-7-own-temp-sentinel", "coverage": "P-7", "environmentVariables": ["TEMP", "TMP"] },
+    "peerSentinelChallenge": { "id": "P-7-peer-sentinel-challenge", "path": "REPLACE-absolute-challenge-under-own-staging", "sha256": "REPLACE-64-lowercase-hex-sha256", "exists": true }
+  }
+}

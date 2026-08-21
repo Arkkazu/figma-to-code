@@ -1,0 +1,9 @@
+# 実行時に生成される作業領域。プレイブックの内容ではないので追跡しない。
+.r4-coordinator-stage/
+.r5-isolation-probe/
+.r5-sbx-capability-probe/
+error.log
+
+# エージェント個別の設定。プレイブック本体とは別に管理する。
+.claude/
+.codex/

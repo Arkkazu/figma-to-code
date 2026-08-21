@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "kind": "p3-r5-ordinal3-owner-zero-cost-constraint",
+  "recordState": "finalized-owner-constraint-only",
+  "effectiveForSelection": false,
+  "source": {
+    "kind": "direct-owner-conversation",
+    "contentHash": "not-available",
+    "machineVerified": false
+  },
+  "receivedAtDate": "2026-08-15",
+  "constraint": {
+    "currency": "JPY",
+    "maximumIncrementalSpend": 0
+  },
+  "bindings": [
+    {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+      "sha256": "877d5a5adcbc8385be3534290f358876077e4b6707df0d050e25373636ecf634"
+    },
+    {
+      "path": "tools/r5-ordinal3-zero-cost-external-boundary-feasibility.md",
+      "sha256": "00cbd909e528ff936a08bc31bf3f126fb45f2b1751a0f8314dac128bcd600436"
+    }
+  ],
+  "doesNotAuthorize": [
+    "provider selection",
+    "external account access",
+    "purchase or subscription",
+    "networking change",
+    "physical device deployment",
+    "VM or sandbox creation",
+    "P-3 role delivery or launch",
+    "implementation or return handling",
+    "P-11 change"
+  ],
+  "p11Authorization": "NOT_AUTHORIZED"
+}

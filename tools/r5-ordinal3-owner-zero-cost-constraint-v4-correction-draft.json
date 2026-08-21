@@ -1,0 +1,72 @@
+{
+  "version": 4,
+  "kind": "p3-r5-ordinal3-owner-zero-cost-constraint-correction-draft",
+  "recordState": "owner-review-only-draft",
+  "ownerApprovalState": "REQUIRED_UNSET",
+  "appendOnlySuccessorRequiredIfFinalized": true,
+  "effectiveForSelection": false,
+  "cannotBeUsedAsCandidateInputBeforeFinalizedOwnerSuccessor": true,
+  "proposedSupersedesByReferenceOnly": {
+    "path": "tools/r5-ordinal3-owner-zero-cost-constraint-v3.json",
+    "sha256": "ba5b5200a572f49bad245b9d343f4983a0f994249eb1d2e6db89a0586fc35b18",
+    "predecessorRecordRemainsImmutable": true
+  },
+  "purpose": "Review-only draft for an append-only successor that would preserve the zero-yen constraint while rebinding the owner-input-required boundary template to a current, internally coherent source-document set. It has no operational authority.",
+  "proposedCorrection": {
+    "kind": "append-only-template-source-pin-coherence-correction",
+    "replacesBinding": {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template.json",
+      "sha256": "b7ac0c19c4669a4695e760860552058fc2967ddbe9d5766b4df86af7059029f6"
+    },
+    "withReviewOnlyDraft": {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template-v2-correction-draft.json",
+      "sha256": "b5d39e0c3254d7b962f2e190b49b83647aa0d16d25c82ffb6022932e82e24da1",
+      "recordState": "owner-review-only-draft",
+      "effective": false
+    },
+    "preservesMaximumIncrementalSpendJpy": 0,
+    "doesNotSelectProviderOrTopology": true,
+    "requiresExplicitOwnerFinalization": true
+  },
+  "proposedConstraint": {
+    "currency": "JPY",
+    "maximumIncrementalSpend": 0,
+    "continuesOriginalConstraint": true
+  },
+  "proposedBindings": [
+    {
+      "path": "tools/r5-ordinal3-external-verifier-boundary-requirements-draft.md",
+      "sha256": "f3a0ea86270038e62278f97f6d2fa4f75b6c85fb103052a16ae56571877688b3"
+    },
+    {
+      "path": "tools/r5-ordinal3-external-boundary-owner-decision-template-v2-correction-draft.json",
+      "sha256": "b5d39e0c3254d7b962f2e190b49b83647aa0d16d25c82ffb6022932e82e24da1"
+    },
+    {
+      "path": "tools/r5-ordinal3-zero-cost-external-boundary-feasibility.md",
+      "sha256": "22d50e6e3f38a39aa99c01a9c5258af0b06ef4ff73f7915b43dc1e5fad38a45c"
+    },
+    {
+      "path": "tools/r5-ordinal3-zero-cost-local-hardware-inventory.md",
+      "sha256": "f6641a3de0bbb6d6fa5a0519b6b34b5e5984942369a481f2e49287b03e7e049c"
+    }
+  ],
+  "proposedInterpretation": {
+    "noScreenedOrConcretelyIdentifiedLocalOptionMeetsStrictBoundaryAtZeroYen": true,
+    "doesNotClaimAbsenceOfUnenumeratedOrExternallyAdministeredHardware": true,
+    "doesNotSelectProviderOrDevice": true,
+    "requiresSeparateOwnerDecisionBeforeChangingAnyCostOrBoundaryConstraint": true
+  },
+  "doesNotAuthorize": [
+    "provider selection",
+    "external account access",
+    "purchase or subscription",
+    "networking change",
+    "physical device deployment",
+    "VM or sandbox creation",
+    "P-3 role delivery or launch",
+    "implementation or return handling",
+    "P-11 change"
+  ],
+  "p11Authorization": "NOT_AUTHORIZED"
+}

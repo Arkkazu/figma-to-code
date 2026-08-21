@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "status": "recorded",
+  "id": "CR-YYYYMMDD-short-description",
+  "classification": "project-only",
+  "recordedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "projectCorrectionLogPath": "MyBrain/rules/corrections.md",
+  "projectCorrectionLogSha256": "sha256-written-by-correction-receipt.mjs"
+}

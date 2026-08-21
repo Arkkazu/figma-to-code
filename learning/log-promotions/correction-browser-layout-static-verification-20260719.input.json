@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-browser-layout-static-verification-20260719",
+  "kind": "correction",
+  "occurredOn": "2026-07-19",
+  "failureClass": "browser-layout-static-verification",
+  "recurrenceKey": "figma-layout-static-only-verification",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "A Figma layout correction was judged complete from source CSS values without comparing the rendered browser output against the Figma reference at the corresponding viewport. Content-driven layout behavior changed the visible geometry.",
+  "prevention": "For components with explicit column widths, equal tracks, or fixed geometry, the spec must define the layout mode and each track. Completion requires one PC and one SP checkpoint that compares rendered rectangles for every track and marked sub-element against the fixed Figma reference; source inspection alone is a failure."
+}

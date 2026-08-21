@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "id": "figma-log-intake-fbdacaafedcdcca9",
+  "status": "waiting-human",
+  "policyPath": "rules/log-promotion-policy.json",
+  "policySha256": "680b9017688fbf1b7d77d2547557292454a56b82ca999d0d3f0729db3a1c5de3",
+  "records": [
+    {
+      "id": "correction-browser-layout-static-verification-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: browser-layout-static-verification",
+        "line": 48,
+        "sha256": "250b6d8569916af459f581dfeba3af7e1e8e48e2262ae6514a7213aab440e9e4"
+      }
+    },
+    {
+      "id": "correction-component-section-spacing-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: component-section-spacing-ownership",
+        "line": 43,
+        "sha256": "0b7d33495a8dbd2d5a00e72e0c32244ccd85630458389b76ae3ce4b88e36c5d4"
+      }
+    },
+    {
+      "id": "correction-log-feedback-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: log-to-rule-feedback-gap",
+        "line": 33,
+        "sha256": "571c62d0fef12ae0912174e475778a53ee9d76b01157630d8ca0c75f6509dcfb"
+      }
+    },
+    {
+      "id": "correction-owner-correction-receipt-gate-20260719",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-19: owner-correction-log-not-gated",
+        "line": 53,
+        "sha256": "cceac310b09d431fe4a2bd0b82025f158c7ba02efad496a9aa19399414b7bba5"
+      }
+    },
+    {
+      "id": "correction-provenance-spec-20260709",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-09",
+        "line": 114,
+        "sha256": "bb1eba419ae0e8f6e9642fccd010f5536f0f3b65f542c4a491860ce9e98fa5cd"
+      }
+    },
+    {
+      "id": "mistake-provenance-spec-20260625",
+      "source": {
+        "path": "rules/mistakes.md",
+        "heading": "2026-06-25",
+        "line": 102,
+        "sha256": "405a72d3fbb09975c1e4bee4137752b7188fbac18a663765a8c0fc87a4070db6"
+      }
+    },
+    {
+      "id": "scope-expansion-during-scoped-fix-20260718",
+      "source": {
+        "path": "rules/corrections.md",
+        "heading": "2026-07-18: scope-expansion-during-scoped-fix",
+        "line": 38,
+        "sha256": "5730d8a17d2662199f96cdd2b5d256caba4d3d334688b95b80602764992b6546"
+      }
+    }
+  ],
+  "unclassified": [
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-29: proactive-fidelity-improvement",
+      "line": 23,
+      "sha256": "95dcdd27e878d26f0252bc740721ff0d6e2d65ff52c7e9c88882cc3ca96c3a06"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-29: figma-to-code-is-cross-project-rulebook",
+      "line": 26,
+      "sha256": "90fa72ece73ecf90c6448d1554c86b4d1d41c2ce576a139465f3938c8fbb3462"
+    },
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction",
+      "heading": "2026-07-29: one-shot-fidelity-is-the-product-goal",
+      "line": 29,
+      "sha256": "671c8182fd1c1db9bacad394ab3b32336fd0eda72a8d6790a01dc1fbf8a7c6f1"
+    }
+  ],
+  "proposalIds": []
+}
