@@ -33,7 +33,9 @@ Not allowed here:
 - Copies of the full local upper-layer rulebooks
 
 If a note needs private project facts, keep it in that project's local
-`MyBrain/` instead of this directory.
+`MyBrain/` instead of this directory. Before committing, run
+`node tools/public-memory-scan.mjs`; it exits 2 when machine-detectable private
+data is present in this directory.
 
 ## Name Collision With Project-Side `MyBrain/`
 

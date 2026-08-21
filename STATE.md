@@ -1363,3 +1363,10 @@
   - 修正1: `MyBrain/STATE.md` の "Status: initial skeleton, not yet committed or pushed." は実態と不一致（`master` にコミット・push済み）。実態へ訂正し、クラウドのクローンに含まれること（＝開始順5が到達可能）を実測として追記した。
   - 修正2: `MyBrain` の名前が二義になった。`rules/` と `templates/` に多数ある `MyBrain/verify/…` は**案件側**を指すが、同名ディレクトリがリポジトリ直下にできたため、案件側パスを本リポジトリ側で解決する誤読が起こりうる。`MyBrain/README.md` と `WORKFLOW.md` に、どちらを指すかと「この公開MyBrainに検証キット・gate manifestを置かない」ことを明記した。
   - 未着手（オーナー判断待ち）: `MyBrain/STATE.md` の Open Items にある `MyBrain/` 専用の機密スキャン。`tools/gate-command-doc-audit.mjs` と同じ作りで実装できる。ポリシーが「Decide whether」としているため、こちらの判断で追加していない。
+
+- [2026-08-22 claude / 公開MyBrainの機密スキャン] **`MyBrain/STATE.md` のOpen Item「pre-push private-data scan」をオーナー指示により実装した。**
+  - `tools/public-memory-scan.mjs`：リポジトリ直下 `MyBrain/` を走査し、Figma node-id、Figma URL、fileKey、px実測値、秘密鍵、アクセストークン、資格情報の代入、Basic認証つきURL、IPアドレス、利用者固有のホームパスを検出したら exit 2。秘匿系の一致値は伏せて出力する（検査結果自体を漏洩経路にしないため）。
+  - 走査対象を `MyBrain/` に限定した理由：`rules/corrections.md` などの正本側には既存の案件固有値が残っており（監査F-3、別scope）、巻き込むと常時FAILして無視される検査になる。
+  - 検出できないもの：案件名・クライアント名、CSSセレクタ、DOM対応の断片、スクリーンショットの内容。PASSは「機械で見える範囲に無い」ことしか意味しないと `public-memory-policy.md` に明記した。
+  - 実測：`public-memory-scan.e2e.mjs` は全10規則が発火することと、公開してよい記述（`06:54`、`16:9`、`localhost:3000`、`C:\AI\vault`、Node版）を誤検出しないことを固定。現在の `MyBrain/` は findings 0 で、その清潔さも回帰として固定した。
+  - ポリシーの「Before Commit Or Push」を実行コマンド付きの手順に書き換え、`MyBrain/README.md` からも参照した。
