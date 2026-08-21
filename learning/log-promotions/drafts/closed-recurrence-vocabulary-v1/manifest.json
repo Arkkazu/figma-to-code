@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "kind": "log-promotion-closed-recurrence-vocabulary-draft",
+  "status": "draft-only",
+  "authorization": {
+    "policyApply": false,
+    "canonicalRewrite": false,
+    "proposalApproval": false,
+    "proposalApply": false,
+    "runtimeOrDelivery": false
+  },
+  "canonicalFilesUntouched": [
+    "rules/log-promotion-policy.json",
+    "tools/figma-log-promote.mjs",
+    "tools/figma-log-promote.e2e.mjs",
+    "rules/correction-log-promotion.md",
+    "rules/corrections.md",
+    "rules/mistakes.md",
+    "learning/log-promotions/proposals"
+  ],
+  "candidates": [
+    "rules/log-promotion-policy.v4-candidate.json",
+    "tools/figma-log-promote.v4-candidate.mjs",
+    "tools/figma-log-promote.v4-candidate.e2e.mjs",
+    "rules/correction-log-promotion.v4-candidate.md",
+    "recurrence-key-resolution.json",
+    "tools/current-log-dry-run.mjs",
+    "dry-run.json",
+    "e2e.log",
+    "independent-review-request.md"
+  ],
+  "verification": {
+    "fixtureOnly": true,
+    "fixtureLifecycleApplyRegression": true,
+    "canonicalRecordScanReviewApplyClose": false,
+    "sourceByteInvariant": true
+  }
+}

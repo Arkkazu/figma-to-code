@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-unverified-completion-report-20260821",
+  "kind": "correction",
+  "occurredOn": "2026-08-21",
+  "failureClass": "unverified-completion-report",
+  "recurrenceKey": "completion-report-without-gate-receipt",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"],
+  "summary": "Figma実装でデザインとの不一致が残ったまま完了報告が出た。完了条件は規則本文に複数箇所で明記されているが、いずれもゲートを実行した場合の合否を述べるだけで、ゲート実行そのものを必須とする機械的要件が無い。ゲートを実行しなければFAILも証跡も発生せず、報告は自己申告だけで成立する。",
+  "prevention": "完了報告の成立要件を散文の禁止から受領証の提示へ移す。figma-gate close の受領証（phase=closed、manifest hash、対象ファイルhash）が提示されない報告は、内容にかかわらず未検証として差し戻す。受領証検査をcoding:gate併用時の任意運用ではなくFigma scopeの既定とし、ゲート未実行のまま完了報告に到達できる経路を負のE2Eで検出する。"
+}

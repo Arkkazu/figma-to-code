@@ -1,0 +1,95 @@
+{
+  "version": 4,
+  "mode": "proposal",
+  "schemaMarker": "<!-- loop-log-schema: v1 -->",
+  "sourceLogs": [
+    {
+      "path": "rules/corrections.md",
+      "kind": "correction"
+    },
+    {
+      "path": "rules/mistakes.md",
+      "kind": "mistake"
+    }
+  ],
+  "recurrenceThreshold": 2,
+  "allowedRecurrenceKeys": [
+    "completion-without-machine-evidence",
+    "verification-coverage-gap",
+    "unverified-figma-value",
+    "spec-missing-or-weak",
+    "required-step-not-blocking",
+    "scope-drift",
+    "comparison-condition-unfixed",
+    "promotion-loop-broken"
+  ],
+  "recurrenceKeyAliases": {
+    "archived-evidence-obligation": "required-step-not-blocking",
+    "card-dom-identity": "verification-coverage-gap",
+    "close-contract-version": "completion-without-machine-evidence",
+    "comparison-overlay-export-scale": "comparison-condition-unfixed",
+    "completion-report-without-gate-receipt": "completion-without-machine-evidence",
+    "component-reuse-asset-check": "unverified-figma-value",
+    "component-root-must-not-own-inter-section-spacing": "scope-drift",
+    "contract-upgrade-audit": "required-step-not-blocking",
+    "copied-evidence-scope-content": "scope-drift",
+    "copied-evidence-semantic-drift": "scope-drift",
+    "current-design-reference": "unverified-figma-value",
+    "diff-coordinate-diagnosis": "comparison-condition-unfixed",
+    "exception-to-mechanism": "required-step-not-blocking",
+    "execution-evidence": "completion-without-machine-evidence",
+    "figma-full-page-verification-before-completion": "completion-without-machine-evidence",
+    "figma-layout-static-only-verification": "verification-coverage-gap",
+    "figma-line-height-rounding": "unverified-figma-value",
+    "figma-visual-subproperty-unverified-report": "completion-without-machine-evidence",
+    "hidden-readiness": "verification-coverage-gap",
+    "honest-contract-fields": "spec-missing-or-weak",
+    "line-art-diff-limit": "comparison-condition-unfixed",
+    "log-to-rule-feedback-gap": "promotion-loop-broken",
+    "machine-enforcement-first": "completion-without-machine-evidence",
+    "node-map-real-id": "unverified-figma-value",
+    "nongeometric-spec-property": "spec-missing-or-weak",
+    "owner-correction-log-not-gated": "promotion-loop-broken",
+    "page-coverage-inventory": "verification-coverage-gap",
+    "page-coverage-semantic-evidence": "verification-coverage-gap",
+    "repeat-card-complete-order": "verification-coverage-gap",
+    "repeat-text-leaf-measurement": "verification-coverage-gap",
+    "required-check-must-stop": "required-step-not-blocking",
+    "scoped-fix-execution-drift": "scope-drift",
+    "scoped-fix-expanded-to-unrequested-process-work": "scope-drift",
+    "shared-header-route-condition": "scope-drift",
+    "spec-expectation-required": "spec-missing-or-weak",
+    "subpixel-diff-nonmonotonic": "comparison-condition-unfixed",
+    "text-ellipsis-contract": "spec-missing-or-weak",
+    "text-node-content": "verification-coverage-gap",
+    "vector-contain-sizing": "unverified-figma-value",
+    "visible-icon-asset-coverage": "verification-coverage-gap",
+    "visible-line-count": "verification-coverage-gap",
+    "visual-threshold-basis": "comparison-condition-unfixed"
+  },
+  "allowedRuleTargets": [
+    "rules/figma-spec-pipeline.md",
+    "rules/figma-mcp-implementation.md",
+    "rules/figma-image-export.md",
+    "rules/loop-execution.md",
+    "rules/self-improvement.md",
+    "rules/correction-log-promotion.md"
+  ],
+  "allowedVerifierTargets": [
+    "templates/verify/figma-gate.mjs",
+    "templates/verify/figma-gate.e2e.mjs",
+    "templates/verify/loop-learn.mjs",
+    "templates/verify/loop-learn.e2e.mjs",
+    "tools/figma-log-promote.mjs",
+    "tools/figma-log-promote.e2e.mjs",
+    "tools/figma-scope-lock.mjs",
+    "tools/figma-scope-lock.e2e.mjs"
+  ],
+  "review": {
+    "loopEngineeringSpec": "C:\\AI\\loop-engineering\\spec\\06-self-improvement.md",
+    "requiresIndependentReview": true,
+    "requiresOwnerApproval": true,
+    "requiresNegativeE2E": true,
+    "requiresAtomicPromotionPlan": true
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "kind": "isolated-log-promotion-v4-dry-run",
+  "candidatePolicySha256": "73bf8ec7ddc6e7ab6d892f0a6e6a89078c7b32a5db51b99c22c9b1655a29dd45",
+  "canonicalCommandsInvoked": [],
+  "canonicalSourceByteInvariant": true,
+  "canonicalSources": [
+    {
+      "path": "rules/corrections.md",
+      "beforeSha256": "831632b5c1965cc1a568776a11bffaf2c0e7f2060874ba56183d28e3caa937d4",
+      "afterSha256": "831632b5c1965cc1a568776a11bffaf2c0e7f2060874ba56183d28e3caa937d4",
+      "byteInvariant": true
+    },
+    {
+      "path": "rules/mistakes.md",
+      "beforeSha256": "9793cd9b22434b9ad6b98b32023ecb36463154771ccb18bccc9bf3bd9e55cd5e",
+      "afterSha256": "9793cd9b22434b9ad6b98b32023ecb36463154771ccb18bccc9bf3bd9e55cd5e",
+      "byteInvariant": true
+    }
+  ],
+  "canonicalHistoricalInputByteInvariant": true,
+  "canonicalHistoricalInputs": [
+    {
+      "kind": "current-index",
+      "path": "learning/log-promotions/proposals/current.json",
+      "sha256": "9d5b0e75580d816bbe47a89e98f4804764b69276f5f1474eda9d132503297bcd",
+      "bytes": 1491,
+      "afterSha256": "9d5b0e75580d816bbe47a89e98f4804764b69276f5f1474eda9d132503297bcd",
+      "byteInvariant": true
+    },
+    {
+      "kind": "closed-proposal",
+      "path": "learning/log-promotions/proposals/figma-log-unverified-figma-value-66a72cdb86aa026a.json",
+      "sha256": "e9807da4d7eda907bed0e2412bcc5530949b73825f4a524f97b4477dfa8f9d91",
+      "bytes": 2152,
+      "afterSha256": "e9807da4d7eda907bed0e2412bcc5530949b73825f4a524f97b4477dfa8f9d91",
+      "byteInvariant": true
+    },
+    {
+      "kind": "closure-receipt",
+      "path": "learning/log-promotions/closures/promotion-closure-close-unverified-figma-value-66a72cdb-20260807-23033453b1366e10.json",
+      "sha256": "7fe88b637ae4b0da398fcf8f5a50d480c45a8f3275433501f7ac7761f82a5d2f",
+      "bytes": 1066,
+      "afterSha256": "7fe88b637ae4b0da398fcf8f5a50d480c45a8f3275433501f7ac7761f82a5d2f",
+      "byteInvariant": true
+    },
+    {
+      "kind": "closure-input",
+      "path": "learning/log-promotions/closure-inputs/figma-log-unverified-figma-value-66a72cdb86aa026a.json",
+      "sha256": "23033453b1366e10d089680db3c4fcad0943a5fb8c60516d52525a73c1c07175",
+      "bytes": 658,
+      "afterSha256": "23033453b1366e10d089680db3c4fcad0943a5fb8c60516d52525a73c1c07175",
+      "byteInvariant": true
+    }
+  ],
+  "strict": {
+    "execution": {
+      "exitCode": 0,
+      "stdout": "PASS waiting-human: 24 promotable record(s), 21 non-promotable record(s), 7 unassigned legacy record(s), 1 unclassified new record(s), 0 proposal(s).",
+      "stderr": ""
+    },
+    "sourceByteInvariant": true,
+    "status": "waiting-human",
+    "recordCount": 24,
+    "nonPromotableCount": 21,
+    "unassignedLegacyCount": 7,
+    "unassignedLegacyKeys": [
+      "clean-room-boundary-evidence",
+      "cross-project-rulebook",
+      "one-shot-fidelity-goal",
+      "powershell-selector-quoting",
+      "proactive-fidelity-improvement",
+      "wait-budget-separation",
+      "windows-process-tree"
+    ],
+    "unclassifiedCount": 1,
+    "proposalCount": 0,
+    "proposalFamilies": [],
+    "proposals": [],
+    "closedProposalIds": [],
+    "sourceText": "strict source copy"
+  },
+  "markerOnlyProjection": {
+    "execution": {
+      "exitCode": 0,
+      "stdout": "PASS pending-review: 24 promotable record(s), 21 non-promotable record(s), 7 unassigned legacy record(s), 0 unclassified new record(s), 7 proposal(s).",
+      "stderr": ""
+    },
+    "sourceByteInvariant": true,
+    "status": "pending-review",
+    "recordCount": 24,
+    "nonPromotableCount": 21,
+    "unassignedLegacyCount": 7,
+    "unassignedLegacyKeys": [
+      "clean-room-boundary-evidence",
+      "cross-project-rulebook",
+      "one-shot-fidelity-goal",
+      "powershell-selector-quoting",
+      "proactive-fidelity-improvement",
+      "wait-budget-separation",
+      "windows-process-tree"
+    ],
+    "unclassifiedCount": 0,
+    "proposalCount": 7,
+    "proposalFamilies": [
+      "comparison-condition-unfixed",
+      "completion-without-machine-evidence",
+      "promotion-loop-broken",
+      "required-step-not-blocking",
+      "scope-drift",
+      "unverified-figma-value",
+      "verification-coverage-gap"
+    ],
+    "proposals": [
+      {
+        "id": "figma-log-comparison-condition-unfixed-bca2f77be84b2c25",
+        "path": "learning/log-promotions/proposals/figma-log-comparison-condition-unfixed-bca2f77be84b2c25.json",
+        "recurrenceKey": "comparison-condition-unfixed",
+        "evidenceCount": 2
+      },
+      {
+        "id": "figma-log-completion-without-machine-evidence-f0ec13b5f8bdd925",
+        "path": "learning/log-promotions/proposals/figma-log-completion-without-machine-evidence-f0ec13b5f8bdd925.json",
+        "recurrenceKey": "completion-without-machine-evidence",
+        "evidenceCount": 6
+      },
+      {
+        "id": "figma-log-promotion-loop-broken-20b46c83ec596712",
+        "path": "learning/log-promotions/proposals/figma-log-promotion-loop-broken-20b46c83ec596712.json",
+        "recurrenceKey": "promotion-loop-broken",
+        "evidenceCount": 2
+      },
+      {
+        "id": "figma-log-required-step-not-blocking-b4146f103e84e620",
+        "path": "learning/log-promotions/proposals/figma-log-required-step-not-blocking-b4146f103e84e620.json",
+        "recurrenceKey": "required-step-not-blocking",
+        "evidenceCount": 2
+      },
+      {
+        "id": "figma-log-scope-drift-e6f5e0d850783813",
+        "path": "learning/log-promotions/proposals/figma-log-scope-drift-e6f5e0d850783813.json",
+        "recurrenceKey": "scope-drift",
+        "evidenceCount": 3
+      },
+      {
+        "id": "figma-log-unverified-figma-value-ae25c3ef1e62539b",
+        "path": "learning/log-promotions/proposals/figma-log-unverified-figma-value-ae25c3ef1e62539b.json",
+        "recurrenceKey": "unverified-figma-value",
+        "evidenceCount": 3
+      },
+      {
+        "id": "figma-log-verification-coverage-gap-6b9213dc62de9f2d",
+        "path": "learning/log-promotions/proposals/figma-log-verification-coverage-gap-6b9213dc62de9f2d.json",
+        "recurrenceKey": "verification-coverage-gap",
+        "evidenceCount": 5
+      }
+    ],
+    "closedProposalIds": [],
+    "sourceText": "marker-only projection"
+  },
+  "closureInterpretation": "A pending proposal in the marker-only projection has a changed full evidence set. It does not mutate or reopen the closed historical proposal; exact historical evidence remains suppressed by the candidate closure-equivalence regression."
+}

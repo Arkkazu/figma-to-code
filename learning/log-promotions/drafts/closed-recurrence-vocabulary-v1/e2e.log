@@ -1,0 +1,25 @@
+candidate: closed recurrence vocabulary v4
+scope: draft bundle; disposable operating-system temporary fixtures only
+candidate-tool-sha256: becb2f2bd840a72ddd4d70b0ffceaa87ecf9c860ebb64dad7c38140df357f8cd
+candidate-e2e-sha256: bf5c8b974d754d2a6790a99c4f721302f91774cd83a5eb9777c0fa0de447256d
+
+commands:
+- node --check tools/figma-log-promote.v4-candidate.mjs
+- node --check tools/figma-log-promote.v4-candidate.e2e.mjs
+- node --check tools/current-log-dry-run.mjs
+- node tools/figma-log-promote.v4-candidate.e2e.mjs
+
+result:
+- exit: 0
+- stdout: figma-log-promote v4 candidate E2E PASS
+- final rerun: exit 0 with the same stdout
+
+coverage:
+- closed-vocabulary record rejection and source-byte invariance;
+- below-threshold, threshold, alias aggregation, and non-promotable exclusion;
+- legacy closure suppression and changed-evidence reopening;
+- retained review, owner gate, rollback, successful fixture apply, supersede, close, and project-fact regressions.
+
+boundary:
+- `apply` is exercised only by the retained lifecycle regression in a disposable temporary fixture.
+- no canonical repository `record`, `scan`, `review`, `apply`, or `close` command was invoked.

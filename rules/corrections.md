@@ -258,6 +258,16 @@ Figmaデザインの実装・修正に関する恒久ルールを記録する。
 - 指摘：一部コンポーネントの照合結果をページ全体の設計一致として報告し、PC/SPの全セクションに差分がないことを確認しなかった。
 - 今後：Figma実装の完了前にPC/SPのページroot全体を実ページ描画と照合し、全セクションを対応表で分類する。差分、未確認項目、または未closeのgateが一つでもあれば完了・設計一致と報告しない。
 
+## 2026-08-21: unverified-completion-report
+<!-- loop-log: {"id":"correction-unverified-completion-report-20260821","kind":"correction","failureClass":"unverified-completion-report","recurrenceKey":"completion-report-without-gate-receipt","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs","templates/verify/figma-gate.e2e.mjs"]} -->
+- 指摘：Figma実装でデザインとの不一致が残ったまま完了報告が出た。完了条件は規則本文に複数箇所で明記されているが、いずれもゲートを実行した場合の合否を述べるだけで、ゲート実行そのものを必須とする機械的要件が無い。ゲートを実行しなければFAILも証跡も発生せず、報告は自己申告だけで成立する。
+- 今後：完了報告の成立要件を散文の禁止から受領証の提示へ移す。figma-gate close の受領証（phase=closed、manifest hash、対象ファイルhash）が提示されない報告は、内容にかかわらず未検証として差し戻す。受領証検査をcoding:gate併用時の任意運用ではなくFigma scopeの既定とし、ゲート未実行のまま完了報告に到達できる経路を負のE2Eで検出する。
+
+## 2026-08-21: unverified-completion-report
+<!-- loop-log: {"id":"correction-machine-enforcement-completion-receipt-20260821","kind":"correction","failureClass":"unverified-completion-report","recurrenceKey":"machine-enforcement-first","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs","templates/verify/figma-gate.e2e.mjs"]} -->
+- 指摘：デザインとの不一致が残ったまま完了報告が出た。完了報告の禁止は規則本文に8箇所あり、実行エージェントはその規則本文を実際に読んでいる。読んでも守られていないため、文章の追加では再発を止められない。完了条件はゲートを実行した場合の合否を述べるだけで、ゲート実行そのものを必須とする機械的要件が無く、未実行なら FAIL も証跡も発生せず報告だけが成立する。
+- 今後：完了報告の成立要件を散文の禁止から受領証の提示へ変換する。figma-gate close の受領証（phase=closed、manifest hash、対象ファイルhash）が無い報告は内容にかかわらず未検証として扱う。受領証検査を coding:gate 併用時の任意運用ではなく Figma scope の既定とし、ゲート未実行のまま完了報告へ到達できる経路を負のE2Eで FAIL にする。
+
 <!-- loop-log-schema: v1 -->
 
 ## 2026-07-18: Figma差異指摘の保存先
