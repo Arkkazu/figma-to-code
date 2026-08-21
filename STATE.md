@@ -1357,3 +1357,9 @@
   - 残る弱点: (1) 入口3行に着手前ゲートが無く、規則本文へ到達する前に編集できる。(2) 4ホップすべてが任意読みで、到達したかを検証する機構が無い（監査B）。(3) `C:\AI\web-development` と `C:\AI\figma-to-code` は案件側の番号付き開始順には無く、条件節での参照にとどまる。
   - **実測で見つかった本リポジトリ側の欠陥**: `rules/figma-spec-pipeline.md:58` と `templates/LOOP.md:46,98` が `figma:gate -- preflight` を `--implementation-actor` / `--implementation-context-id` 抜きで記載していた。gateはv13でこの2つを必須にしており、書いてあるとおり実行すると `preflight requires exactly --implementation-actor and --implementation-context-id once each.` で即FAILする（実測）。案件側 `MyBrain/WORKFLOW.md` は正本のこの記述を写しているだけで、**案件は正しく正本に従っていた。ゲートを通せない原因は正本の記述にあった。**
   - 対応: 3箇所を現行契約の形へ修正し、再発防止として `tools/gate-command-doc-audit.mjs` を追加した。規範文書（`rules/` `templates/` `spec/` `references/` とルート直下）に書かれた preflight コマンドが必須フラグを欠けば exit 2 で落ちる。記録類（STATE / AUDIT / REVIEW）は履歴のため対象外。`gate-command-doc-audit.e2e.mjs` で正負を固定し、正本自身が契約と一致していることも回帰として固定した。
+
+- [2026-08-22 claude / 公開MyBrain層の受け入れ確認] **`0d2def6` で追加されたリポジトリ直下 `MyBrain/` を確認し、2点を修正した。**
+  - 位置づけは妥当: `WORKFLOW.md` を唯一の実行規則としたまま記憶層だけを足しており、規則本文の二重化は起きていない。クラウドが上位層を持たないという制約が `MyBrain/rules/cloud-agent-boundary.md` として正式化された。
+  - 修正1: `MyBrain/STATE.md` の "Status: initial skeleton, not yet committed or pushed." は実態と不一致（`master` にコミット・push済み）。実態へ訂正し、クラウドのクローンに含まれること（＝開始順5が到達可能）を実測として追記した。
+  - 修正2: `MyBrain` の名前が二義になった。`rules/` と `templates/` に多数ある `MyBrain/verify/…` は**案件側**を指すが、同名ディレクトリがリポジトリ直下にできたため、案件側パスを本リポジトリ側で解決する誤読が起こりうる。`MyBrain/README.md` と `WORKFLOW.md` に、どちらを指すかと「この公開MyBrainに検証キット・gate manifestを置かない」ことを明記した。
+  - 未着手（オーナー判断待ち）: `MyBrain/STATE.md` の Open Items にある `MyBrain/` 専用の機密スキャン。`tools/gate-command-doc-audit.mjs` と同じ作りで実装できる。ポリシーが「Decide whether」としているため、こちらの判断で追加していない。

@@ -6,7 +6,9 @@
   public development context for `figma-to-code`.
 - Purpose: support future cloud-agent development of this repository without
   depending on local-only paths.
-- Status: initial skeleton, not yet committed or pushed.
+- Status: committed and pushed on `master` as `0d2def6`.
+- 2026-08-22: Verified in a cloud session that this directory arrives with the
+  repository clone, so read-order item 5 is reachable from cloud agents.
 
 ## Active Constraints
 

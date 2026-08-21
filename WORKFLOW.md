@@ -21,6 +21,8 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 5. 本リポジトリの規則・テンプレート・tools・workflowを改善する場合は、リポジトリ直下の `MyBrain/README.md`、`MyBrain/STATE.md`、`MyBrain/rules/`
 6. 案件のFigma実装・修正を行う場合は、案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
+`rules/`・`templates/`・本ファイルに書かれた `MyBrain/verify/…`、`MyBrain/rules/corrections.md` などのパスは、**すべて6の案件側 `MyBrain/` を指す**。5のリポジトリ直下 `MyBrain/` は本リポジトリを改善するための公開メモリであり、検証キットもgate manifestも置かない。同名だが別物として扱う。
+
 ## 案件側への入口の設置
 
 Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件側に入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。
