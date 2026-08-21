@@ -43,7 +43,7 @@ L1ではコードを変更しない。検証役は実装役と独立に次を監
 - 独立レビュアーのpage coverage承認記録が現在のcoverageハッシュを指し、reviewer actor/contextがimplementation actor/contextと同一組合せではない
 - 停止条件または重大指摘がない
 
-全件PASS後、検証役は独立承認をSTATE.mdに記録する。実装役はその直後に `npm run figma:gate -- preflight {gate-manifest}` を**一度だけ**実行し、exit 0をL1→L2昇格の根拠とする。FAIL、未確認、または検証不能なら waiting-human として停止し、kazuへエスカレーションする。
+全件PASS後、検証役は独立承認をSTATE.mdに記録する。実装役はその直後に `npm run figma:gate -- preflight {gate-manifest} --implementation-actor {actor} --implementation-context-id {context}` を**一度だけ**実行し、exit 0をL1→L2昇格の根拠とする。FAIL、未確認、または検証不能なら waiting-human として停止し、kazuへエスカレーションする。
 
 ## ページcoverage・セクション完了契約
 
@@ -95,7 +95,7 @@ section-closeは一セクションの完了であり、ページ完了ではな�
 1. STATE.mdを読み、前回までの状況と未解決FAILを把握する
 2. L1でPC/SPページ全体のメタデータ、page coverage、component manifest、component decision manifest、DOM対応表、既存コード検索証跡、独立承認記録を作成する
 3. 実装役は着手ゲートを宣言し、painted要素のFigma参照画像をSHA-256とともに登録する
-4. 独立レビュー承認後、component rootの外側section間padding禁止を含むcomponent manifestを固定し、npm run figma:gate -- preflight {gate-manifest} を**一度だけ**実行する。成功時にL2を開始する
+4. 独立レビュー承認後、component rootの外側section間padding禁止を含むcomponent manifestを固定し、npm run figma:gate -- preflight {gate-manifest} --implementation-actor {actor} --implementation-context-id {context} を**一度だけ**実行する。成功時にL2を開始する
 5. L2では npm run figma:gate -- section-start {gate-manifest} {sectionId} を実行する
 6. 実装役はcurrentセクションのspecを作成し、未取得欄が残る間は停止する
 7. 実装役はcurrentセクションを実装し、各componentに npm run figma:gate -- checkpoint {gate-manifest} {elementId} を実行する。painted componentのPC/SPは同一Chrome sessionのbatch撮影・条件待機・宣言済みmask差分で照合する。FAILならQ-10の順で原因診断→必要最小限の修正→**同一componentのcheckpoint再実行**をPASSまで繰り返す。PASSまで次component・section-close・完了報告へ進まない

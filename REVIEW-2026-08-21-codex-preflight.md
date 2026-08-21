@@ -146,3 +146,33 @@ P-1〜P-4は正本の変更を伴うため、着手にはオーナー承認が�
 **回帰**：`gate-contract-audit.e2e` / `figma-feature-coverage.e2e` / `workflow-preflight.e2e` / `figma-log-promote.e2e` / `figma-scope-lock.e2e` はPASSのまま。`fidelity-benchmark.e2e` / `p3-p11-app-server-spike.e2e` / `p3-role-packet.e2e` は本変更の前後で同一理由の失敗（既存の未解決であり、本変更が原因ではない）。
 
 **残る未実測（ローカル必須）**：案件ルートへの実設置、上位層を読める状態での `local` 判定、`npm run figma:gate -- preflight` の実行。これらを通すまで、本節の配線は「クラウドのフィクスチャで固定した」段階である。
+
+## 8. 訂正と追加実測（2026-08-21、案件側 `MyBrain/WORKFLOW.md` の提示を受けて）
+
+**訂正**：第7節および直前のSTATE記録で「案件の入口が上位層へ繋がっていない」と書いたのは誤り。案件側 `MyBrain/WORKFLOW.md` は共通Vaultを開始順1に置き、Web実装は `C:\AI\web-development`、Figma実装は `C:\AI\figma-to-code\WORKFLOW.md` と `rules/loop-execution.md` / `rules/figma-spec-pipeline.md` を必読と明記している。**配送チェーンは繋がっていた。**
+
+**代わりに実測で確定した欠陥（本リポジトリ側）**
+
+`rules/figma-spec-pipeline.md:58` と `templates/LOOP.md:46,98` は、ゲート起動をこう書いていた。
+
+```
+npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json
+```
+
+現行のgate（v13）は `--implementation-actor` と `--implementation-context-id` を必須にしている。書いてあるとおり実行した結果（実測）:
+
+```
+FIGMA GATE: preflight requires exactly --implementation-actor and --implementation-context-id once each.
+```
+
+案件側 `MyBrain/WORKFLOW.md` は正本のこの形をそのまま写している。**案件は正しく正本に従っており、ゲートを通せなかった原因は正本の記述だった。**編集前ゲートが引数エラーで落ちる状態は、ゲートを飛ばして実装する経路をこちら側から用意していたことになる。
+
+**対応**
+- 3箇所を現行契約の形へ修正した。
+- `tools/gate-command-doc-audit.mjs` を追加。規範文書に書かれた preflight コマンドが必須フラグを欠けば **exit 2**。記録類（STATE / AUDIT / REVIEW）は履歴なので対象外。
+- `tools/gate-command-doc-audit.e2e.mjs` で正負（欠落2件・片方欠落・close行の誤検出なし）を固定し、**正本自身が契約と一致していること**も回帰として固定した。
+
+**案件側で必要な変更**（ローカル、オーナー判断）
+`MyBrain/WORKFLOW.md` の figma gate 起動行も同じ形へ揃える必要がある。揃えないと、案件側の記述に従った時点で落ちる。
+
+**残る弱点**：入口3行 → MyBrain → 上位層 の4ホップはすべて任意読みで、到達を検証する機構が無い（監査B）。着手前ゲートを入口自身に持たせる雛形（第7節）はこの弱点への対処である。

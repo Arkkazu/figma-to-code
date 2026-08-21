@@ -1351,3 +1351,9 @@
   - 内容は開始順の5（案件層）だけを宣言し、1〜4（共通Vault / Web Development / figma-to-code / 本リポジトリの規則本文）を参照しない。**監査Aの「届いても本文が無い」に加えて「届いても上位層へ繋がらない」状態だった。**Codexがfigma-to-codeの規則に従わない直接の経路として辻褄が合う。
   - 対応: `templates/project-entry.md` に「規則を読む順序」（vault → web-development → figma-to-code → 案件 `MyBrain/`）を明記し、案件側 `MyBrain/` は最下層で上位層を置き換えないと規定。`project-entry-install.mjs` は複数ディレクトリを一度に設置・検査できるようにした（リポジトリのルートとテーマディレクトリの両方に同一内容を置くため）。
   - 未実測: 案件側 `MyBrain/WORKFLOW.md` の本文はクラウドから読めないため、そこからfigma-to-codeへ繋がっているかは未確認。ローカルで確認が要る。
+
+- [2026-08-21 claude / 訂正と実測] **直前の記録「案件の入口が上位層へ繋がっていない」は誤りだった。**オーナーが提示した案件側 `MyBrain/WORKFLOW.md` の実文により訂正する。
+  - 事実: 案件側 `MyBrain/WORKFLOW.md` は開始順1に `C:\AI\vault\WORKFLOW.md` を置き、「Web実装の規則」で `C:\AI\web-development`、「Figma実装・修正」で `C:\AI\figma-to-code\WORKFLOW.md` と `rules/loop-execution.md` / `rules/figma-spec-pipeline.md` を必読と明記している。**配送チェーン自体は繋がっている。**入口3行 → MyBrain → 上位層、の4ホップ構成である。
+  - 残る弱点: (1) 入口3行に着手前ゲートが無く、規則本文へ到達する前に編集できる。(2) 4ホップすべてが任意読みで、到達したかを検証する機構が無い（監査B）。(3) `C:\AI\web-development` と `C:\AI\figma-to-code` は案件側の番号付き開始順には無く、条件節での参照にとどまる。
+  - **実測で見つかった本リポジトリ側の欠陥**: `rules/figma-spec-pipeline.md:58` と `templates/LOOP.md:46,98` が `figma:gate -- preflight` を `--implementation-actor` / `--implementation-context-id` 抜きで記載していた。gateはv13でこの2つを必須にしており、書いてあるとおり実行すると `preflight requires exactly --implementation-actor and --implementation-context-id once each.` で即FAILする（実測）。案件側 `MyBrain/WORKFLOW.md` は正本のこの記述を写しているだけで、**案件は正しく正本に従っていた。ゲートを通せない原因は正本の記述にあった。**
+  - 対応: 3箇所を現行契約の形へ修正し、再発防止として `tools/gate-command-doc-audit.mjs` を追加した。規範文書（`rules/` `templates/` `spec/` `references/` とルート直下）に書かれた preflight コマンドが必須フラグを欠けば exit 2 で落ちる。記録類（STATE / AUDIT / REVIEW）は履歴のため対象外。`gate-command-doc-audit.e2e.mjs` で正負を固定し、正本自身が契約と一致していることも回帰として固定した。
