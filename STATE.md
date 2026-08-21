@@ -1389,3 +1389,8 @@
   - 対応: 規範文書のコマンド行17箇所を `C:/AI/figma-to-code/...` へ変更（PowerShell・cmd・Git Bashのいずれでも通る）。散文中の所在表記はWindows表記のまま残した。
   - 再発防止: `tools/gate-command-doc-audit.mjs` を `tools/doc-command-audit.mjs` へ改名し、検査を2つにした。(1) ゲート起動の実引数契約、(2) `node` / `npm` のコマンド行にバックスラッシュ絶対パスが無いこと。コマンド行だけを見るため、散文中のパス表記は誤検出しない。
   - 実測: `doc-command-audit.e2e.mjs` に正負（バックスラッシュのコマンド行＝違反、`C:/` のコマンド行と散文中のWindowsパス＝違反でない）を追加してPASS。正本自身の exit 0 も回帰として維持。
+
+- [2026-08-22 kazu実測 / 環境判定のローカル側が確定] **オーナー環境で `workflow-preflight` が `local` を返した。**
+  - 実測（Git Bash、`node /c/AI/figma-to-code/tools/workflow-preflight.mjs`）: `mode: local` / `signals: []` / `vault` と `web-development` はいずれも `status: ok` / `unusableLocalWorkflows: []`。
+  - 意味: (1) 上位層は既定パス（`C:\AI\vault` / `C:\AI\web-development`）のまま読める。環境変数による上書きは不要。(2) 実読による判定（下限バイト＋見出し）が本物の上位層で誤検出しない。(3) `figma-gate` の `preflight` が起動する環境判定は、このローカルで通る。
+  - これで環境判定側の未実測は解消した。残る未実測は、案件側での `npm run figma:gate -- preflight`（案件側 `MyBrain/WORKFLOW.md` のコマンド形の修正が前提）と、着手前ゲートが実依頼で守られるかの2点。

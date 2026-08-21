@@ -66,6 +66,8 @@ Claude Code / Codex のクラウドセッションは、このリポジトリの
 
 クラウド判定の正本は `tools/workflow-preflight.mjs` が**上位層の `WORKFLOW.md` を実際に読めるか**とする。読めない、下限バイト未満、Markdown見出しが無い（空・プレースホルダ）の場合は `cloud-restricted` とする。`CLAUDE_CODE_REMOTE=true` と `CODEX_CI=1` は補助シグナルであり、特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
 
+2026-08-22 実測（オーナー環境、Git Bash）：`local` を返し、`C:\AI\vault\WORKFLOW.md` と `C:\AI\web-development\WORKFLOW.md` はどちらも `status: ok`。ローカルの上位層は既定パスのまま読める。
+
 2026-08-21 実測：Claude Codeのクラウドセッションは `CLAUDE_CODE_REMOTE=true` を持ち、上位層2ファイルはどちらも存在しない。`CODEX_CI=1` はCodexクラウドの申告値であり、本リポジトリでは未実測である。判定はファイルの実読を正本とするため、この値の当否に結果が依存しない構成にしてある。
 
 上位層のルート位置が既定と異なるローカル環境では、`FIGMA_TO_CODE_VAULT_WORKFLOW` と `FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW` でパスを上書きする。ファイル検査は空・プレースホルダを弾くが、**旧世代のコピーは検出できない**。世代差の検査はこの環境判定の責務ではない。
