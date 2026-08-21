@@ -48,7 +48,7 @@ Figma実装案件では、案件側 `MyBrain/verify/figma-gate.mjs` を使い、
 - **編集中 `checkpoint <manifest> <elementId>`**：コンポーネントを実装・変更するごとに、対象specのCDP実測と、painted要素のブラウザ撮影・Figma参照画像との差分照合を実行する。PASSするまで次のコンポーネントへ進まない。
 - **編集後 `close`**：Sass build、単位lint、必要なPHP lint、PC/SPの全spec再実測を実行し、全componentを最終状態で再測定、painted要素はFigma参照画像との差分を再計算する。PASSしない限り「Figmaどおり」「作業完了」と報告しない。
 
-環境判定 `workflow-preflight` は編集前ゲートの前段であり、代わりではない。上位層を読めない環境でFigma実装scopeを開始しないための検査である。
+環境判定 `workflow-preflight` は編集前ゲートの前段であり、代わりではない。上位層を読めない環境でFigma実装scopeを開始しないための検査である。`figma:gate preflight` は manifest を読むより先にこの判定を起動し、`cloud-restricted` または `workflow-preflight` 不在なら **SPEC FAIL** とする。正本の位置が既定と異なる環境では `FIGMA_TO_CODE_ROOT` で指定する。判定を迂回する環境変数は用意しない（テストダブルはgateのフィクスチャ内に限る）。
 
 ```bash
 # environment gate: exits 2 when the upper-layer WORKFLOW.md files are unreadable

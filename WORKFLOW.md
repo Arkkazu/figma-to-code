@@ -20,6 +20,17 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 4. `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`
 5. 案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
+## 案件側への入口の設置
+
+Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件リポジトリのルートに入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。
+
+```bash
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート>          # AGENTS.md と CLAUDE.md を設置・更新
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --check  # 世代差の検出（不一致は非0終了）
+```
+
+`--check` は雛形とのSHA-256一致を検査する。案件側の入口を手編集しない。案件固有の記録は案件側 `MyBrain/` に置く。入口が未設置または世代差のある案件では、Figma実装を開始する前に設置し直す。
+
 ## クラウドセッションでの実行範囲
 
 Claude Code / Codex のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、5（案件側 `MyBrain/`）は存在しない**。ユーザースコープのMCP設定も届かない。

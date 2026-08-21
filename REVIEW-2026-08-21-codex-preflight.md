@@ -128,3 +128,21 @@ P-1〜P-4は正本の変更を伴うため、着手にはオーナー承認が�
 1. **案件側 `AGENTS.md` の設置**（監査P-A の本体）。本リポジトリは案件cwdの祖先ではないため、クラウドからは配送経路を作れない。**これが未了の間、今回の入口強化は案件セッションに届かない。**
 2. **`figma-gate` から `--assert-local` を自動起動する配線**。案件側 `package.json` と実測が要る。現状は「チェックリストに書かれた手順」であり、機械的強制ではない。
 3. 監査C（旧 `C:\AI\MyBrain` 参照5箇所）、監査D（`unverified-figma-value` 5件の滞留）、監査E（忠実度ベンチマーク0件）。いずれも別scopeであり、`WORKFLOW.md` のscope分離規定により本scopeへ混ぜていない。
+
+## 7. 配送と強制の配線（2026-08-21 claude、オーナー指示「作れ」）
+
+第6節の「未実施」1・2を実装した。
+
+**案件側入口**（監査P-Aの本体）
+- `templates/project-entry.md`：案件ルートに置く入口の雛形。最初のツール実行（環境判定）、着手前ゲート5点、`figma:gate` 未導入時の停止、規則と記録の所在だけを持つ。規則本文は複製しない。
+- `tools/project-entry-install.mjs <案件ルート> [--check]`：`AGENTS.md` と `CLAUDE.md` を設置する。`--check` は雛形とのSHA-256一致を検査し、未設置（`absent`）と世代差（`drift`）を **exit 2** で落とす。手作業コピーと世代差の検出不能（監査C）に対する最小の機械検査でもある。
+- `tools/project-entry-install.e2e.mjs`：absent → install → drift → 再設置の冪等性、CLI終了コード、実プロセス起動を固定。
+
+**gateからの起動**（R-3の残り）
+- `templates/verify/figma-gate.mjs` の `preflight` は、manifestを読むより先に `workflow-preflight --assert-local` を起動する。`cloud-restricted`・ツール不在・起動失敗はいずれも **SPEC FAIL**。
+- 正本の位置は `FIGMA_TO_CODE_ROOT` で指定する。**判定を迂回する環境変数は用意していない**（`corrections.md:70` の「抜け穴が常用される」パターンを繰り返さないため）。テストダブルはgateのフィクスチャ内だけに置いた。
+- `figma-gate.e2e.mjs` に負の2件（cloud判定／ツール不在。いずれもgate成果物を残さないことまで確認）と、同一manifestがlocal判定なら通る正の1件を追加。**309 → 323 アサーションでPASS。**
+
+**回帰**：`gate-contract-audit.e2e` / `figma-feature-coverage.e2e` / `workflow-preflight.e2e` / `figma-log-promote.e2e` / `figma-scope-lock.e2e` はPASSのまま。`fidelity-benchmark.e2e` / `p3-p11-app-server-spike.e2e` / `p3-role-packet.e2e` は本変更の前後で同一理由の失敗（既存の未解決であり、本変更が原因ではない）。
+
+**残る未実測（ローカル必須）**：案件ルートへの実設置、上位層を読める状態での `local` 判定、`npm run figma:gate -- preflight` の実行。これらを通すまで、本節の配線は「クラウドのフィクスチャで固定した」段階である。

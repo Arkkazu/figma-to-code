@@ -22,11 +22,33 @@ function assert(condition, label) {
   if (!condition) throw new Error(`fixture failed: ${label}`);
 }
 
-function gate(args, cwd) {
+// 環境判定 workflow-preflight のテストダブル。実際の C:\\AI\\figma-to-code や
+// 上位層 WORKFLOW.md に依存せずに、gateが判定へ委ねていることだけを検査する。
+function createWorkflowPreflightStub(mode) {
+  const root = mkdtempSync(join(tmpdir(), `figma-gate-workflow-${mode}-`));
+  mkdirSync(join(root, "tools"), { recursive: true });
+  const exitCode = mode === "local" ? 0 : 2;
+  writeFileSync(
+    join(root, "tools", "workflow-preflight.mjs"),
+    [
+      `process.stdout.write(JSON.stringify({ mode: ${JSON.stringify(mode)} }) + "\\n");`,
+      `process.exit(process.argv.includes("--assert-local") ? ${exitCode} : 0);`,
+      "",
+    ].join("\n"),
+    "utf8"
+  );
+  return root;
+}
+
+const localWorkflowRoot = createWorkflowPreflightStub("local");
+const cloudWorkflowRoot = createWorkflowPreflightStub("cloud-restricted");
+const missingWorkflowRoot = mkdtempSync(join(tmpdir(), "figma-gate-workflow-missing-"));
+
+function gate(args, cwd, envOverrides = {}) {
   const result = spawnSync(process.execPath, [gatePath, ...args], {
     cwd,
     encoding: "utf8",
-    env: { ...process.env },
+    env: { ...process.env, FIGMA_TO_CODE_ROOT: localWorkflowRoot, ...envOverrides },
   });
   return {
     result,
@@ -34,8 +56,8 @@ function gate(args, cwd) {
   };
 }
 
-function reject(args, expectedText, cwd) {
-  const attempt = gate(args, cwd);
+function reject(args, expectedText, cwd, envOverrides = {}) {
+  const attempt = gate(args, cwd, envOverrides);
   assert(attempt.result.status !== 0, `${args[0]} rejects invalid invocation`);
   assert(
     attempt.output.includes(expectedText),
@@ -44,8 +66,8 @@ function reject(args, expectedText, cwd) {
   return attempt;
 }
 
-function accept(args, cwd) {
-  const attempt = gate(args, cwd);
+function accept(args, cwd, envOverrides = {}) {
+  const attempt = gate(args, cwd, envOverrides);
   assert(
     attempt.result.status === 0,
     `${args.join(" ")} succeeds in the disposable fixture (output=${JSON.stringify(attempt.output)}; spawn=${attempt.result.error?.message || "none"})`
@@ -891,6 +913,35 @@ function assertResponsiveHtmlSingleDomStillGuardsLaterPhases() {
   }
 }
 
+// 上位層を読めない環境では、manifestの中身に関係なくpreflightを開始させない。
+function assertWorkflowPreflightGuards() {
+  const fixture = createFixture("figma-gate-workflow-preflight-");
+  try {
+    assertNoGateArtifacts(fixture, "before the workflow-preflight guard");
+    reject(
+      preflightArgs(fixture),
+      "workflow-preflight rejected this environment",
+      fixture.root,
+      { FIGMA_TO_CODE_ROOT: cloudWorkflowRoot }
+    );
+    assertNoGateArtifacts(fixture, "after a cloud-restricted workflow-preflight verdict");
+
+    reject(
+      preflightArgs(fixture),
+      "workflow-preflight not found",
+      fixture.root,
+      { FIGMA_TO_CODE_ROOT: missingWorkflowRoot }
+    );
+    assertNoGateArtifacts(fixture, "after an unreachable workflow-preflight");
+
+    // 同じmanifestが、判定がlocalなら通ることまで示す（拒否理由が環境判定であることの確認）
+    accept(preflightArgs(fixture), fixture.root);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+}
+
+assertWorkflowPreflightGuards();
 assertIdentityArgumentGuards();
 assertDirtyPreflightLeavesNoCoverageRuntime();
 assertResponsiveHtmlV12SchemaGuards();
@@ -904,5 +955,9 @@ assertResponsiveHtmlSingleDomStillGuardsLaterPhases();
 assertPreflightDraftGuardCases();
 assertLaterPhaseDraftGuards();
 assertReleaseCheckRecordGuards();
+
+for (const root of [localWorkflowRoot, cloudWorkflowRoot, missingWorkflowRoot]) {
+  rmSync(root, { recursive: true, force: true });
+}
 
 console.log(`figma-gate.e2e: PASS (${assertions} assertions)`);

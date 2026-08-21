@@ -2542,7 +2542,43 @@ function run(program, programArgs, label, failureClass = null) {
   }
 }
 
+// 上位層（共通Vault / Web Development）の WORKFLOW.md を読めない環境で実装scopeを
+// 開始すると、規則を読まないまま「読んだことにして」進む経路が開く。環境判定は
+// figma-to-code 正本の tools/workflow-preflight.mjs が持つため、gateはそれを起動して
+// 判定を委ねる。見つからない場合も fail-closed とする（規則の所在が不明な環境で
+// Figma実装を始めないため）。FIGMA_TO_CODE_ROOT は正本の位置が既定と異なる環境と、
+// このgateのフィクスチャのためにある。
+const FIGMA_TO_CODE_ROOT = process.env.FIGMA_TO_CODE_ROOT || "C:\\AI\\figma-to-code";
+
+function assertWorkflowEnvironment() {
+  const toolPath = resolve(FIGMA_TO_CODE_ROOT, "tools", "workflow-preflight.mjs");
+  if (!existsSync(toolPath)) {
+    fail(
+      `SPEC FAIL: workflow-preflight not found at ${toolPath}. ` +
+        "Figma実装scopeは、上位層の規則を読める環境でしか開始できない。" +
+        "figma-to-code 正本の位置が既定と異なる場合は FIGMA_TO_CODE_ROOT で指定する。"
+    );
+  }
+  const result = spawnSync(process.execPath, [toolPath, "--assert-local"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (result.error) {
+    fail(`SPEC FAIL: workflow-preflight could not be started: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    fail(
+      `SPEC FAIL: workflow-preflight rejected this environment (exit ${result.status}). ` +
+        "上位層の WORKFLOW.md を読めないため、Figma実装scopeのpreflightを開始できない。\n" +
+        `${(result.stdout || "").trim()}${(result.stderr || "").trim()}`
+    );
+  }
+  return toolPath;
+}
+
 function preflight(manifestPath, implementationIdentityInput) {
+  // 規則の所在と上位層の可読性は、manifestを読むより前の前提条件とする。
+  assertWorkflowEnvironment();
   const absoluteManifestPath = resolve(repoRoot, requireString(manifestPath, "manifest path"));
   const manifest = readExecutionJson(absoluteManifestPath, "Manifest");
   const implementationIdentity = requireImplementationIdentity(implementationIdentityInput, "preflight implementation identity");
