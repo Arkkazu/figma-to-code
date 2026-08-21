@@ -6,6 +6,8 @@
 
 ## 実行時の入口
 
+どちらのエージェントも、入口ファイルを読んだ直後の最初のツール実行で `node tools/workflow-preflight.mjs` を実行する。これによりCodexクラウドをClaude専用の環境変数だけで誤ってローカル扱いする経路と、上位規則が欠けたまま実装を始める経路を閉じる。
+
 ### Codex
 1. `C:\Users\tane1\.codex\AGENTS.md`
 2. `C:\AI\vault\AGENTS.md`

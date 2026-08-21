@@ -4,6 +4,8 @@
 
 ## Figma実装・修正タスクの開始順
 
+入口（`AGENTS.md` / `CLAUDE.md`）を読んだ直後、他の調査・編集より先にリポジトリ直下で `node tools/workflow-preflight.mjs` を実行する。`local` なら下記1〜5を順に読み、`cloud-restricted` なら次節の制限に従う。非0終了、判定不能、または `local` で必須上位ファイルが欠けた場合は着手しない。
+
 1. `C:\AI\vault\WORKFLOW.md`
 2. `C:\AI\web-development\WORKFLOW.md`
 3. 本ファイルと `README.md`
@@ -12,9 +14,11 @@
 
 ## クラウドセッションでの実行範囲
 
-Claude Code のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、5（案件側 `MyBrain/`）は存在しない**。ユーザースコープのMCP設定も届かない。判定は環境変数 `CLAUDE_CODE_REMOTE` が `true` かどうかで行う。
+Claude Code / Codex のクラウドセッションは、このリポジトリのクローンだけを持つ。上の開始順のうち **1（共通Vault）、2（Web Development）、5（案件側 `MyBrain/`）は存在しない**。ユーザースコープのMCP設定も届かない。
 
-`CLAUDE_CODE_REMOTE=true` のとき、実行してよいのは次に限る。
+クラウド判定の正本は `tools/workflow-preflight.mjs` とする。`CLAUDE_CODE_REMOTE=true` または `CODEX_CI=1` をクラウドの明示シグナルとして扱い、さらにローカル必須上位ファイルを参照できない環境も安全側で `cloud-restricted` とする。特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
+
+preflight が `cloud-restricted` を返したとき、実行してよいのは次に限る。
 
 - このリポジトリ内で完結するテスト・E2E・lintの実行と、その失敗の修正
 - `spec/`・`rules/`・`tools/` の静的な整合確認と、機械的に検証できる修正
