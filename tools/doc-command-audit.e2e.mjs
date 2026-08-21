@@ -6,10 +6,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { REQUIRED_FLAGS, auditGateCommandDocs, listDocs, runCli } from "./gate-command-doc-audit.mjs";
+import { REQUIRED_FLAGS, auditGateCommandDocs, listDocs, runCli } from "./doc-command-audit.mjs";
 
-const TOOL_PATH = fileURLToPath(new URL("./gate-command-doc-audit.mjs", import.meta.url));
-const fixtureRoot = mkdtempSync(path.join(tmpdir(), "gate-command-doc-"));
+const TOOL_PATH = fileURLToPath(new URL("./doc-command-audit.mjs", import.meta.url));
+const fixtureRoot = mkdtempSync(path.join(tmpdir(), "doc-command-audit-"));
 const rulesDirectory = path.join(fixtureRoot, "rules");
 mkdirSync(rulesDirectory, { recursive: true });
 
@@ -27,27 +27,52 @@ writeFileSync(
 );
 writeFileSync(
   path.join(rulesDirectory, "unrelated.md"),
-  "# 無関係\n\nnpm run figma:gate -- close MyBrain/verify/gate-x.json\npreflight という語だけの行\n",
+  [
+    "# 無関係",
+    "",
+    "npm run figma:gate -- close MyBrain/verify/gate-x.json",
+    "preflight という語だけの行",
+    "上位層は `C:\\AI\\vault\\WORKFLOW.md` にある（散文中のパス表記は実行しない）。",
+    "node C:/AI/figma-to-code/tools/workflow-preflight.mjs",
+    "",
+  ].join("\n"),
+  "utf8",
+);
+writeFileSync(
+  path.join(rulesDirectory, "backslash.md"),
+  "# シェル依存\n\nnode C:\\AI\\figma-to-code\\tools\\workflow-preflight.mjs\n",
   "utf8",
 );
 
 const docs = listDocs(fixtureRoot);
-assert.equal(docs.length, 4, "every markdown document under the doc roots is inspected");
+assert.equal(docs.length, 5, "every markdown document under the doc roots is inspected");
 
 const audited = auditGateCommandDocs(docs, { root: fixtureRoot });
 assert.equal(audited.ok, false, "a stale command form is a violation");
 assert.deepEqual(
-  audited.violations.map((violation) => path.basename(violation.file)).sort(),
+  audited.violations
+    .filter((violation) => violation.rule === "gate-contract")
+    .map((violation) => path.basename(violation.file))
+    .sort(),
   ["partial.md", "stale.md"],
   "only the documents whose preflight command misses a required flag are reported",
 );
+
+// Git Bash で落ちるバックスラッシュ絶対パスを、コマンド行だけで検出する
+const shellViolations = audited.violations.filter((violation) => violation.rule === "windows-backslash-command");
 assert.deepEqual(
-  audited.violations.find((violation) => violation.file.endsWith("stale.md")).missing,
+  shellViolations.map((violation) => path.basename(violation.file)),
+  ["backslash.md"],
+  `only command lines with a backslash path are reported: ${JSON.stringify(shellViolations)}`,
+);
+assert.ok(shellViolations[0].hint.includes("C:/AI/"), "the finding names the portable form");
+assert.deepEqual(
+  audited.violations.find((violation) => violation.file.endsWith("stale.md") && violation.rule === "gate-contract").missing,
   [...REQUIRED_FLAGS],
   "both missing flags are named",
 );
 assert.deepEqual(
-  audited.violations.find((violation) => violation.file.endsWith("partial.md")).missing,
+  audited.violations.find((violation) => violation.file.endsWith("partial.md") && violation.rule === "gate-contract").missing,
   [REQUIRED_FLAGS[1]],
   "a half-migrated command reports only the flag it still lacks",
 );
@@ -56,7 +81,7 @@ assert.deepEqual(
 assert.equal(
   auditGateCommandDocs([path.join(rulesDirectory, "unrelated.md")], { root: fixtureRoot }).ok,
   true,
-  "non-preflight lines are not flagged",
+  "close commands, prose paths, and forward-slash command lines are not flagged",
 );
 
 assert.equal(runCli([], { root: fixtureRoot }).exitCode, 2, "the CLI fails on a stale document set");
@@ -72,4 +97,4 @@ assert.equal(
 assert.equal(JSON.parse(repoRun.stdout).ok, true, "the CLI reports the verdict as JSON");
 
 rmSync(fixtureRoot, { recursive: true, force: true });
-process.stdout.write("gate-command-doc-audit.e2e: PASS\n");
+process.stdout.write("doc-command-audit.e2e: PASS\n");

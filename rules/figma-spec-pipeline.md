@@ -28,14 +28,14 @@ Figma MCP ──→ spec（唯一の真実）──→ SCSS/PHP実装
 Figma実装・修正の開始時に、案件側 MyBrain/verify/scope-<id>.json へ編集可能な正確な相対パスだけを列挙する。ワイルドカード、ディレクトリ指定、関連ファイル一式、ルール・検証基盤の予防的な追加は禁止する。
 
 ~~~powershell
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs begin MyBrain/verify/scope-<id>.json MyBrain/verify/scope-<id>.state.json
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs assert MyBrain/verify/scope-<id>.state.json <編集する相対パス>
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs begin MyBrain/verify/scope-<id>.json MyBrain/verify/scope-<id>.state.json
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs assert MyBrain/verify/scope-<id>.state.json <編集する相対パス>
 ~~~
 
 assert は各ファイルの編集直前に実行する。checkpoint前とclose前には verify を実行する。
 
 ~~~powershell
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs verify MyBrain/verify/scope-<id>.state.json
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs verify MyBrain/verify/scope-<id>.state.json
 ~~~
 
 verifyが対象外の変更を検知したらscopeは blocked となる。以降の編集、checkpoint、close、完了報告を停止する。対象外パスを編集する必要が判明したが未編集の場合だけ、ownerの明示承認を記録したamendmentでamendできる。blocked後の自己拡張、対象外変更の自動復旧、通常scopeへの運用改善の混入は禁止する。詳細は rules/figma-scope-lock.md を正本とする。
@@ -52,7 +52,7 @@ Figma実装案件では、案件側 `MyBrain/verify/figma-gate.mjs` を使い、
 
 ```bash
 # environment gate: exits 2 when the upper-layer WORKFLOW.md files are unreadable
-node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
+node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local
 
 # source edit is prohibited until this exits 0
 npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementation-actor <actor> --implementation-context-id <context>

@@ -1,12 +1,16 @@
 #!/usr/bin/env node
-// 規範文書に書かれた figma:gate preflight のコマンド形が、ゲートの実引数契約と
-// 一致しているかを検査する。
+// 規範文書に書かれたコマンドが、書いてあるとおり実行して通る形になっているかを検査する。
+// 現在の検査は2つ。(1) figma:gate preflight がゲートの実引数契約と一致しているか、
+// (2) node / npm のコマンド行がWindowsのバックスラッシュ絶対パスを使っていないか。
 //
 // 2026-08-21 実測：rules/figma-spec-pipeline.md と templates/LOOP.md は
 // `--implementation-actor` / `--implementation-context-id` を欠いた形を書いていた。
 // gate は v13 でこの2つを必須にしているため、書いてあるとおりに実行すると
 // `preflight requires exactly ...` で即FAILする。案件側はこの記述を写すので、
 // ゲートを通せない案件が生まれ、ゲートを飛ばして実装する経路が開く。
+// 2026-08-22 実測：Git Bash（MSYS）では `node C:\AI\figma-to-code\tools\x.mjs` の
+// バックスラッシュがエスケープとして解釈され、`AIfigma-to-codetoolsx.mjs` を探して
+// MODULE_NOT_FOUND で落ちる。`C:/AI/...` はPowerShell・cmd・Git Bashのいずれでも通る。
 // 記録（STATE.md / AUDIT-*.md / REVIEW-*.md）は履歴なので対象にしない。
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -19,6 +23,8 @@ export const DOC_ROOTS = Object.freeze(["rules", "templates", "spec", "reference
 export const ROOT_DOCS = Object.freeze(["WORKFLOW.md", "README.md", "AGENTS.md", "CLAUDE.md", "LOOP.md"]);
 export const PREFLIGHT_COMMAND = /(?:figma:gate\s+--\s+preflight|figma-gate\.mjs\s+preflight)/;
 export const REQUIRED_FLAGS = Object.freeze(["--implementation-actor", "--implementation-context-id"]);
+export const COMMAND_LINE = /^(?:node|npm)\s/;
+export const WINDOWS_BACKSLASH_PATH = /[A-Za-z]:(?:\\[^\s\\`"']+)+/;
 
 export function listDocs(root = REPO_ROOT, deps = {}) {
   const { readDir = readdirSync, stat = statSync } = deps;
@@ -55,15 +61,22 @@ export function auditGateCommandDocs(files, deps = {}) {
   for (const file of files) {
     const lines = readFile(file).split(/\r?\n/);
     lines.forEach((line, index) => {
-      if (!PREFLIGHT_COMMAND.test(line)) return;
-      const missing = REQUIRED_FLAGS.filter((flag) => !line.includes(flag));
-      if (missing.length === 0) return;
-      violations.push({
-        file: path.relative(root, file).replace(/\\/g, "/"),
-        line: index + 1,
-        missing,
-        text: line.trim(),
-      });
+      const location = { file: path.relative(root, file).replace(/\\/g, "/"), line: index + 1, text: line.trim() };
+
+      if (PREFLIGHT_COMMAND.test(line)) {
+        const missing = REQUIRED_FLAGS.filter((flag) => !line.includes(flag));
+        if (missing.length > 0) violations.push({ ...location, rule: "gate-contract", missing });
+      }
+
+      // コマンド行だけを見る。散文中のWindowsパス表記は所在の説明であって実行しない。
+      if (COMMAND_LINE.test(line.trim()) && WINDOWS_BACKSLASH_PATH.test(line)) {
+        violations.push({
+          ...location,
+          rule: "windows-backslash-command",
+          missing: [],
+          hint: "Git Bash がバックスラッシュを食うため `C:/AI/...` と書く",
+        });
+      }
     });
   }
   return { checked: files.length, violations, ok: violations.length === 0 };
@@ -79,8 +92,8 @@ export function runCli(argv, deps = {}) {
     exitCode: 2,
     stdout,
     stderr:
-      "gate-command-doc-audit: 書かれているとおりに実行するとゲートが引数エラーで落ちる。" +
-      "規範文書のコマンド形をゲートの契約に合わせる。\n",
+      "doc-command-audit: 書かれているとおりに実行すると落ちるコマンドが規範文書にある。" +
+      "ゲートの引数契約と、シェルに依存しないパス表記へ揃える。\n",
   };
 }
 
