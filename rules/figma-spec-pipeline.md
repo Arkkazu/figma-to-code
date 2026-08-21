@@ -55,7 +55,7 @@ Figma実装案件では、案件側 `MyBrain/verify/figma-gate.mjs` を使い、
 node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
 
 # source edit is prohibited until this exits 0
-npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json
+npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementation-actor <actor> --implementation-context-id <context>
 
 # run during each implementation iteration
 npm run figma:gate -- checkpoint MyBrain/verify/gate-<対象>.json <elementId>

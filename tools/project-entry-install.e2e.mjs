@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,7 +74,28 @@ assert.equal(runCli([fresh]).exitCode, 0, "install succeeds");
 assert.equal(runCli([fresh, "--check"]).exitCode, 0, "--check passes after install");
 writeFileSync(path.join(fresh, "CLAUDE.md"), "古い世代の入口\n", "utf8");
 assert.equal(runCli([fresh, "--check"]).exitCode, 2, "--check fails on a stale generation");
-assert.equal(runCli([]).exitCode, 64, "the project root is required");
+
+// cwdになりうる場所が複数ある案件（リポジトリのルートとテーマディレクトリなど）
+const repoRoot = newRoot();
+const themeRoot = path.join(repoRoot, "wp-content", "themes", "fixture-theme");
+mkdirSync(themeRoot, { recursive: true });
+assert.equal(runCli([repoRoot, themeRoot, "--check"]).exitCode, 2, "--check fails while any directory is missing the entries");
+assert.equal(runCli([repoRoot, themeRoot]).exitCode, 0, "both directories are installed in one run");
+for (const root of [repoRoot, themeRoot]) {
+  for (const filename of ENTRY_FILENAMES) {
+    assert.equal(readFileSync(path.join(root, filename), "utf8"), templateText, `${root} carries the same entry`);
+  }
+}
+assert.equal(runCli([repoRoot, themeRoot, "--check"]).exitCode, 0, "--check passes once every directory is current");
+writeFileSync(path.join(themeRoot, "AGENTS.md"), "# 案件入口\n\n古い世代の入口\n", "utf8");
+assert.equal(
+  runCli([repoRoot, themeRoot, "--check"]).exitCode,
+  2,
+  "--check fails when one of the directories drifts",
+);
+assert.equal(JSON.parse(runCli([repoRoot, themeRoot, "--check"]).stdout).roots.length, 2, "every directory is reported");
+
+assert.equal(runCli([]).exitCode, 64, "at least one directory is required");
 assert.equal(runCli([fresh, "--nope"]).exitCode, 64, "unknown arguments are rejected");
 assert.equal(
   runCli([path.join(fresh, "does-not-exist")]).exitCode,
@@ -90,7 +111,11 @@ assert.equal(JSON.parse(checkBefore.stdout).ok, false, "the CLI reports the fail
 
 const install = spawnSync(process.execPath, [TOOL_PATH, spawned], { encoding: "utf8" });
 assert.equal(install.status, 0, "the CLI installs successfully");
-assert.deepEqual(JSON.parse(install.stdout).written, [...ENTRY_FILENAMES], "the CLI reports what it wrote");
+assert.deepEqual(
+  JSON.parse(install.stdout).roots[0].written,
+  [...ENTRY_FILENAMES],
+  "the CLI reports what it wrote",
+);
 
 const checkAfter = spawnSync(process.execPath, [TOOL_PATH, spawned, "--check"], { encoding: "utf8" });
 assert.equal(checkAfter.status, 0, "the CLI exits 0 once the entries are current");

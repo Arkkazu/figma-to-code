@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// 案件リポジトリのルートへ入口2枚（AGENTS.md / CLAUDE.md）を設置・検証する。
+// エージェントが作業するディレクトリへ入口2枚（AGENTS.md / CLAUDE.md）を設置・検証する。
+// リポジトリのルートとテーマディレクトリのように、cwdになりうる場所が複数ある案件では
+// 同一内容を各所へ置く（複数の引数を受け付ける）。
 //
 // Codex は cwd とその祖先の AGENTS.md しか自動読込しない。figma-to-code は案件cwdの
 // 祖先ではないため、案件側に入口を置かない限り本リポジトリの規則は届かない。
@@ -69,21 +71,24 @@ export function runCli(argv, deps = {}) {
   const unknown = flags.filter((flag) => flag !== "--check");
 
   if (unknown.length > 0) return { exitCode: 64, stdout: "", stderr: `unknown argument: ${unknown[0]}\n` };
-  if (positionals.length !== 1) {
+  if (positionals.length === 0) {
     return {
       exitCode: 64,
       stdout: "",
-      stderr: "Usage: node tools/project-entry-install.mjs <案件ルート> [--check]\n",
+      stderr: "Usage: node tools/project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] [--check]\n",
     };
   }
 
-  const rootError = assertProjectRoot(positionals[0], deps);
-  if (rootError) return { exitCode: 64, stdout: "", stderr: `${rootError}\n` };
+  for (const positional of positionals) {
+    const rootError = assertProjectRoot(positional, deps);
+    if (rootError) return { exitCode: 64, stdout: "", stderr: `${rootError}\n` };
+  }
 
   if (flags.includes("--check")) {
-    const inspection = inspectProjectEntry(positionals[0], deps);
-    const stdout = `${JSON.stringify({ mode: "check", ...summarize(inspection) }, null, 2)}\n`;
-    if (inspection.ok) return { exitCode: 0, stdout, stderr: "" };
+    const inspections = positionals.map((positional) => inspectProjectEntry(positional, deps));
+    const ok = inspections.every((inspection) => inspection.ok);
+    const stdout = `${JSON.stringify({ mode: "check", ok, roots: inspections.map(summarize) }, null, 2)}\n`;
+    if (ok) return { exitCode: 0, stdout, stderr: "" };
     return {
       exitCode: 2,
       stdout,
@@ -93,10 +98,10 @@ export function runCli(argv, deps = {}) {
     };
   }
 
-  const installed = installProjectEntry(positionals[0], deps);
+  const installs = positionals.map((positional) => installProjectEntry(positional, deps));
   return {
     exitCode: 0,
-    stdout: `${JSON.stringify({ mode: "install", ...summarize(installed) }, null, 2)}\n`,
+    stdout: `${JSON.stringify({ mode: "install", ok: true, roots: installs.map(summarize) }, null, 2)}\n`,
     stderr: "",
   };
 }

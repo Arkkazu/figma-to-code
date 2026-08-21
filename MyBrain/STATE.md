@@ -6,7 +6,9 @@
   public development context for `figma-to-code`.
 - Purpose: support future cloud-agent development of this repository without
   depending on local-only paths.
-- Status: initial skeleton, not yet committed or pushed.
+- Status: committed and pushed on `master` as `0d2def6`.
+- 2026-08-22: Verified in a cloud session that this directory arrives with the
+  repository clone, so read-order item 5 is reachable from cloud agents.
 
 ## Active Constraints
 
@@ -18,6 +20,13 @@
 
 ## Open Items
 
-- Decide whether to add a pre-push private-data scan specific to this directory.
-- Decide whether root `README.md` should link to this directory after owner
-  review.
+- None.
+
+## Resolved
+
+- 2026-08-22: Added `tools/public-memory-scan.mjs` as the pre-push private-data
+  scan for this directory, with `tools/public-memory-scan.e2e.mjs` fixing both
+  the positive and negative cases. This directory currently scans clean.
+- 2026-08-22: Decided with the owner that root `README.md` lists this directory
+  as one line under its structure list, and that no dedicated section is added -
+  a section would duplicate `rules/public-memory-policy.md`. Applied.

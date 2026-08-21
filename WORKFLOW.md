@@ -21,16 +21,24 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 5. 本リポジトリの規則・テンプレート・tools・workflowを改善する場合は、リポジトリ直下の `MyBrain/README.md`、`MyBrain/STATE.md`、`MyBrain/rules/`
 6. 案件のFigma実装・修正を行う場合は、案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
+`rules/`・`templates/`・本ファイルに書かれた `MyBrain/verify/…`、`MyBrain/rules/corrections.md` などのパスは、**すべて6の案件側 `MyBrain/` を指す**。5のリポジトリ直下 `MyBrain/` は本リポジトリを改善するための公開メモリであり、検証キットもgate manifestも置かない。同名だが別物として扱う。
+
 ## 案件側への入口の設置
 
-Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件リポジトリのルートに入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。
+Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件側に入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。
+
+置き場所は「エージェントのcwdになりうるディレクトリ」であり、リポジトリのルートとは限らない。テーマディレクトリ配下で作業する案件では、そのディレクトリにも同一内容を置く（祖先チェーンは cwd から上へしか辿らないため、深い階層だけに置くと上位で起動したセッションに届かず、浅い階層だけに置くと深い階層で起動したセッションに届く一方で案件側の記述と二重管理になる）。
 
 ```bash
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート>          # AGENTS.md と CLAUDE.md を設置・更新
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --check  # 世代差の検出（不一致は非0終了）
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...]          # AGENTS.md と CLAUDE.md を設置・更新
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] --check  # 世代差の検出（不一致は非0終了）
 ```
 
 `--check` は雛形とのSHA-256一致を検査する。案件側の入口を手編集しない。案件固有の記録は案件側 `MyBrain/` に置く。入口が未設置または世代差のある案件では、Figma実装を開始する前に設置し直す。
+
+**案件側 `MyBrain/WORKFLOW.md` は最下層（開始順の5）であり、上位層1〜4を置き換えない。**案件の入口が案件層だけを指している場合、上位層へ到達するかは案件側ファイルの記述しだいで、本リポジトリからは検証できない。読む順序は入口自身に持たせる。
+
+規範文書に書くゲートのコマンド形は、`node tools/gate-command-doc-audit.mjs` で実引数契約との一致を検査する。案件側は正本の記述を写すため、正本が古い形を書いていると案件でゲートが引数エラーで落ち、ゲートを飛ばす経路が開く。
 
 ## クラウドセッションでの実行範囲
 

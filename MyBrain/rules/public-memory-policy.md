@@ -33,5 +33,19 @@ public memory, not a second execution rulebook.
 
 ## Before Commit Or Push
 
-Run a focused scan of changed files and inspect the diff. If uncertain, keep the
+Run the scan, then inspect the diff.
+
+```bash
+node tools/public-memory-scan.mjs
+```
+
+It walks this directory and exits 2 when it finds a Figma node-id, a Figma URL
+or fileKey, a design measurement in px, a private key, an access token, a
+credential assignment, a URL carrying basic auth, an IP address, or a
+user-specific home path. Findings for secret-bearing rules are masked in the
+output.
+
+The scan cannot recognise client or project names, CSS selectors, DOM mapping
+fragments, or the contents of screenshots. A passing scan only means nothing
+machine-detectable is present, so still read the diff. If uncertain, keep the
 note out of Git and place it in the relevant local project-side `MyBrain/`.

@@ -1344,3 +1344,34 @@
   - gate配線: `templates/verify/figma-gate.mjs` の `preflight` が、manifestを読むより先に `workflow-preflight --assert-local` を起動する。`cloud-restricted`、ツール不在、起動失敗はいずれも SPEC FAIL。正本の位置は `FIGMA_TO_CODE_ROOT` で指定する。迂回用の環境変数は用意していない（テストダブルはgateのフィクスチャ内に限る）。
   - 実測: `figma-gate.e2e` は 309 → 323 アサーションでPASS（cloud判定・ツール不在の負の2件と、同一manifestがlocal判定なら通る正の1件を追加。負の2件でgate成果物が生成されないことも確認）。`project-entry-install.e2e` PASS。`gate-contract-audit.e2e` / `figma-feature-coverage.e2e` / `workflow-preflight.e2e` / `figma-log-promote.e2e` / `figma-scope-lock.e2e` に回帰なし。`fidelity-benchmark.e2e` / `p3-p11-app-server-spike.e2e` / `p3-role-packet.e2e` は本変更の前後で同一の理由で失敗したまま（既存の未解決）。
   - 未実施: 案件側での実測（案件ルートへの実設置、`npm run figma:gate -- preflight` の実行、上位層 `C:\AI\vault` / `C:\AI\web-development` を読める状態での `local` 判定）はローカルでしか行えない。案件側 `MyBrain/verify/` への配布同期（監査C）と `unverified-figma-value` の滞留（監査D）は別scopeのまま。
+
+- [2026-08-21 kazu実測報告 / 案件入口の現況] **案件側の入口は既に存在するが、上位層へ繋がっていない。**
+  - 実在: `…\\themes\\rpa-technologies-theme\\AGENTS.md` と同 `CLAUDE.md`。本文は「規則本文は `MyBrain/WORKFLOW.md` のみです」の3行。
+  - 位置はテーマディレクトリであり、リポジトリのルートではない。祖先チェーンはcwdから上へしか辿らないため、上位ディレクトリで起動したセッションには届かない。
+  - 内容は開始順の5（案件層）だけを宣言し、1〜4（共通Vault / Web Development / figma-to-code / 本リポジトリの規則本文）を参照しない。**監査Aの「届いても本文が無い」に加えて「届いても上位層へ繋がらない」状態だった。**Codexがfigma-to-codeの規則に従わない直接の経路として辻褄が合う。
+  - 対応: `templates/project-entry.md` に「規則を読む順序」（vault → web-development → figma-to-code → 案件 `MyBrain/`）を明記し、案件側 `MyBrain/` は最下層で上位層を置き換えないと規定。`project-entry-install.mjs` は複数ディレクトリを一度に設置・検査できるようにした（リポジトリのルートとテーマディレクトリの両方に同一内容を置くため）。
+  - 未実測: 案件側 `MyBrain/WORKFLOW.md` の本文はクラウドから読めないため、そこからfigma-to-codeへ繋がっているかは未確認。ローカルで確認が要る。
+
+- [2026-08-21 claude / 訂正と実測] **直前の記録「案件の入口が上位層へ繋がっていない」は誤りだった。**オーナーが提示した案件側 `MyBrain/WORKFLOW.md` の実文により訂正する。
+  - 事実: 案件側 `MyBrain/WORKFLOW.md` は開始順1に `C:\AI\vault\WORKFLOW.md` を置き、「Web実装の規則」で `C:\AI\web-development`、「Figma実装・修正」で `C:\AI\figma-to-code\WORKFLOW.md` と `rules/loop-execution.md` / `rules/figma-spec-pipeline.md` を必読と明記している。**配送チェーン自体は繋がっている。**入口3行 → MyBrain → 上位層、の4ホップ構成である。
+  - 残る弱点: (1) 入口3行に着手前ゲートが無く、規則本文へ到達する前に編集できる。(2) 4ホップすべてが任意読みで、到達したかを検証する機構が無い（監査B）。(3) `C:\AI\web-development` と `C:\AI\figma-to-code` は案件側の番号付き開始順には無く、条件節での参照にとどまる。
+  - **実測で見つかった本リポジトリ側の欠陥**: `rules/figma-spec-pipeline.md:58` と `templates/LOOP.md:46,98` が `figma:gate -- preflight` を `--implementation-actor` / `--implementation-context-id` 抜きで記載していた。gateはv13でこの2つを必須にしており、書いてあるとおり実行すると `preflight requires exactly --implementation-actor and --implementation-context-id once each.` で即FAILする（実測）。案件側 `MyBrain/WORKFLOW.md` は正本のこの記述を写しているだけで、**案件は正しく正本に従っていた。ゲートを通せない原因は正本の記述にあった。**
+  - 対応: 3箇所を現行契約の形へ修正し、再発防止として `tools/gate-command-doc-audit.mjs` を追加した。規範文書（`rules/` `templates/` `spec/` `references/` とルート直下）に書かれた preflight コマンドが必須フラグを欠けば exit 2 で落ちる。記録類（STATE / AUDIT / REVIEW）は履歴のため対象外。`gate-command-doc-audit.e2e.mjs` で正負を固定し、正本自身が契約と一致していることも回帰として固定した。
+
+- [2026-08-22 claude / 公開MyBrain層の受け入れ確認] **`0d2def6` で追加されたリポジトリ直下 `MyBrain/` を確認し、2点を修正した。**
+  - 位置づけは妥当: `WORKFLOW.md` を唯一の実行規則としたまま記憶層だけを足しており、規則本文の二重化は起きていない。クラウドが上位層を持たないという制約が `MyBrain/rules/cloud-agent-boundary.md` として正式化された。
+  - 修正1: `MyBrain/STATE.md` の "Status: initial skeleton, not yet committed or pushed." は実態と不一致（`master` にコミット・push済み）。実態へ訂正し、クラウドのクローンに含まれること（＝開始順5が到達可能）を実測として追記した。
+  - 修正2: `MyBrain` の名前が二義になった。`rules/` と `templates/` に多数ある `MyBrain/verify/…` は**案件側**を指すが、同名ディレクトリがリポジトリ直下にできたため、案件側パスを本リポジトリ側で解決する誤読が起こりうる。`MyBrain/README.md` と `WORKFLOW.md` に、どちらを指すかと「この公開MyBrainに検証キット・gate manifestを置かない」ことを明記した。
+  - 未着手（オーナー判断待ち）: `MyBrain/STATE.md` の Open Items にある `MyBrain/` 専用の機密スキャン。`tools/gate-command-doc-audit.mjs` と同じ作りで実装できる。ポリシーが「Decide whether」としているため、こちらの判断で追加していない。
+
+- [2026-08-22 claude / 公開MyBrainの機密スキャン] **`MyBrain/STATE.md` のOpen Item「pre-push private-data scan」をオーナー指示により実装した。**
+  - `tools/public-memory-scan.mjs`：リポジトリ直下 `MyBrain/` を走査し、Figma node-id、Figma URL、fileKey、px実測値、秘密鍵、アクセストークン、資格情報の代入、Basic認証つきURL、IPアドレス、利用者固有のホームパスを検出したら exit 2。秘匿系の一致値は伏せて出力する（検査結果自体を漏洩経路にしないため）。
+  - 走査対象を `MyBrain/` に限定した理由：`rules/corrections.md` などの正本側には既存の案件固有値が残っており（監査F-3、別scope）、巻き込むと常時FAILして無視される検査になる。
+  - 検出できないもの：案件名・クライアント名、CSSセレクタ、DOM対応の断片、スクリーンショットの内容。PASSは「機械で見える範囲に無い」ことしか意味しないと `public-memory-policy.md` に明記した。
+  - 実測：`public-memory-scan.e2e.mjs` は全10規則が発火することと、公開してよい記述（`06:54`、`16:9`、`localhost:3000`、`C:\AI\vault`、Node版）を誤検出しないことを固定。現在の `MyBrain/` は findings 0 で、その清潔さも回帰として固定した。
+  - ポリシーの「Before Commit Or Push」を実行コマンド付きの手順に書き換え、`MyBrain/README.md` からも参照した。
+
+- [2026-08-22 claude / 公開MyBrainのOpen Item完了] **root `README.md` からのリンク方針をオーナー決定により適用した。**
+  - 決定: 構成一覧に1行だけ置き、独立節は作らない。独立節はポリシー本文を要約したくなり、`MyBrain/rules/public-memory-policy.md` との二重管理を招くため。READMEは所在だけを示し中身を持たない。
+  - 適用: 構成一覧に `MyBrain/`（案件側の非公開 `MyBrain/` とは別物である旨つき）を追加。`状態` の最終更新を 2026-08-22 へ更新（監査F-4の再発防止）。`MyBrain/STATE.md` のOpen Itemを決定内容つきで閉じた。
+  - これで `MyBrain/STATE.md` のOpen Itemは0件。

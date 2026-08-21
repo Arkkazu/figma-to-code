@@ -33,7 +33,25 @@ Not allowed here:
 - Copies of the full local upper-layer rulebooks
 
 If a note needs private project facts, keep it in that project's local
-`MyBrain/` instead of this directory.
+`MyBrain/` instead of this directory. Before committing, run
+`node tools/public-memory-scan.mjs`; it exits 2 when machine-detectable private
+data is present in this directory.
+
+## Name Collision With Project-Side `MyBrain/`
+
+`MyBrain/` now means two different things, so read every reference by its
+owner, not by its name.
+
+- **This directory** (`<repo>/MyBrain/`) is public memory for developing
+  `figma-to-code` itself. It holds no verification kit and no gate manifests.
+- **Project-side `MyBrain/`** lives in a client repository and is private. Every
+  `MyBrain/verify/...`, `MyBrain/rules/corrections.md`, `MyBrain/README.md`, and
+  `MyBrain/WORKFLOW.md` path written in `rules/`, `templates/`, and
+  `WORKFLOW.md` refers to that project-side directory, resolved against the
+  project repository root - never against this one.
+
+Do not create `verify/`, gate manifests, spec files, or node maps under this
+directory, and do not resolve a project-side path against this repository.
 
 The repository root `WORKFLOW.md` is the only execution rulebook.
 `MyBrain/` stores public memory and its content policy only.
