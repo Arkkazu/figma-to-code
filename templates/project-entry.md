@@ -5,7 +5,7 @@
 **最初のツール実行**で環境判定を実行します。cwdに依存しない絶対パスで呼びます。
 
 ```bash
-node C:\AI\figma-to-code\tools\workflow-preflight.mjs
+node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 ```
 
 非0終了、またはJSON判定が得られない場合は着手してはいけません。

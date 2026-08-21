@@ -1382,3 +1382,10 @@
   - これで `WORKFLOW.md` 冒頭の「規則本文をエージェント別の入口へ複製しない」と入口の実体が再び一致する。入口に残るのは禁止の一文であり、規則の中身ではない。
   - 残る限界: 入口の一文を守ったかは自己申告のままである。機械的な強制は `figma-gate` 側（`preflight` が `workflow-preflight --assert-local` を起動し、失敗ならSPEC FAIL）にあり、ゲートを起動しない経路は塞げていない。
   - 実測: E2E 9本すべてPASS。`gate-command-doc-audit` と `public-memory-scan` はともに exit 0。
+
+- [2026-08-22 kazu実測 / シェル依存でコマンドが落ちる] **規範文書のコマンドが Git Bash で実行できない形だった。**
+  - 実測（オーナー環境、Git Bash）: `node C:\AI\figma-to-code\tools\workflow-preflight.mjs` が `Cannot find module 'C:\AI\figma-to-code\AIfigma-to-codetoolsworkflow-preflight.mjs'` で失敗。MSYSがバックスラッシュをエスケープとして解釈し、パス区切りが消える。
+  - これは今回の「書いてあるとおり実行すると落ちる」欠陥の2件目である。1件目はゲートの引数契約、2件目はシェル可搬性。どちらも正本の記述が原因で、案件側はそれを写しているだけだった。
+  - 対応: 規範文書のコマンド行17箇所を `C:/AI/figma-to-code/...` へ変更（PowerShell・cmd・Git Bashのいずれでも通る）。散文中の所在表記はWindows表記のまま残した。
+  - 再発防止: `tools/gate-command-doc-audit.mjs` を `tools/doc-command-audit.mjs` へ改名し、検査を2つにした。(1) ゲート起動の実引数契約、(2) `node` / `npm` のコマンド行にバックスラッシュ絶対パスが無いこと。コマンド行だけを見るため、散文中のパス表記は誤検出しない。
+  - 実測: `doc-command-audit.e2e.mjs` に正負（バックスラッシュのコマンド行＝違反、`C:/` のコマンド行と散文中のWindowsパス＝違反でない）を追加してPASS。正本自身の exit 0 も回帰として維持。

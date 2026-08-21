@@ -7,7 +7,7 @@
 入口（`AGENTS.md` / `CLAUDE.md`）を読んだ直後、他の調査・編集より先に環境判定 `workflow-preflight` を実行する。案件ディレクトリなど本リポジトリ外で作業している場合も同じなので、**cwdに依存しない絶対パスで呼ぶ**。
 
 ```bash
-node C:\AI\figma-to-code\tools\workflow-preflight.mjs
+node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 ```
 
 `local` なら下記1〜6を順に読み、`cloud-restricted` なら次節の制限に従う。非0終了、またはJSON判定が得られない場合は着手しない。
@@ -34,7 +34,7 @@ Figma URLや「デザインどおりに直して」という依頼を受けた�
 5. 次の2つがどちらも通ったこと。環境判定は編集前ゲートの代わりにならない。
 
 ```bash
-node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
+node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local
 npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementation-actor <actor> --implementation-context-id <context>
 ```
 
@@ -47,15 +47,18 @@ Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、および�
 置き場所は「エージェントのcwdになりうるディレクトリ」であり、リポジトリのルートとは限らない。テーマディレクトリ配下で作業する案件では、そのディレクトリにも同一内容を置く（祖先チェーンは cwd から上へしか辿らないため、深い階層だけに置くと上位で起動したセッションに届かず、浅い階層だけに置くと深い階層で起動したセッションに届く一方で案件側の記述と二重管理になる）。
 
 ```bash
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...]          # AGENTS.md と CLAUDE.md を設置・更新
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] --check  # 世代差の検出（不一致は非0終了）
+node C:/AI/figma-to-code/tools/project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...]          # AGENTS.md と CLAUDE.md を設置・更新
+node C:/AI/figma-to-code/tools/project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] --check  # 世代差の検出（不一致は非0終了）
 ```
 
 `--check` は雛形とのSHA-256一致を検査する。案件側の入口を手編集しない。案件固有の記録は案件側 `MyBrain/` に置く。入口が未設置または世代差のある案件では、Figma実装を開始する前に設置し直す。
 
 **案件側 `MyBrain/WORKFLOW.md` は最下層（開始順の5）であり、上位層1〜4を置き換えない。**案件の入口が案件層だけを指している場合、上位層へ到達するかは案件側ファイルの記述しだいで、本リポジトリからは検証できない。読む順序は入口自身に持たせる。
 
-規範文書に書くゲートのコマンド形は、`node tools/gate-command-doc-audit.mjs` で実引数契約との一致を検査する。案件側は正本の記述を写すため、正本が古い形を書いていると案件でゲートが引数エラーで落ち、ゲートを飛ばす経路が開く。
+規範文書に書くコマンドは、`node tools/doc-command-audit.mjs` で「書いてあるとおり実行して通る形か」を検査する。案件側は正本の記述を写すため、正本が実行できない形を書いていると案件で落ち、ゲートを飛ばす経路が開く。検査は2つ。
+
+- ゲート起動が実引数契約（`--implementation-actor` / `--implementation-context-id`）と一致していること
+- `node` / `npm` のコマンド行がWindowsのバックスラッシュ絶対パスを使っていないこと。**Git Bashはバックスラッシュをエスケープとして食う**ため、絶対パスは `C:/AI/figma-to-code/...` と書く。散文中の所在表記（`C:\AI\vault\WORKFLOW.md` など）はこの制約の対象外とする。
 
 ## クラウドセッションでの実行範囲
 
@@ -70,7 +73,7 @@ Claude Code / Codex のクラウドセッションは、このリポジトリの
 Figma実装・修正でソースを編集する前は、環境判定を非0で落ちないことまで確認する（`cloud-restricted` は exit 2）。
 
 ```bash
-node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
+node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local
 ```
 
 `workflow-preflight` が `cloud-restricted` を返したとき、実行してよいのは次に限る。

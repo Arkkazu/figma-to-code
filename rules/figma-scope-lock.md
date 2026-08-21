@@ -23,9 +23,9 @@ Figma実装・修正では、SCSS、PHP、JavaScript、画像、生成CSSを1行
 ワイルドカード、ディレクトリ指定、「関連ファイル一式」、後から必要になるかもしれない基盤ファイルは許可しない。生成CSSも変更するなら、生成前にその正確なパスを列挙する。
 
 ~~~powershell
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs begin MyBrain/verify/scope-<id>.json MyBrain/verify/scope-<id>.state.json
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs assert MyBrain/verify/scope-<id>.state.json assets/scss/components/_card.scss
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs verify MyBrain/verify/scope-<id>.state.json
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs begin MyBrain/verify/scope-<id>.json MyBrain/verify/scope-<id>.state.json
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs assert MyBrain/verify/scope-<id>.state.json assets/scss/components/_card.scss
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs verify MyBrain/verify/scope-<id>.state.json
 ~~~
 
 assert は各ファイルを書き換える直前、verify は checkpoint前とclose前に必ず実行する。
@@ -52,7 +52,7 @@ verify が対象外パスを検知した時点でstateは blocked になる。
 対象外ファイルを編集する必要が判明したが、まだ編集していない場合だけ、ownerの明示承認を記録した scope-amendment.json を用意して amend を実行できる。承認前に対象外ファイルを触ることは禁止する。
 
 ~~~powershell
-node C:\AI\figma-to-code\tools\figma-scope-lock.mjs amend MyBrain/verify/scope-<id>.state.json MyBrain/verify/scope-<id>.amendment.json
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs amend MyBrain/verify/scope-<id>.state.json MyBrain/verify/scope-<id>.amendment.json
 ~~~
 
 ## 作業単位の分離
