@@ -1,10 +1,10 @@
 # 案件エントリ — Figma実装は figma-to-code の規則で行う
 
-このファイルは `C:\AI\figma-to-code\templates\project-entry.md` の複製です。案件リポジトリのルートに `AGENTS.md` と `CLAUDE.md` の2枚として置き、Codex / Claude の祖先ディレクトリ自動読込に乗せます。**直接編集しない。**正本を直してから再インストールします。
+このファイルは `C:\AI\figma-to-code\templates\project-entry.md` の複製です。**直接編集しない。**正本を直してから再インストールします。エージェントが作業するディレクトリ（リポジトリのルート、テーマディレクトリなど）ごとに `AGENTS.md` と `CLAUDE.md` の2枚を同一内容で置き、Codex / Claude の祖先ディレクトリ自動読込に乗せます。
 
 ```bash
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート>          # 設置・更新
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --check  # 世代差の検出（非0で失敗）
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...]          # 設置・更新
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] --check  # 世代差の検出（非0で失敗）
 ```
 
 ## 最初のツール実行
@@ -15,7 +15,16 @@ node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --che
 node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 ```
 
-`local` なら `C:\AI\figma-to-code\WORKFLOW.md` の開始順に従って上位層から読みます。非0終了、またはJSON判定が得られない場合は着手してはいけません。推測で上位層を補完しないでください。
+非0終了、またはJSON判定が得られない場合は着手してはいけません。推測で上位層を補完しないでください。
+
+## 規則を読む順序
+
+`local` 判定なら次の順に読みます。**案件側 `MyBrain/` は最下層であり、上位層を置き換えません。**
+
+1. `C:\AI\vault\WORKFLOW.md`（共通Vault）
+2. `C:\AI\web-development\WORKFLOW.md`（Web実装）
+3. `C:\AI\figma-to-code\WORKFLOW.md`（**Figma実装規則の正本**。この入口にも案件側にも規則本文を複製しない）
+4. 案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
 ## 着手前ゲート（規則本文を読む前でも例外なく適用）
 
@@ -33,9 +42,8 @@ npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementati
 
 環境判定と `figma:gate preflight` は別物です。前者のPASSは後者の代わりになりません。`figma:gate` script が未導入なら、ゲート未導入として実装を開始せず、導入手順の確認だけを行います。いずれかが未了なら推測で補わず、不足情報を1つだけ確認して停止します。
 
-## 規則と記録の所在
+## 記録の所在
 
-- Figma実装規則の正本：`C:\AI\figma-to-code\WORKFLOW.md`（この案件エントリに規則本文は複製しません）
+- 案件固有の差異指摘・訂正、Figma node-id、セレクタ、実測値：案件側 `MyBrain/rules/corrections.md`
 - 検証キットの正本：`C:\AI\figma-to-code\templates\verify\`（案件側 `MyBrain/verify/` はその複製）
-- 案件固有の差異指摘・訂正：案件側 `MyBrain/rules/corrections.md`
 - 案件横断の失敗：`C:\AI\figma-to-code` 側へ `figma-log-promote.mjs record` で登録する。手書きで正本へ追記しない

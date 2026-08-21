@@ -14,21 +14,21 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 
 これによりCodexクラウドをClaude専用の環境変数だけで誤ってローカル扱いする経路と、上位規則が欠けたまま実装を始める経路を閉じる。Figma実装scopeでソースを編集する前は `--assert-local` を付けて非0終了で止まることを確認する。この環境判定は編集前ゲート `figma:gate preflight` とは別物で、両方を通す。
 
-案件リポジトリのルートには、`templates/project-entry.md` から生成した入口2枚を置く（Codexは cwd の祖先しか自動読込しないため、置かない限り本リポジトリの規則は案件セッションに届かない）。
+案件側のうち、エージェントのcwdになりうるディレクトリ（リポジトリのルート、テーマディレクトリなど）には、`templates/project-entry.md` から生成した入口2枚を置く。Codexは cwd の祖先しか自動読込しないため、置かない限り本リポジトリの規則は案件セッションに届かない。
 
 ```bash
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --check
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] --check
 ```
 
 ### Codex
-1. 案件ルートの `AGENTS.md`（`project-entry-install.mjs` が設置）
+1. 案件側の `AGENTS.md`（`project-entry-install.mjs` が設置）
 2. `C:\Users\tane1\.codex\AGENTS.md`
 3. `C:\AI\vault\AGENTS.md`
 4. `C:\AI\web-development\AGENTS.md`
 5. `C:\AI\figma-to-code\AGENTS.md`
 
 ### Claude
-1. 案件ルートの `CLAUDE.md`（`project-entry-install.mjs` が設置）
+1. 案件側の `CLAUDE.md`（`project-entry-install.mjs` が設置）
 2. `C:\Users\tane1\.claude\CLAUDE.md`
 3. `C:\AI\vault\CLAUDE.md`
 4. `C:\AI\web-development\CLAUDE.md`

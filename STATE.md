@@ -1344,3 +1344,10 @@
   - gate配線: `templates/verify/figma-gate.mjs` の `preflight` が、manifestを読むより先に `workflow-preflight --assert-local` を起動する。`cloud-restricted`、ツール不在、起動失敗はいずれも SPEC FAIL。正本の位置は `FIGMA_TO_CODE_ROOT` で指定する。迂回用の環境変数は用意していない（テストダブルはgateのフィクスチャ内に限る）。
   - 実測: `figma-gate.e2e` は 309 → 323 アサーションでPASS（cloud判定・ツール不在の負の2件と、同一manifestがlocal判定なら通る正の1件を追加。負の2件でgate成果物が生成されないことも確認）。`project-entry-install.e2e` PASS。`gate-contract-audit.e2e` / `figma-feature-coverage.e2e` / `workflow-preflight.e2e` / `figma-log-promote.e2e` / `figma-scope-lock.e2e` に回帰なし。`fidelity-benchmark.e2e` / `p3-p11-app-server-spike.e2e` / `p3-role-packet.e2e` は本変更の前後で同一の理由で失敗したまま（既存の未解決）。
   - 未実施: 案件側での実測（案件ルートへの実設置、`npm run figma:gate -- preflight` の実行、上位層 `C:\AI\vault` / `C:\AI\web-development` を読める状態での `local` 判定）はローカルでしか行えない。案件側 `MyBrain/verify/` への配布同期（監査C）と `unverified-figma-value` の滞留（監査D）は別scopeのまま。
+
+- [2026-08-21 kazu実測報告 / 案件入口の現況] **案件側の入口は既に存在するが、上位層へ繋がっていない。**
+  - 実在: `…\\themes\\rpa-technologies-theme\\AGENTS.md` と同 `CLAUDE.md`。本文は「規則本文は `MyBrain/WORKFLOW.md` のみです」の3行。
+  - 位置はテーマディレクトリであり、リポジトリのルートではない。祖先チェーンはcwdから上へしか辿らないため、上位ディレクトリで起動したセッションには届かない。
+  - 内容は開始順の5（案件層）だけを宣言し、1〜4（共通Vault / Web Development / figma-to-code / 本リポジトリの規則本文）を参照しない。**監査Aの「届いても本文が無い」に加えて「届いても上位層へ繋がらない」状態だった。**Codexがfigma-to-codeの規則に従わない直接の経路として辻褄が合う。
+  - 対応: `templates/project-entry.md` に「規則を読む順序」（vault → web-development → figma-to-code → 案件 `MyBrain/`）を明記し、案件側 `MyBrain/` は最下層で上位層を置き換えないと規定。`project-entry-install.mjs` は複数ディレクトリを一度に設置・検査できるようにした（リポジトリのルートとテーマディレクトリの両方に同一内容を置くため）。
+  - 未実測: 案件側 `MyBrain/WORKFLOW.md` の本文はクラウドから読めないため、そこからfigma-to-codeへ繋がっているかは未確認。ローカルで確認が要る。

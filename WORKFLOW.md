@@ -23,14 +23,18 @@ node C:\AI\figma-to-code\tools\workflow-preflight.mjs
 
 ## 案件側への入口の設置
 
-Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件リポジトリのルートに入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。
+Codexが自動読込するのは cwd とその祖先の `AGENTS.md`、およびグローバル `~/.codex/AGENTS.md` だけである。`C:\AI\figma-to-code` は案件の作業ディレクトリの祖先ではないため、**案件側に入口を置かない限り、この規則は案件セッションに届かない。**雛形の正本は `templates/project-entry.md` とし、手作業でコピーしない。
+
+置き場所は「エージェントのcwdになりうるディレクトリ」であり、リポジトリのルートとは限らない。テーマディレクトリ配下で作業する案件では、そのディレクトリにも同一内容を置く（祖先チェーンは cwd から上へしか辿らないため、深い階層だけに置くと上位で起動したセッションに届かず、浅い階層だけに置くと深い階層で起動したセッションに届く一方で案件側の記述と二重管理になる）。
 
 ```bash
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート>          # AGENTS.md と CLAUDE.md を設置・更新
-node C:\AI\figma-to-code\tools\project-entry-install.mjs <案件ルート> --check  # 世代差の検出（不一致は非0終了）
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...]          # AGENTS.md と CLAUDE.md を設置・更新
+node C:\AI\figma-to-code\tools\project-entry-install.mjs <ディレクトリ> [<ディレクトリ> ...] --check  # 世代差の検出（不一致は非0終了）
 ```
 
 `--check` は雛形とのSHA-256一致を検査する。案件側の入口を手編集しない。案件固有の記録は案件側 `MyBrain/` に置く。入口が未設置または世代差のある案件では、Figma実装を開始する前に設置し直す。
+
+**案件側 `MyBrain/WORKFLOW.md` は最下層（開始順の5）であり、上位層1〜4を置き換えない。**案件の入口が「規則本文は `MyBrain/WORKFLOW.md` のみ」と宣言している場合、共通Vault・Web Development・本リポジトリの規則が届かない状態になっているため、雛形で置き換える。
 
 ## クラウドセッションでの実行範囲
 
