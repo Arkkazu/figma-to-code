@@ -1,36 +1,84 @@
 #!/usr/bin/env node
 
-import { accessSync, constants } from "node:fs";
+import { readFileSync } from "node:fs";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
-export const REQUIRED_LOCAL_WORKFLOWS = [
-  "C:\\AI\\vault\\WORKFLOW.md",
-  "C:\\AI\\web-development\\WORKFLOW.md",
+// 上位層 WORKFLOW.md の既定位置。ローカルのルート位置が異なる環境では envKey で上書きする。
+export const LOCAL_WORKFLOW_SOURCES = [
+  {
+    id: "vault",
+    defaultPath: "C:\\AI\\vault\\WORKFLOW.md",
+    envKey: "FIGMA_TO_CODE_VAULT_WORKFLOW",
+  },
+  {
+    id: "web-development",
+    defaultPath: "C:\\AI\\web-development\\WORKFLOW.md",
+    envKey: "FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW",
+  },
 ];
 
-function canRead(path) {
+// 空ファイル・プレースホルダを `local` と誤認しないための下限。世代差の検出はできない。
+export const MIN_WORKFLOW_BYTES = 200;
+
+// 明示シグナルは補助であり、判定の正本は上位層ファイルの実読である。
+export const CLOUD_ENV_SIGNALS = [
+  { key: "CLAUDE_CODE_REMOTE", value: "true", measured: "2026-08-21 Claude Codeクラウドで実測" },
+  { key: "CODEX_CI", value: "1", measured: null },
+];
+
+function readText(path) {
   try {
-    accessSync(path, constants.R_OK);
-    return true;
+    return readFileSync(path, "utf8");
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function evaluateWorkflowEnvironment({ env = process.env, canReadPath = canRead } = {}) {
-  const signals = [];
-  if (env.CLAUDE_CODE_REMOTE === "true") signals.push("CLAUDE_CODE_REMOTE=true");
-  if (env.CODEX_CI === "1") signals.push("CODEX_CI=1");
-
-  const missingLocalWorkflows = REQUIRED_LOCAL_WORKFLOWS.filter((path) => !canReadPath(path));
-  if (signals.length > 0 || missingLocalWorkflows.length > 0) {
-    return { mode: "cloud-restricted", signals, missingLocalWorkflows };
+function inspectWorkflow(source, env, readPath) {
+  const path = env[source.envKey] || source.defaultPath;
+  const text = readPath(path);
+  if (text === null) return { id: source.id, path, status: "missing" };
+  if (Buffer.byteLength(text, "utf8") < MIN_WORKFLOW_BYTES) {
+    return { id: source.id, path, status: "too-short" };
   }
-
-  return { mode: "local", signals, missingLocalWorkflows: [] };
+  if (!/^#\s+\S/m.test(text)) return { id: source.id, path, status: "no-heading" };
+  return { id: source.id, path, status: "ok" };
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  const result = evaluateWorkflowEnvironment();
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+export function evaluateWorkflowEnvironment({ env = process.env, readPath = readText } = {}) {
+  const signals = CLOUD_ENV_SIGNALS.filter((signal) => env[signal.key] === signal.value).map(
+    (signal) => `${signal.key}=${signal.value}`,
+  );
+
+  const localWorkflows = LOCAL_WORKFLOW_SOURCES.map((source) => inspectWorkflow(source, env, readPath));
+  const unusableLocalWorkflows = localWorkflows.filter((workflow) => workflow.status !== "ok");
+
+  const mode = signals.length > 0 || unusableLocalWorkflows.length > 0 ? "cloud-restricted" : "local";
+  return { mode, signals, localWorkflows, unusableLocalWorkflows };
+}
+
+export function runCli(argv, { env = process.env, readPath = readText } = {}) {
+  const unknown = argv.filter((arg) => arg !== "--assert-local");
+  if (unknown.length > 0) {
+    return { exitCode: 64, stdout: "", stderr: `unknown argument: ${unknown[0]}\n` };
+  }
+
+  const result = evaluateWorkflowEnvironment({ env, readPath });
+  const stdout = `${JSON.stringify(result, null, 2)}\n`;
+  if (argv.includes("--assert-local") && result.mode !== "local") {
+    return {
+      exitCode: 2,
+      stdout,
+      stderr: "workflow-preflight: cloud-restricted. 上位層を読めないため、この判定を要求する工程は開始できない。\n",
+    };
+  }
+  return { exitCode: 0, stdout, stderr: "" };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { exitCode, stdout, stderr } = runCli(process.argv.slice(2));
+  if (stdout) process.stdout.write(stdout);
+  if (stderr) process.stderr.write(stderr);
+  process.exit(exitCode);
 }

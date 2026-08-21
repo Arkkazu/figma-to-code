@@ -48,7 +48,12 @@ Figma実装案件では、案件側 `MyBrain/verify/figma-gate.mjs` を使い、
 - **編集中 `checkpoint <manifest> <elementId>`**：コンポーネントを実装・変更するごとに、対象specのCDP実測と、painted要素のブラウザ撮影・Figma参照画像との差分照合を実行する。PASSするまで次のコンポーネントへ進まない。
 - **編集後 `close`**：Sass build、単位lint、必要なPHP lint、PC/SPの全spec再実測を実行し、全componentを最終状態で再測定、painted要素はFigma参照画像との差分を再計算する。PASSしない限り「Figmaどおり」「作業完了」と報告しない。
 
+環境判定 `workflow-preflight` は編集前ゲートの前段であり、代わりではない。上位層を読めない環境でFigma実装scopeを開始しないための検査である。`figma:gate preflight` は manifest を読むより先にこの判定を起動し、`cloud-restricted` または `workflow-preflight` 不在なら **SPEC FAIL** とする。正本の位置が既定と異なる環境では `FIGMA_TO_CODE_ROOT` で指定する。判定を迂回する環境変数は用意しない（テストダブルはgateのフィクスチャ内に限る）。
+
 ```bash
+# environment gate: exits 2 when the upper-layer WORKFLOW.md files are unreadable
+node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local
+
 # source edit is prohibited until this exits 0
 npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json
 
@@ -103,6 +108,7 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 [ ] Figma値と現HTML/CSSの差分表を作った
 [ ] Figmaノード↔実装DOMの全件対応表と未対応・余計な要素リストを作成した（書式は C:\AI\figma-to-code\templates\verify\figma-dom-mapping-template.md）
 [ ] 機械可読なnode map（`MyBrain/verify/nodemap-<対象>.json`）を作成し、manifestの `scope.nodeMapPath` に登録した。`preflight` がFigma子ノード単位のカバレッジを検査してPASSした
+[ ] `node C:\AI\figma-to-code\tools\workflow-preflight.mjs --assert-local` が exit 0 だった（上位層を読めない環境でFigma実装を開始しない。環境判定であり `figma:gate preflight` の代わりではない）
 [ ] **1行も編集する前に** `figma:gate preflight` をPASSさせた（変更対象がgit上でcleanな状態で通した）
 [ ] specに `viewportPolicy.scrollbars` を宣言した（`hidden` または `visible`）
 [ ] カード・検索結果・表・リストなど反復要素は、PC/SPそれぞれの全可視itemをFigma順とDOM順で1対1に対応付け、title・label・`dt/dd`・補助文言・画像・リンク先を実DOMの出力値で照合した（先頭1件の抽出確認、親コンテナ寸法だけのPASS、ソース配列だけの確認は禁止）
