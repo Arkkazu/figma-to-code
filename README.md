@@ -46,6 +46,18 @@ node C:/AI/figma-to-code/tools/project-entry-install.mjs <ディレクトリ> [<
 - `MyBrain/`：本リポジトリを改善するための公開メモリ（案件側の非公開 `MyBrain/` とは別物）
 - `LOOP.md` / `STATE.md`：手法育成ループの状態
 
+## 検査と反映
+
+検査は1コマンドで実行する。CIと手元で同じ集合を実行する。
+
+```bash
+node tools/run-checks.mjs
+```
+
+`claude/**` と `codex/**` へ push すると、GitHub Actions（`.github/workflows/verify-and-merge.yml`）が同じ検査を実行し、緑なら `master` へ自動マージする。赤ならマージしない。プルリクエストは作らない。
+
+実ブラウザや案件側の成果物を要するE2Eは、`run-checks.mjs` の `KNOWN_FAILING` に理由つきで列挙し、集合から外している。緑と赤を混ぜると検査そのものが無視されるため。解消したら `CHECKS` へ移す。
+
 ## Gitとの関係
 
 Figma照合はコーディング反復の中で実施する。Git hook、commit、push、deployに結び付けない。

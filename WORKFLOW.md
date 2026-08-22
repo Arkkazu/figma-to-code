@@ -122,6 +122,14 @@ Figma上で同じ表示名のノード、同種CTA、同じ文言のボタンが
 - `C:\AI\figma-to-code` には案件名、URL、node-id、セレクタ、数値、固有アセットを保存しない。案件固有の記録を共通ルールで代用しない。
 - 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、独立レビュー、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
 
+## 検査と反映
+
+このリポジトリへの変更は `node tools/run-checks.mjs` を通してから push する。`claude/**` と `codex/**` への push は GitHub Actions が同じ検査を実行し、緑なら `master` へ自動マージする。赤ならマージされないので、`master` には検査を通った変更だけが入る。
+
+実ブラウザや案件側の成果物を要するE2Eは `run-checks.mjs` の `KNOWN_FAILING` に理由つきで外してある。緑と赤を混ぜた集合は「いつも赤いので誰も見ない」状態を作り、検査そのものを無効化する。解消したら `CHECKS` へ移す。
+
+自動マージは検査に通ることだけを保証する。**設計判断の妥当性は保証しない**ので、規則本文（`WORKFLOW.md`・`rules/`）の意味を変える変更は、オーナーの指示があったものに限る。
+
 ## この手法自体を編集する場合
 
 1. `LOOP.md` と `STATE.md` を読む。
