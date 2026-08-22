@@ -1,0 +1,53 @@
+# claude/** と codex/** への push で検査を実行し、緑なら master へ自動マージする。
+# PRを都度作らずに変更を反映するための仕組み。赤ならマージしないので、
+# master には検査を通った変更だけが入る。
+name: verify-and-merge
+
+on:
+  push:
+    branches:
+      - "claude/**"
+      - "codex/**"
+      - master
+
+permissions:
+  contents: write
+
+concurrency:
+  group: verify-and-merge-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: run repository checks
+        run: node tools/run-checks.mjs
+
+  merge:
+    needs: verify
+    if: github.ref != 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: master
+      - name: merge the verified branch into master
+        run: |
+          set -eu
+          branch="${GITHUB_REF_NAME}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "${branch}"
+          if git merge-base --is-ancestor "origin/${branch}" HEAD; then
+            echo "master already contains origin/${branch}; nothing to merge."
+            exit 0
+          fi
+          git merge --no-ff --no-edit "origin/${branch}" \
+            -m "auto-merge ${branch} (verified by tools/run-checks.mjs)"
+          git push origin master

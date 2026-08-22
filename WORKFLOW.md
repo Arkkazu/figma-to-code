@@ -66,6 +66,8 @@ Claude Code / Codex のクラウドセッションは、このリポジトリの
 
 クラウド判定の正本は `tools/workflow-preflight.mjs` が**上位層の `WORKFLOW.md` を実際に読めるか**とする。読めない、下限バイト未満、Markdown見出しが無い（空・プレースホルダ）の場合は `cloud-restricted` とする。`CLAUDE_CODE_REMOTE=true` と `CODEX_CI=1` は補助シグナルであり、特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
 
+2026-08-22 実測（オーナー環境、Git Bash）：`local` を返し、`C:\AI\vault\WORKFLOW.md` と `C:\AI\web-development\WORKFLOW.md` はどちらも `status: ok`。ローカルの上位層は既定パスのまま読める。
+
 2026-08-21 実測：Claude Codeのクラウドセッションは `CLAUDE_CODE_REMOTE=true` を持ち、上位層2ファイルはどちらも存在しない。`CODEX_CI=1` はCodexクラウドの申告値であり、本リポジトリでは未実測である。判定はファイルの実読を正本とするため、この値の当否に結果が依存しない構成にしてある。
 
 上位層のルート位置が既定と異なるローカル環境では、`FIGMA_TO_CODE_VAULT_WORKFLOW` と `FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW` でパスを上書きする。ファイル検査は空・プレースホルダを弾くが、**旧世代のコピーは検出できない**。世代差の検査はこの環境判定の責務ではない。
@@ -119,6 +121,14 @@ Figma上で同じ表示名のノード、同種CTA、同じ文言のボタンが
 - 同じ指摘から案件横断の工程失敗が判明した場合だけ、プロジェクト固有値を除いた抽象ルールを `rules/corrections.md` または `rules/mistakes.md` へ昇格する。
 - `C:\AI\figma-to-code` には案件名、URL、node-id、セレクタ、数値、固有アセットを保存しない。案件固有の記録を共通ルールで代用しない。
 - 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、独立レビュー、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
+
+## 検査と反映
+
+このリポジトリへの変更は `node tools/run-checks.mjs` を通してから push する。`claude/**` と `codex/**` への push は GitHub Actions が同じ検査を実行し、緑なら `master` へ自動マージする。赤ならマージされないので、`master` には検査を通った変更だけが入る。
+
+実ブラウザや案件側の成果物を要するE2Eは `run-checks.mjs` の `KNOWN_FAILING` に理由つきで外してある。緑と赤を混ぜた集合は「いつも赤いので誰も見ない」状態を作り、検査そのものを無効化する。解消したら `CHECKS` へ移す。
+
+自動マージは検査に通ることだけを保証する。**設計判断の妥当性は保証しない**ので、規則本文（`WORKFLOW.md`・`rules/`）の意味を変える変更は、オーナーの指示があったものに限る。
 
 ## この手法自体を編集する場合
 

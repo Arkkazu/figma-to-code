@@ -1389,3 +1389,14 @@
   - 対応: 規範文書のコマンド行17箇所を `C:/AI/figma-to-code/...` へ変更（PowerShell・cmd・Git Bashのいずれでも通る）。散文中の所在表記はWindows表記のまま残した。
   - 再発防止: `tools/gate-command-doc-audit.mjs` を `tools/doc-command-audit.mjs` へ改名し、検査を2つにした。(1) ゲート起動の実引数契約、(2) `node` / `npm` のコマンド行にバックスラッシュ絶対パスが無いこと。コマンド行だけを見るため、散文中のパス表記は誤検出しない。
   - 実測: `doc-command-audit.e2e.mjs` に正負（バックスラッシュのコマンド行＝違反、`C:/` のコマンド行と散文中のWindowsパス＝違反でない）を追加してPASS。正本自身の exit 0 も回帰として維持。
+
+- [2026-08-22 kazu実測 / 環境判定のローカル側が確定] **オーナー環境で `workflow-preflight` が `local` を返した。**
+  - 実測（Git Bash、`node /c/AI/figma-to-code/tools/workflow-preflight.mjs`）: `mode: local` / `signals: []` / `vault` と `web-development` はいずれも `status: ok` / `unusableLocalWorkflows: []`。
+  - 意味: (1) 上位層は既定パス（`C:\AI\vault` / `C:\AI\web-development`）のまま読める。環境変数による上書きは不要。(2) 実読による判定（下限バイト＋見出し）が本物の上位層で誤検出しない。(3) `figma-gate` の `preflight` が起動する環境判定は、このローカルで通る。
+  - これで環境判定側の未実測は解消した。残る未実測は、案件側での `npm run figma:gate -- preflight`（案件側 `MyBrain/WORKFLOW.md` のコマンド形の修正が前提）と、着手前ゲートが実依頼で守られるかの2点。
+- [2026-08-22 claude / 反映の自動化] **オーナー指示により、PRを都度作る運用をやめ、検査が通ったら自動でmasterへマージする仕組みにした。**
+  - `tools/run-checks.mjs`：検査を1コマンドに集約（E2E 9本＋正本自身への監査2本＝11件）。CIと手元で同じ集合を実行する。
+  - 実ブラウザ・案件側成果物を要するE2E 9本は `KNOWN_FAILING` に理由つきで列挙し集合から外した。緑と赤を混ぜると「いつも赤いので誰も見ない」状態になり、検査が無効化されるため。解消したら `CHECKS` へ移す。
+  - `.github/workflows/verify-and-merge.yml`：`claude/**` と `codex/**` への push で検査を実行し、緑なら `master` へ `--no-ff` でマージする。赤ならマージしない。masterへの push では検査だけ実行する。
+  - 保証の範囲: 自動マージは検査通過だけを保証し、設計判断の妥当性は保証しない。規則本文の意味を変える変更はオーナー指示があったものに限る旨を `WORKFLOW.md` に明記した。
+  - 未実測: このワークフロー自身の初回実行。branch protection が `master` への push を拒否する設定であれば merge ジョブが失敗するので、その場合は設定を変えるかPR運用へ戻す。
