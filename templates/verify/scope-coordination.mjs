@@ -79,13 +79,24 @@ export function withScopePreflightLock({ root = process.cwd(), gateKind, manifes
   }
 }
 
+// scope-conflict-audit.mjs と同じ解決規則。両ゲートを使うscopeでは、ゲート種別ごとに
+// manifest が別ファイルになるため、gateManifestPaths の宣言があればそちらを正とする。
+function entryManifestPath(entry, gateKind) {
+  const perGate = entry?.gateManifestPaths;
+  if (perGate && typeof perGate === "object" && !Array.isArray(perGate) && typeof perGate[gateKind] === "string") {
+    return perGate[gateKind];
+  }
+  return entry?.manifestPath;
+}
+
 function findReservedEntry({ root, scopeId, gateKind, actor, contextId, manifestPath }) {
   const { path, data } = readScopeCoordination(root);
   const entry = data.scopes.find((scope) => scope?.id === scopeId);
   if (!entry) throw new Error(`scope coordination台帳に scope がありません: ${scopeId}`);
   if (entry.actor !== actor) throw new Error(`${scopeId} のactorがscope coordination台帳と一致しません。`);
   if (entry.implementationContextId !== contextId) throw new Error(`${scopeId} のimplementationContextIdがscope coordination台帳と一致しません。`);
-  if (entry.manifestPath !== manifestPath) throw new Error(`${scopeId} のmanifestPathがscope coordination台帳と一致しません。`);
+  const expectedManifestPath = entryManifestPath(entry, gateKind);
+  if (expectedManifestPath !== manifestPath) throw new Error(`${scopeId} の ${gateKind} gate のmanifestPathがscope coordination台帳と一致しません（台帳: ${expectedManifestPath}）。`);
   if (!entry.gates || typeof entry.gates !== "object" || Array.isArray(entry.gates) || !["active", "waiting", "aborted"].includes(entry.gates[gateKind])) {
     throw new Error(`${scopeId} は${gateKind} gateをactive、waiting、またはabortedとして予約していません。`);
   }

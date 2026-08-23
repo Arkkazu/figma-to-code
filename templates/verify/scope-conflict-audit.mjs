@@ -146,13 +146,14 @@ function closedFigmaScopeFileHashes(root) {
   return byPath;
 }
 
-function permittedFigmaDirtyTargets(root, manifest, gateKind, targets, violations) {
-  if (gateKind !== "figma") return new Set();
+function permittedDirtyTargets(root, manifest, gateKind, targets, violations) {
   const permitted = new Set();
-  const generatedTargets = manifest.scope?.generatedTargets;
+  // 生成物の宣言はゲートで名前が違うだけで意味は同じ。
+  const generatedField = gateKind === "figma" ? "generatedTargets" : "generatedPaths";
+  const generatedTargets = manifest.scope?.[generatedField];
   if (generatedTargets !== undefined) {
     if (!Array.isArray(generatedTargets)) {
-      violations.push("Figma manifest の scope.generatedTargets は配列である必要があります。");
+      violations.push(`manifest の scope.${generatedField} は配列である必要があります。`);
     } else {
       for (const path of generatedTargets) permitted.add(normalizePath(path));
     }
@@ -160,11 +161,14 @@ function permittedFigmaDirtyTargets(root, manifest, gateKind, targets, violation
   const approval = manifest.scope?.preEditApproval;
   if (approval !== undefined) {
     if (!approval || typeof approval !== "object" || Array.isArray(approval) || typeof approval.instruction !== "string" || !Array.isArray(approval.paths)) {
-      violations.push("Figma manifest の scope.preEditApproval が不正です。");
+      violations.push("manifest の scope.preEditApproval が不正です。");
     } else {
       for (const path of approval.paths) permitted.add(normalizePath(path));
     }
   }
+  // 完了済みFigma scopeの合格時点と内容が一致する引き継ぎは、Figma scopeでだけ判定する。
+  // close-report を書くのが figma gate だけであるため。
+  if (gateKind !== "figma") return permitted;
   const closedHashes = closedFigmaScopeFileHashes(root);
   for (const target of targets) {
     const hashes = closedHashes.get(target);
@@ -172,6 +176,16 @@ function permittedFigmaDirtyTargets(root, manifest, gateKind, targets, violation
     if (hashes && existsSync(absoluteTarget) && hashes.has(hashFile(absoluteTarget))) permitted.add(target);
   }
   return permitted;
+}
+
+// 1スコープが両ゲートを使う場合、そのscopeのmanifestはゲート種別ごとに別ファイルになる。
+// entry.gateManifestPaths が宣言されていればそれを正とし、無ければ従来の manifestPath を使う。
+function entryManifestPath(entry, gateKind) {
+  const perGate = entry?.gateManifestPaths;
+  if (perGate && typeof perGate === "object" && !Array.isArray(perGate) && typeof perGate[gateKind] === "string") {
+    return perGate[gateKind];
+  }
+  return entry?.manifestPath;
 }
 
 function loadCoordinationEntry(root, entry, violations, actors) {
@@ -264,8 +278,9 @@ function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
   } else {
     if (own.entry.actor !== actor) violations.push(`${scopeId} の担当者がmanifestとscope coordination台帳で一致しません。`);
     if (own.entry.implementationContextId !== contextId) violations.push(`${scopeId} のimplementationContextIdがmanifestとscope coordination台帳で一致しません。`);
-    if (normalizePath(relative(root, absoluteManifestPath)) !== normalizePath(own.entry.manifestPath)) {
-      violations.push(`${scopeId} のmanifestPathがscope coordination台帳と一致しません。`);
+    const expectedManifestPath = entryManifestPath(own.entry, gateKind);
+    if (normalizePath(relative(root, absoluteManifestPath)) !== normalizePath(expectedManifestPath)) {
+      violations.push(`${scopeId} の ${gateKind} gate のmanifestPathがscope coordination台帳と一致しません（台帳: ${expectedManifestPath}）。`);
     }
     if (!samePaths(own.targets, targets)) violations.push(`${scopeId} の操作対象がscope coordination台帳のmanifestと一致しません。`);
     const acceptedGateStates = operation === "preflight" ? ["active", "waiting", "aborted"] : ["active", "waiting"];
@@ -318,7 +333,7 @@ function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
   } catch (error) {
     violations.push(error.message);
   }
-  const permittedDirty = permittedFigmaDirtyTargets(root, manifest, gateKind, targets, violations);
+  const permittedDirty = permittedDirtyTargets(root, manifest, gateKind, targets, violations);
 
   for (const target of targets) {
     const ownershipRule = ownershipRules.find((rule) =>
