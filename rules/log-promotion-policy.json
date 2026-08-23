@@ -29,7 +29,9 @@
     "tools/figma-log-promote.mjs",
     "tools/figma-log-promote.e2e.mjs",
     "tools/figma-scope-lock.mjs",
-    "tools/figma-scope-lock.e2e.mjs"
+    "tools/figma-scope-lock.e2e.mjs",
+    "templates/verify/scope-coordination.mjs",
+    "templates/verify/scope-conflict-audit.mjs"
   ],
   "review": {
     "loopEngineeringSpec": "C:\\AI\\loop-engineering\\spec\\06-self-improvement.md",
