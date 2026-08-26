@@ -99,8 +99,19 @@ try {
   copyFileSync(resolve(templateDirectory, "cdp-browser.mjs"), join(verifyDirectory, "cdp-browser.mjs"));
   write(
     "MyBrain/verify/axe-fixture.js",
-    `globalThis.axe = { run: async () => ({ violations: document.body.dataset.axeMode === 'fail' ? [{ id: 'image-alt', impact: 'critical', nodes: [{ target: ['img#missing-alt'], html: '<img id="missing-alt">', failureSummary: 'Fix alt text' }] }] : [] }) };`
+    `const imageAlt = { id: 'image-alt', impact: 'critical', nodes: [{ target: ['img#missing-alt'], html: '<img id="missing-alt">', failureSummary: 'Fix alt text' }] };
+const colorContrast = { id: 'color-contrast', impact: 'serious', nodes: [
+  { target: ['.brand-a'], html: '<span class="brand-a">a</span>', failureSummary: 'foreground color: #e8374a' },
+  { target: ['.brand-b'], html: '<span class="brand-b">b</span>', failureSummary: 'foreground color: #757573' }
+] };
+globalThis.axe = { run: async () => {
+  const mode = document.body.dataset.axeMode;
+  if (mode === 'fail') return { violations: [imageAlt] };
+  if (mode === 'color') return { violations: [colorContrast, imageAlt] };
+  return { violations: [] };
+} };`
   );
+  write("MyBrain/rules/no-color-check.md", "# 色検査を行わない\n\nオーナー判断の根拠ファイル（e2eフィクスチャ）。\n");
   server = createServer((request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -182,6 +193,105 @@ try {
   if (failure.report.failures.length === 0 || failure.report.axe.unapprovedViolations.length !== 1 || failure.report.failures[0].type !== "axe-violation") {
     throw new Error(`expected axe violation to fail:\n${JSON.stringify(failure.report, null, 2)}`);
   }
+  // ===== colorChecks: オーナー承認による色検査の停止 =====
+  //
+  // 負のテストが本体である。停止できることより、**エージェントが独断で停止できないこと**と、
+  // **停止しても色以外は落ち続けること**を確かめないと、この口は単なる検査の抜け道になる。
+
+  const approvedColorChecks = {
+    status: "disabled",
+    specPath: "MyBrain/rules/no-color-check.md",
+    reason: "ブランド色がAAを僅かに下回るため、案件単位で色検査を停止する",
+    ownerApproval: { status: "approved", by: "owner", reference: "MyBrain/rules/no-color-check.md" },
+  };
+
+  // 「何かが投げられた」では負のテストにならない。落ちた理由まで固定する。
+  async function expectRejected(label, patch, expectedFragment) {
+    let threw = null;
+    try {
+      await runAccessibilityVerification({
+        config: { ...structuredClone(config), url: `http://127.0.0.1:${port}/?axe=color`, ...patch },
+        reportPath: "MyBrain/verify/reports/rejected.json",
+        projectRoot: repo,
+      });
+    } catch (error) { threw = error; }
+    if (!threw) throw new Error(`expected ${label} to be rejected`);
+    if (!threw.message.includes(expectedFragment)) {
+      throw new Error(`${label} was rejected for the wrong reason.\n  expected to contain: ${expectedFragment}\n  actual: ${threw.message}`);
+    }
+    return threw;
+  }
+
+  // 1. 停止すると色の違反は無視され、色以外は落ち続ける
+  const disabledConfig = structuredClone(config);
+  disabledConfig.colorChecks = approvedColorChecks;
+  disabledConfig.contrast.targets = [
+    { id: "opacity-copy", selector: "#opacity-copy", kind: "text" },
+    { id: "ui-opacity-copy", selector: "#ui-opacity-copy", kind: "ui", foregroundProperty: "borderTopColor", backgroundScope: "behind" },
+  ];
+  const disabled = await runAccessibilityVerification({
+    config: { ...disabledConfig, url: `http://127.0.0.1:${port}/?axe=color` },
+    reportPath: "MyBrain/verify/reports/color-disabled.json",
+    projectRoot: repo,
+  });
+  if (disabled.report.axe.colorChecksDisabled?.skippedNodeCount !== 2) {
+    throw new Error(`expected 2 color-contrast nodes to be skipped:\n${JSON.stringify(disabled.report.axe, null, 2)}`);
+  }
+  if (disabled.report.axe.unapprovedViolations.length !== 1 || disabled.report.axe.unapprovedViolations[0].violation.id !== "image-alt") {
+    throw new Error(`expected non-color violations to survive:\n${JSON.stringify(disabled.report.axe.unapprovedViolations, null, 2)}`);
+  }
+  if (disabled.report.contrast.disabled !== true || disabled.report.contrast.failures.length !== 0 || disabled.report.contrast.entries.length !== 0) {
+    throw new Error(`expected contrast measurement to be skipped entirely:\n${JSON.stringify(disabled.report.contrast, null, 2)}`);
+  }
+  if (!disabled.report.failures.some((entry) => entry.type === "axe-violation")) {
+    throw new Error("expected the image-alt failure to keep failing the run");
+  }
+  if (disabled.report.colorChecks?.ownerApproval?.by !== "owner") {
+    throw new Error("expected the owner approval to be recorded in the report");
+  }
+
+  // 2. 停止していれば contrast.targets は空でよい。有効なら空は拒否される
+  const emptyTargets = structuredClone(disabledConfig);
+  emptyTargets.contrast.targets = [];
+  const emptyTargetsRun = await runAccessibilityVerification({
+    config: { ...emptyTargets, url: `http://127.0.0.1:${port}/?axe=pass` },
+    reportPath: "MyBrain/verify/reports/color-disabled-empty.json",
+    projectRoot: repo,
+  });
+  if (emptyTargetsRun.report.failures.length !== 0) {
+    throw new Error(`expected an empty target list to be accepted while colour checks are off:\n${JSON.stringify(emptyTargetsRun.report, null, 2)}`);
+  }
+  await expectRejected("empty contrast.targets while colour checks are enabled", { contrast: { targets: [] } }, "config.contrast.targets must contain");
+
+  // 3. 【負のテスト】承認記録が無い停止は拒否する
+  await expectRejected("colorChecks without ownerApproval", { colorChecks: { ...approvedColorChecks, ownerApproval: undefined } }, "config.colorChecks.ownerApproval");
+  await expectRejected("colorChecks with a pending approval", {
+    colorChecks: { ...approvedColorChecks, ownerApproval: { status: "pending", by: "agent", reference: "x" } },
+  }, 'config.colorChecks.ownerApproval.status must be "approved"');
+
+  // 4. 【負のテスト】根拠ファイルが実在しない停止は拒否する
+  await expectRejected("colorChecks with a missing specPath", { colorChecks: { ...approvedColorChecks, specPath: "MyBrain/rules/does-not-exist.md" } }, "config.colorChecks.specPath does not exist");
+
+  // 5. 【負のテスト】理由が短い停止は拒否する
+  await expectRejected("colorChecks with a short reason", { colorChecks: { ...approvedColorChecks, reason: "不要" } }, "config.colorChecks.reason must state the reason");
+
+  // 6. 【負のテスト】この口が任意ルールの汎用スイッチになっていないこと
+  await expectRejected("axe.disableRules is still refused", {
+    colorChecks: approvedColorChecks,
+    axe: { sourcePath: "MyBrain/verify/axe-fixture.js", disableRules: ["image-alt"] },
+  }, "config.axe must not disable, exclude, or override axe rules");
+  await expectRejected("unknown colorChecks.status", { colorChecks: { ...approvedColorChecks, status: "off" } }, 'config.colorChecks.status must be "enabled" or "disabled"');
+
+  // 7. 宣言しなければ従来どおり色検査は有効
+  const stillEnabled = await runAccessibilityVerification({
+    config: { ...structuredClone(config), url: `http://127.0.0.1:${port}/?axe=color` },
+    reportPath: "MyBrain/verify/reports/color-enabled.json",
+    projectRoot: repo,
+  });
+  if (stillEnabled.report.axe.colorChecksDisabled !== null || stillEnabled.report.axe.unapprovedViolations.length !== 3) {
+    throw new Error(`expected colour checks to stay on by default:\n${JSON.stringify(stillEnabled.report.axe, null, 2)}`);
+  }
+
   console.log("accessibility-verify E2E PASS");
 } finally {
   if (server) await close(server);

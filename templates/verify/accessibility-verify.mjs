@@ -136,12 +136,41 @@ function validateContrastException(value, label) {
   return exception;
 }
 
+// 色に起因する検査だけを止める口。案件のブランド色がAAを僅かに下回る場合、
+// 個別 approvedExceptions をページごとに積み上げても同じ作業を繰り返すだけになるため、
+// オーナーが案件単位で「色は見ない」と決められるようにする。
+//
+// **エージェントが独断で無効化できないようにする**のがこのブロックの要件である。
+// 承認記録・根拠ファイルの実在・20文字以上の理由をすべて必須にし、
+// 下の axe.rules / disableRules / runOptions / exclude の禁止はそのまま残す。
+// 任意のルールを止める汎用スイッチにはしない。
+const COLOR_AXE_RULE_IDS = new Set(["color-contrast", "color-contrast-enhanced", "link-in-text-block"]);
+
+function validateColorChecks(raw, projectRoot) {
+  if (raw === undefined) return { status: "enabled" };
+  const block = requireObject(raw, "config.colorChecks");
+  const status = requireString(block.status, "config.colorChecks.status");
+  if (status !== "enabled" && status !== "disabled") fail('config.colorChecks.status must be "enabled" or "disabled".');
+  if (status === "enabled") return { status };
+
+  const specPath = resolveProjectPath(projectRoot, requireString(block.specPath, "config.colorChecks.specPath"), "config.colorChecks.specPath");
+  if (!existsSync(specPath)) fail(`config.colorChecks.specPath does not exist: ${specPath}`);
+  const reason = requireString(block.reason, "config.colorChecks.reason");
+  if (reason.trim().length < 20) fail("config.colorChecks.reason must state the reason in at least 20 characters.");
+  const ownerApproval = requireObject(block.ownerApproval, "config.colorChecks.ownerApproval");
+  if (ownerApproval.status !== "approved") fail('config.colorChecks.ownerApproval.status must be "approved".');
+  requireString(ownerApproval.by, "config.colorChecks.ownerApproval.by");
+  requireString(ownerApproval.reference, "config.colorChecks.ownerApproval.reference");
+  return { status, specPath: block.specPath, reason, ownerApproval, disabledRuleIds: [...COLOR_AXE_RULE_IDS] };
+}
+
 function validateConfig(raw, projectRoot) {
   const config = requireObject(raw, "config");
   const viewportPolicy = requireObject(config.viewportPolicy, "config.viewportPolicy");
   if (viewportPolicy.scrollbars !== "hidden" && viewportPolicy.scrollbars !== "visible") {
     fail('config.viewportPolicy.scrollbars must be "hidden" or "visible".');
   }
+  const colorChecks = validateColorChecks(config.colorChecks, projectRoot);
 
   const axe = requireObject(config.axe, "config.axe");
   if (axe.rules !== undefined || axe.disableRules !== undefined || axe.runOptions !== undefined || axe.exclude !== undefined) {
@@ -154,7 +183,10 @@ function validateConfig(raw, projectRoot) {
 
   const contrast = requireObject(config.contrast, "config.contrast");
   const targets = requireArray(contrast.targets, "config.contrast.targets");
-  if (targets.length === 0) fail("config.contrast.targets must contain every machine-verifiable text/UI contrast target.");
+  // 色検査を止めている案件では、宣言すべきターゲットがそもそも無い。
+  if (targets.length === 0 && colorChecks.status !== "disabled") {
+    fail("config.contrast.targets must contain every machine-verifiable text/UI contrast target.");
+  }
   const targetIds = new Set();
   for (const [index, target] of targets.entries()) {
     const label = `config.contrast.targets[${index}]`;
@@ -193,6 +225,7 @@ function validateConfig(raw, projectRoot) {
   return {
     ...config,
     viewportPolicy,
+    colorChecks,
     axe: { ...axe, sourcePath: axeSourcePath, approvedExceptions: axeExceptions },
     contrast: { ...contrast, targets, approvedExceptions: contrastExceptions },
     keyboard: { ...keyboard, stateFlows, dialogs },
@@ -224,10 +257,15 @@ async function injectAndRunAxe(browser, config) {
   })()`, { awaitPromise: true });
   if (!result || result.runtimeError) fail(`axe-core execution failed: ${result?.runtimeError ?? "no result"}`);
 
+  const colorDisabled = config.colorChecks?.status === "disabled";
   const approved = [];
   const unapproved = [];
+  const colorSkipped = [];
   for (const violation of result.violations || []) {
+    const isColorRule = COLOR_AXE_RULE_IDS.has(violation.id);
     for (const node of violation.nodes || []) {
+      // 停止していても走査自体は行い、件数を証跡に残す。黙って消さない。
+      if (colorDisabled && isColorRule) { colorSkipped.push({ violation, node }); continue; }
       const exception = config.axe.approvedExceptions.find((candidate) => candidate.ruleId === violation.id && candidate.target === node.target);
       if (exception) approved.push({ violation, node, exceptionId: exception.id });
       else unapproved.push({ violation, node });
@@ -239,6 +277,9 @@ async function injectAndRunAxe(browser, config) {
     totalViolationNodes: (result.violations || []).reduce((count, violation) => count + violation.nodes.length, 0),
     approvedExceptions: approved,
     unapprovedViolations: unapproved,
+    colorChecksDisabled: colorDisabled
+      ? { ruleIds: [...COLOR_AXE_RULE_IDS], skippedNodeCount: colorSkipped.length, skipped: colorSkipped }
+      : null,
   };
 }
 
@@ -410,6 +451,11 @@ function contrastExpression(targets) {
   })()`;
 }
 async function runContrast(browser, config) {
+  // 色検査を止めている案件では計測自体を行わない。ブラウザで測って結果を捨てると、
+  // レポートに「測ったが無視した値」が残り、後から読む人が判定を取り違える。
+  if (config.colorChecks?.status === "disabled") {
+    return { disabled: true, entries: [], approvedExceptions: [], failures: [], humanReview: [] };
+  }
   const entries = await browser.evaluate(contrastExpression(config.contrast.targets));
   const approvedExceptions = [];
   const failures = [];
@@ -519,10 +565,38 @@ async function waitForVisibility(browser, selector, visible) {
   );
 }
 
+// aria-expanded を持つ操作要素は stateFlow で宣言させる。ただし要求するのは
+// **測定viewportで実際に操作できる要素だけ** とする。
+//
+// 2026-08-25 実測：レスポンシブの共有ヘッダーはSP専用のハンバーガー
+// （aria-controls / aria-expanded 付き）を持つ。PC幅で測定する config では、この要素は
+// display:none で描画されないため triggerSelector として宣言できない
+// （navigateAndWait の測定ルート待ちが60秒でタイムアウトし、スキャン全体が落ちる）。
+// 一方この関数はDOM全体から [aria-expanded] を拾うため、宣言できない要素の宣言を要求していた。
+// 要求と宣言可能性が矛盾し、viewportで出し分ける共有部品を持つページは構造的に合格できなかった。
+//
+// したがって描画されていない要素（display:none / detached / visibility:hidden /
+// hidden属性 / inert配下）は対象外にする。閉じたアコーディオンのように、
+// 測定viewportで見えている操作要素は従来どおり宣言が必須である。
 async function ensureStateFlowCoverage(browser, stateFlows) {
   const missing = await browser.evaluate(`(() => {
     const selectors = ${JSON.stringify(stateFlows.map((flow) => flow.triggerSelector))};
-    return Array.from(document.querySelectorAll("[aria-expanded]")).filter((element) => !selectors.some((selector) => element.matches(selector))).map((element) => element.outerHTML.slice(0, 200));
+    function operableHere(element) {
+      // display:none と detached はレイアウトボックスを持たない。
+      if (element.getClientRects().length === 0) return false;
+      if (element.closest("[inert]") !== null) return false;
+      for (let node = element; node instanceof Element; node = node.parentElement) {
+        if (node.hasAttribute("hidden")) return false;
+        const style = getComputedStyle(node);
+        if (style.visibility === "hidden" || style.visibility === "collapse") return false;
+        if (style.contentVisibility === "hidden") return false;
+      }
+      return true;
+    }
+    return Array.from(document.querySelectorAll("[aria-expanded]"))
+      .filter((element) => operableHere(element))
+      .filter((element) => !selectors.some((selector) => element.matches(selector)))
+      .map((element) => element.outerHTML.slice(0, 200));
   })()`);
   return missing;
 }
@@ -619,6 +693,7 @@ async function executeAccessibilityInBrowser({ browser, validated, reportPath, p
     generatedAt: new Date().toISOString(),
     browserSessionId: browser.sessionId,
     browserPid: browser.browserPid,
+    colorChecks: validated.colorChecks,
     axe: null,
     contrast: null,
     keyboard: null,
@@ -667,7 +742,24 @@ async function main() {
   const configPath = resolveProjectPath(projectRoot, configArg, "config path");
   const config = readJson(configPath, "Accessibility config");
   const { report, reportPath } = await runAccessibilityVerification({ config, url: urlArg, reportPath: reportArg, projectRoot });
-  console.log(JSON.stringify({ status: report.failures.length === 0 ? "PASS" : "FAIL", reportPath, failures: report.failures.length, humanReview: report.humanReview.length, axeViolations: report.axe?.unapprovedViolations.length ?? 0 }, null, 2));
+  // 色検査の停止は、結果を読む人が必ず気づく位置に出す。レポートの奥だけに置かない。
+  if (report.colorChecks?.status === "disabled") {
+    console.log(
+      `ACCESSIBILITY: 色に関する検査を停止しています（オーナー承認: ${report.colorChecks.ownerApproval.by} / 根拠: ${report.colorChecks.specPath}）。\n` +
+      `  停止したaxeルール: ${report.colorChecks.disabledRuleIds.join(", ")}\n` +
+      `  この実行で無視した色の違反: ${report.axe?.colorChecksDisabled?.skippedNodeCount ?? 0} 件\n` +
+      `  色以外の検査は通常どおり実行しています。`
+    );
+  }
+  console.log(JSON.stringify({
+    status: report.failures.length === 0 ? "PASS" : "FAIL",
+    reportPath,
+    failures: report.failures.length,
+    humanReview: report.humanReview.length,
+    axeViolations: report.axe?.unapprovedViolations.length ?? 0,
+    colorChecks: report.colorChecks?.status ?? "enabled",
+    colorViolationsIgnored: report.axe?.colorChecksDisabled?.skippedNodeCount ?? 0,
+  }, null, 2));
   process.exitCode = report.failures.length === 0 ? 0 : 1;
 }
 
