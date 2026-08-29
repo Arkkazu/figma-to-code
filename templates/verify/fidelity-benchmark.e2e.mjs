@@ -6,9 +6,18 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const sourceScript = resolve("templates/verify/fidelity-benchmark.mjs");
-const sourceProvider = resolve("templates/verify/p3-page-provider.mjs");
+// 複製元は cwd ではなく、このE2E自身の隣から取る。
+// 旧実装は resolve("templates/verify/...") と cwd 相対で書いており、正本リポジトリでしか
+// 通らなかった。このE2Eは配布物であり、案件では MyBrain/verify/ に置かれる。
+// 実測（2026-08-29、rpa-technologies-theme）: 配布後に実行すると
+// `ENOENT: copyfile <案件>/templates/verify/fidelity-benchmark.mjs` で落ちた。
+// 同じ欠陥を figma-gate.e2e.mjs でも直している。正本リポジトリ内でだけ回すE2Eは、
+// 配布先で動くことを証明しない。
+const verifyDirectory = dirname(fileURLToPath(import.meta.url));
+const sourceScript = resolve(verifyDirectory, "fidelity-benchmark.mjs");
+const sourceProvider = resolve(verifyDirectory, "p3-page-provider.mjs");
 const script = "MyBrain/verify/fidelity-benchmark.mjs";
 const providerPort = await new Promise((resolvePort, rejectPort) => { const server = createServer(); server.once("error", rejectPort); server.listen({ host: "127.0.0.1", port: 0, exclusive: true }, () => { const address = server.address(); const port = typeof address === "object" && address ? address.port : 0; server.close((error) => error ? rejectPort(error) : resolvePort(port)); }); });
 const providerUrl = `http://127.0.0.1:${providerPort}/p3`;
