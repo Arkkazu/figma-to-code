@@ -270,31 +270,35 @@ function begin(scopeInputPath, stateInputPath) {
 // 何が起きたか・なぜ復帰できないか・次に誰へ何を求めるかを、出力側で名指しする。
 function blockedGuidance(state, action) {
   const blocked = state.raw.blocked || {};
+  const reason = blocked.reason || "(記録なし)";
   const paths = Array.isArray(blocked.paths) ? blocked.paths : [];
   return [
     "Scope lock is blocked; " + action + " is refused.",
     "",
     "  scopeId: " + state.scope.scopeId,
     "  blocked at: " + (blocked.at || "(記録なし)"),
-    "  reason: " + (blocked.reason || "(記録なし)"),
-    "  out-of-scope paths: " + (paths.length > 0 ? paths.join(", ") : "(記録なし)"),
+    "  reason: " + reason,
+    "  blocked paths: " + (paths.length > 0 ? paths.join(", ") : "(記録なし)"),
     "",
-    "  **これは行き止まりである。** 次の2つはどちらも拒否される。",
-    "    begin  … 既存stateは不変のため拒否する",
-    "    amend  … blocked のscopeは修正できないため拒否する",
-    "  自動でrevertも再baselineもしない。エージェントの判断で回避してはならない。",
+    "  begin と amend はどちらも拒否される（既存stateは不変 / blocked は修正できない）。",
+    "  自動でrevertしない。エージェントの判断で回避してはならない。",
     "",
-    "  reason が out-of-scope-path で、上記パスが**別scopeの正当な作業**である場合、",
-    "  これは既知の未実装欠陥である可能性が高い。scope lockのbaselineは",
-    "  figma-scope-lock.mjs の dirtySnapshot() がリポジトリ全体のdirty集合を取るため、",
-    "  宣言パスが1つも交差しない別scopeの編集でも blocked になる。",
-    "  該当訂正: rules/corrections.md 2026-08-25 concurrent-scope-blocked-by-repo-wide-baseline",
-    "  （同訂正は『blockedからの正規の復帰手順を用意する』ことも求めているが、未実装である）",
+    "  復帰は rebaseline だけである。オーナー承認ファイルが要る。",
     "",
-    "  次に行うこと: オーナーへ次の3点を示して判断を仰ぐ。",
-    "    1. 上記パスが別scopeの正当な作業か、このscopeの逸脱か",
-    "    2. 前者なら、既知欠陥による誤停止として新しいscopeを起こしてよいか",
-    "    3. 後者なら、逸脱をどう扱うか（revert / 承認してamend用の新scope）",
+    "    node C:/AI/figma-to-code/tools/figma-scope-lock.mjs rebaseline \\",
+    "      " + (state.statePath || "<state.json>") + " <approval.json>",
+    "",
+    "  approval.json の形（instruction は20文字以上。なぜ解除してよいかを書く）:",
+    '    { "version": 1, "scopeId": "' + state.scope.scopeId + '",',
+    '      "ownerApproval": { "status": "approved", "approvedBy": "owner",',
+    '        "approvedAt": "<ISO8601>", "instruction": "<解除してよい理由>" } }',
+    "",
+    reason === "scope-manifest-tampered"
+      ? "  この停止は宣言ファイル自体の書き換えによるもので、rebaseline では解除できない。\n" +
+        "  宣言を begin 時点の内容へ戻すか、新しいscopeを起こすこと。宣言を広げるなら amend を使う。"
+      : "  停止する前に、上記パスが本当にこのscopeの逸脱かを確認すること。別scopeの正当な作業なら、\n" +
+        "  現行のverifyは宣言パスと交差しない変更で停止しない（2026-08-29 実装）。古いstateであれば\n" +
+        "  rebaseline で取り直せば、以後は誤停止しない。",
   ].join("\n");
 }
 
@@ -341,33 +345,98 @@ function verify(stateInputPath) {
   const sourceChanges = observedChanges.filter(function (entry) {
     return !controlPathSet.has(entry.path);
   });
-  const outOfScopePaths = sourceChanges
-    .filter(function (entry) { return !state.scope.allowedPaths.includes(entry.path); })
-    .map(function (entry) { return entry.path; });
+  // 判定範囲は宣言パスと制御パスに交差する変更だけとする（2026-08-25 訂正
+  // concurrent-scope-blocked-by-repo-wide-baseline / 2026-08-29 実装）。
+  //
+  // 旧実装は baseline にリポジトリ全体の dirty 集合を取り、宣言パス以外の変更を
+  // すべて違反としていた。そのため**別scopeが自分の宣言パスを正しく編集しただけで、
+  // 宣言パスが1つも交差しない無関係なscopeが blocked になった**。実測（案件
+  // rpa-technologies-theme, 2026-08-26）では why-choose-us scope が、blog-detail scope の
+  // 正当な編集5件で停止し、begin も amend も拒否されて復帰不能になった。
+  // 衝突判定は scope-conflict-audit のパス交差に委ねる方針と食い違っていた。
+  //
+  // 無関係な変更は違反ではなく baseline の更新として扱う。ただし黙って捨てず、
+  // 件数とパスを出力し history にも残す。「自分が宣言せずに編集した」場合の検出は
+  // assert（編集前に非宣言パスを拒否する）と、commit時の
+  // close-receipt-audit --require-coverage が引き続き担う。
+  const unrelatedChanges = sourceChanges.filter(function (entry) {
+    return !state.scope.allowedPaths.includes(entry.path);
+  });
+  const inScopeChanges = sourceChanges.filter(function (entry) {
+    return state.scope.allowedPaths.includes(entry.path);
+  });
+
+  // 判定範囲を狭めたぶん、制御パスの改ざんは明示的に落とす。scope manifest は begin で
+  // 一度だけ書かれ、以後 amend でも書き換えない（amend が広げるのは state 側の
+  // allowedPaths である）。したがって manifest の hash が begin 時と違えば、
+  // 宣言そのものを途中で書き換えたことになる。
+  const beginEntry = state.raw.history.find(function (entry) { return entry.action === "begin"; });
+  const expectedManifestSha256 = beginEntry ? beginEntry.scopeManifestSha256 : null;
+  const manifestRepoPath = state.controlPaths.find(function (path) {
+    return path !== repoPathFromAbsolute(state.scope.repoPath, state.statePath, "Scope lock state file");
+  });
+  let tamperedManifest = null;
+  if (expectedManifestSha256 && manifestRepoPath) {
+    const actualManifestSha256 = fileHash(state.scope.repoPath, manifestRepoPath);
+    if (actualManifestSha256 !== expectedManifestSha256) {
+      tamperedManifest = {
+        path: manifestRepoPath,
+        expectedSha256: expectedManifestSha256,
+        actualSha256: actualManifestSha256,
+      };
+    }
+  }
 
   const result = {
     action: "verify",
     at: nowIso(),
-    changedPaths: sourceChanges,
+    changedPaths: inScopeChanges,
     controlChanges: controlChanges,
-    outOfScopePaths: outOfScopePaths,
-    result: outOfScopePaths.length === 0 ? "pass" : "fail",
+    unrelatedChanges: unrelatedChanges,
+    outOfScopePaths: [],
+    result: tamperedManifest ? "fail" : "pass",
   };
   state.raw.history.push(result);
 
-  if (outOfScopePaths.length > 0) {
+  if (tamperedManifest) {
     state.raw.status = "blocked";
     state.raw.blocked = {
       at: result.at,
-      reason: "out-of-scope-path",
-      paths: outOfScopePaths,
+      reason: "scope-manifest-tampered",
+      paths: [tamperedManifest.path],
+      expectedSha256: tamperedManifest.expectedSha256,
+      actualSha256: tamperedManifest.actualSha256,
     };
     saveState(state);
-    fail("Scope violation detected: " + outOfScopePaths.join(", ") + ". The scope is now blocked; do not auto-revert or auto-amend.");
+    fail(
+      "Scope manifest changed after begin: " + tamperedManifest.path +
+      "\n  begin時のhash: " + tamperedManifest.expectedSha256 +
+      "\n  現在のhash:    " + (tamperedManifest.actualSha256 || "(ファイルが無い)") +
+      "\n  宣言そのものを途中で書き換えている。宣言を広げるときは amend を使う（オーナー承認が要る）。"
+    );
+  }
+
+  // 無関係な変更は baseline を更新して取り込む。次回の verify で再び差分として出さない。
+  if (unrelatedChanges.length > 0) {
+    const merged = new Map(state.baseline.map(function (entry) { return [entry.path, entry.sha256]; }));
+    unrelatedChanges.forEach(function (entry) { merged.set(entry.path, entry.afterSha256); });
+    state.raw.baseline = [...merged.entries()]
+      .map(function (pair) { return { path: pair[0], sha256: pair[1] }; })
+      .sort(function (left, right) { return left.path < right.path ? -1 : left.path > right.path ? 1 : 0; });
   }
 
   saveState(state);
-  console.log("PASS scope-lock verify: " + observedChanges.length + " changed path(s), all in scope.");
+  console.log("PASS scope-lock verify: 宣言パスの変更 " + inScopeChanges.length + " 件、対象外変更 0 件。");
+  if (unrelatedChanges.length > 0) {
+    console.log(
+      "  参考: 宣言パスと交差しない変更 " + unrelatedChanges.length + " 件をbaselineへ取り込んだ（違反ではない）。"
+    );
+    unrelatedChanges.forEach(function (entry) { console.log("    " + entry.path); });
+    console.log(
+      "  これらが自分の編集である場合、assert を通していないことになる。宣言し直すか、commit時の" +
+      " close-receipt-audit --require-coverage で落ちる。"
+    );
+  }
 }
 
 function amend(stateInputPath, amendmentInputPath) {
@@ -420,6 +489,76 @@ function amend(stateInputPath, amendmentInputPath) {
   console.log("PASS scope-lock amend: " + additions.length + " path(s) added after explicit owner approval.");
 }
 
+// blocked からの正規の復帰手順（2026-08-25 訂正の後半 / 2026-08-29 実装）。
+//
+// 従来 blocked は行き止まりだった。begin は既存stateを不変として拒否し、amend は blocked を
+// 拒否する。そのため誤停止しても復帰できず、scopeを捨てて起こし直すしかなかった。
+// verify の判定を交差基準へ寄せたことで誤停止は起きなくなるが、既に blocked のstateと、
+// 本物の違反から戻る手順は別に要る。
+//
+// rebaseline は「いま作業ツリーにある変更を新しい baseline として受け入れ、active へ戻す」。
+// 履歴は消さない。オーナー承認を必須にするのは、blocked が本物の逸脱だった場合に
+// エージェントの判断で無かったことにさせないためである。
+function rebaseline(stateInputPath, approvalInputPath) {
+  const state = loadState(stateInputPath);
+  if (state.raw.status !== "blocked") {
+    fail("rebaseline is only for a blocked scope lock. Current status: " + state.raw.status + ".");
+  }
+
+  const approvalPath = assertInside(state.scope.repoPath, resolve(approvalInputPath), "Scope rebaseline approval file");
+  const raw = readJson(approvalPath, "Scope rebaseline approval");
+  requireObject(raw, "Scope rebaseline approval");
+  if (raw.version !== 1) fail("Scope rebaseline approval.version must be 1.");
+  if (requireIdentifier(raw.scopeId, "Scope rebaseline approval.scopeId") !== state.scope.scopeId) {
+    fail("Scope rebaseline approval.scopeId must match the blocked scope.");
+  }
+  const approval = requireObject(raw.ownerApproval, "Scope rebaseline approval.ownerApproval");
+  if (requireString(approval.status, "Scope rebaseline approval.ownerApproval.status") !== "approved") {
+    fail("Scope rebaseline approval.ownerApproval.status must be approved.");
+  }
+  if (requireString(approval.approvedBy, "Scope rebaseline approval.ownerApproval.approvedBy") !== "owner") {
+    fail("Scope rebaseline approval.ownerApproval.approvedBy must be owner.");
+  }
+  requireString(approval.approvedAt, "Scope rebaseline approval.ownerApproval.approvedAt");
+  const instruction = requireString(approval.instruction, "Scope rebaseline approval.ownerApproval.instruction");
+  if (instruction.trim().length < 20) {
+    fail("Scope rebaseline approval.ownerApproval.instruction must record why the block is being cleared (>=20 chars).");
+  }
+
+  // 宣言そのものを書き換えたまま再開させない。manifest改ざんは rebaseline では戻せない。
+  if (state.raw.blocked && state.raw.blocked.reason === "scope-manifest-tampered") {
+    fail(
+      "A scope-manifest-tampered block cannot be cleared by rebaseline." +
+      "\n  宣言ファイルを begin 時点の内容へ戻すか、新しいscopeを起こすこと。"
+    );
+  }
+
+  const clearedBlock = state.raw.blocked || null;
+  const approvalRepoPath = repoPathFromAbsolute(state.scope.repoPath, approvalPath, "Scope rebaseline approval file");
+  if (!state.controlPaths.includes(approvalRepoPath)) {
+    state.raw.controlPaths = state.controlPaths.concat([approvalRepoPath]).sort();
+  }
+  state.raw.baseline = dirtySnapshot(state.scope.repoPath);
+  state.raw.status = "active";
+  delete state.raw.blocked;
+  state.raw.history.push({
+    action: "rebaseline",
+    at: nowIso(),
+    approvalSha256: sha256(readFileSync(approvalPath)),
+    clearedBlock: clearedBlock,
+    ownerApproval: {
+      approvedBy: approval.approvedBy,
+      approvedAt: approval.approvedAt,
+      instruction: approval.instruction,
+    },
+  });
+  saveState(state);
+  console.log(
+    "PASS scope-lock rebaseline: " + state.scope.scopeId + " を active へ戻した（baseline " +
+    state.raw.baseline.length + " 件で取り直した）。解除した停止は履歴に残している。"
+  );
+}
+
 function showStatus(stateInputPath) {
   const state = loadState(stateInputPath);
   console.log(JSON.stringify({
@@ -448,6 +587,8 @@ try {
     verify(args[0]);
   } else if (command === "amend" && args.length === 2) {
     amend(args[0], args[1]);
+  } else if (command === "rebaseline" && args.length === 2) {
+    rebaseline(args[0], args[1]);
   } else if (command === "status" && args.length === 1) {
     showStatus(args[0]);
   } else {

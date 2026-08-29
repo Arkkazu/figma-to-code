@@ -30,14 +30,66 @@ node C:/AI/figma-to-code/tools/figma-scope-lock.mjs verify MyBrain/verify/scope-
 
 assert は各ファイルを書き換える直前、verify は checkpoint前とclose前に必ず実行する。
 
+## 判定範囲（2026-08-29 変更）
+
+**verify は宣言パスと制御パスに交差する変更だけで判定する。** 宣言パスと1つも交差しない変更は
+違反ではなく baseline の更新として取り込み、件数とパスを出力して history に残す。
+
+旧実装は baseline にリポジトリ全体の dirty 集合を取り、宣言パス以外の変更をすべて違反にしていた。
+そのため**別scopeが自分の宣言パスを正しく編集しただけで、無関係なscopeが停止した**
+（実測: 案件の why-choose-us scope が blog-detail scope の編集5件で停止し、復帰不能になった）。
+衝突判定は `scope-conflict-audit` のパス交差に委ねる方針と食い違っていた。
+根拠は `rules/corrections.md` 2026-08-25 `concurrent-scope-blocked-by-repo-wide-baseline`。
+
+判定を狭めたぶん、**宣言そのものの書き換え（scope manifest の改ざん）は verify で落とす**。
+manifest は begin で一度だけ書かれ、amend でも書き換えない（amend が広げるのは state 側の
+`allowedPaths`）。begin 時の hash と違えば `scope-manifest-tampered` として blocked にする。
+
+「自分が宣言せずに編集した」場合の検出は、`assert`（編集前に非宣言パスを拒否する）と、
+commit時の `close-receipt-audit --require-coverage` が担う。verify はその代替ではない。
+
 ## 逸脱時の停止
 
-verify が対象外パスを検知した時点でstateは blocked になる。
+blocked になるのは次の2つである。
+
+- `scope-manifest-tampered` … 宣言ファイル自体を begin 後に書き換えた
+- `out-of-scope-path` … 2026-08-29 以前のstateに残る旧判定
+
+いずれの場合も、
 
 - その時点で編集、checkpoint、close、完了報告を停止する。
 - 対象外変更を「ついでの改善」として続行しない。
 - ツールはユーザーの変更を自動復旧しない。差分を隠さず、ownerへ対象外パスを報告する。
-- 既に blocked のscopeをエージェント自身で拡張・再開してはならない。ownerの判断後、必要なら新しいscopeを開始する。
+- 既に blocked のscopeをエージェント自身で拡張・再開してはならない。`begin` は既存stateを不変として、
+  `amend` は blocked を修正不可として、どちらも拒否する。
+
+## blocked からの復帰（2026-08-29 追加）
+
+復帰は `rebaseline` だけである。ownerの明示承認を記録したファイルが要る。承認の `instruction` は
+20文字以上で、なぜ解除してよいかを書く。`rebaseline` は現在の作業ツリーを新しい baseline として
+取り直し、status を active へ戻す。解除した停止は history に残す。
+
+~~~bash
+node C:/AI/figma-to-code/tools/figma-scope-lock.mjs rebaseline MyBrain/verify/scope-<id>.state.json MyBrain/verify/scope-<id>.rebaseline.json
+~~~
+
+承認ファイルの形は次のとおり。
+
+~~~json
+{
+  "version": 1,
+  "scopeId": "<scope-id>",
+  "ownerApproval": {
+    "status": "approved",
+    "approvedBy": "owner",
+    "approvedAt": "<ISO8601>",
+    "instruction": "<解除してよい理由。20文字以上>"
+  }
+}
+~~~
+
+`scope-manifest-tampered` の停止は `rebaseline` では解除できない。宣言ファイルを begin 時点の
+内容へ戻すか、新しいscopeを起こす。宣言を広げるなら `amend` を使う。
 
 ### blocked状態の対象別判定
 
