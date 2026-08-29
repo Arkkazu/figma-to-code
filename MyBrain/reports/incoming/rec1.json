@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "declared-value-read-as-measured-value-20260824",
+  "kind": "mistake",
+  "occurredOn": "2026-08-24",
+  "failureClass": "verification",
+  "recurrenceKey": "declared-value-read-as-measured-value",
+  "promotability": "promotable",
+  "summary": "絶対配置要素のCSS宣言値がデザインのルート基準座標と同じ数字であることを確認しただけで「デザインどおり」と報告した。包含ブロックがヘッダー直下から始まるため、実描画はヘッダー高さぶん下にずれていた。片方のブレークポイントでは高さの指定自体も別物だった。",
+  "prevention": "位置と寸法をデザインと突き合わせるときは、CSSの宣言値ではなく実測層（getBoundingClientRect）の値を根拠にする。宣言値の一致は座標の一致を意味しない。宣言値だけを読んだ段階では「一致」「デザインどおり」と書かず未検証として扱う。",
+  "ruleTargets": [
+    "rules/figma-spec-pipeline.md"
+  ],
+  "verifierTargets": [
+    "templates/verify/figma-gate.mjs"
+  ]
+}

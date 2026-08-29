@@ -24,6 +24,13 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [197] 2026-08-29 / Claude（公開メモリの生成物を追跡対象にする。[196]の独立レビューはowner判断で省略）
+
+- owner判断: [196] の独立レビューは不要と指示を受けた。**この変更に独立レビューは付いていない。** なお共通Vault `rules/corrections.md` 2026-08-24 で codex を既定の批評役に固定する体制は既に廃止しており、2026-08-26 の指示では独立レビューは同一エージェントの別contextが書くと定めている。今回の省略は批評役の質の問題ではなく、owner がこの変更について工程を省く判断をしたものである。
+- 事実: `MyBrain/reports/` 配下の生成物8件（`incoming/` 2、`intake/` 2、`reports/` 2、`proposals/current.json`、`latest.json`）が未追跡かつ `.gitignore` 未登録だった。`figma-log-promote.mjs` は出力ベース配下に `intake/` と `reports/` を書くため、一度 `MyBrain/reports` をベースに実行した結果である。`intake` の2件（`041bca6e615bd6e9` / `8392236077705bef`）は `learning/log-promotions/intake/` の33件には存在せず、重複ではなく固有の実行結果である。
+- 判断: **追跡する**（ignore しない）。根拠は3つ。(1) `MyBrain/STATE.md` が「This `MyBrain/` is public-shareable and Git-tracked」と宣言している。(2) `MyBrain/README.md` の Allowed に "Review notes and reports that contain no project-specific secrets" が含まれ、`MyBrain/reports/.keep` も追跡済みで、`reports/` は意図された置き場である。(3) 同種の生成物を `learning/log-promotions/` は既に追跡している（intake 26 / reports 23 / proposals 11 / `latest.json`）。加えて、この階層の存在理由はクラウドエージェントがクローンしか読めないことにあるため、未追跡のままではクラウドへ届かず目的を果たさない。
+- 検証: `public-memory-scan` は scanned 13 / findings 0 / exit 0。機密検査を通したうえで staged にした。
+- 未了: `figma-gate.mjs` の配布済みコピーは再配布まで旧版のままである（[196] から継続）。
 ## [196] 2026-08-29 / Claude（`MyBrain/` の名前衝突を機械で止める）
 
 - owner指示: 共通Vaultの検討で洗い出した3件のうち、優先順位が高いものから対応するよう指示を受けた。最優先は `MyBrain/` の二義性である。

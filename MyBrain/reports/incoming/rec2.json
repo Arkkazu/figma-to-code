@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "verification-definitions-omit-the-deliverable-20260824",
+  "kind": "mistake",
+  "occurredOn": "2026-08-24",
+  "failureClass": "verification",
+  "recurrenceKey": "verification-definitions-omit-the-deliverable",
+  "promotability": "promotable",
+  "summary": "specとpage-coverageが、そのscopeが実装した当のもの（背景と補助ナビ）を1件も測っていないまま多数の測定がPASSし、close直前まで気づかなかった。page-coverageのinventoryはデザインのルート直下ノードを6件取りこぼしていたが、既存の検査はinventoryの網羅性をデザイン側と突き合わせないため素通りした。specの測定先URLがgateの検証URLと別物だった点も検出されなかった。",
+  "prevention": "checkpointを回す前に、そのscopeが実装した要素のセレクタがspecに存在することと、page-coverageのinventoryが凍結済みデザインmetadataのルート直下ノードをノードIDで全件含むことを機械的に突き合わせる。specのURLとmanifestの検証URLの一致も検査する。合格件数の多さは、実装した当のものを測った証拠にならない。",
+  "ruleTargets": [
+    "rules/figma-spec-pipeline.md"
+  ],
+  "verifierTargets": [
+    "templates/verify/figma-gate.mjs"
+  ]
+}
