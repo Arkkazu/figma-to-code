@@ -1247,26 +1247,43 @@ function assertProcessOutputGuards() {
   }
 }
 
-assertWorkflowPreflightGuards();
-assertStartDeclarationGuards();
-assertProcessOutputGuards();
-assertIdentityArgumentGuards();
-assertHeldReceiptBlocksPreflight();
-assertDirtyPreflightLeavesNoCoverageRuntime();
-assertResponsiveHtmlV12SchemaGuards();
-assertScopedNodeMapV13Guards();
-assertExistingResponsiveHtmlStillValidatesAtPreflight();
-assertPreflightDefersPlannedResponsiveHtmlTarget();
-assertResponsiveHtmlSourcesAreRequiredAfterPreflight();
-assertDeferredResponsiveHtmlStateIsFrozen();
-assertLegacyPageCoverageRuntimeIsRejected();
-assertResponsiveHtmlSingleDomStillGuardsLaterPhases();
-assertPreflightDraftGuardCases();
-assertLaterPhaseDraftGuards();
-assertReleaseCheckRecordGuards();
+// このE2Eは毎回100秒前後かかる（1ケースごとに使い捨てGitリポジトリを作り、実gateを起動するため）。
+// 従来は完了行まで一切出力が無く、2026-08-29 の独立検証は90秒で打ち切って「未合格・未確認」と報告した。
+// 実際には101秒でPASSしていた。無反応に見える時間を作らないよう、所要目安と各段の進捗を出す。
+const STEPS = [
+  ["workflow preflight guards", assertWorkflowPreflightGuards],
+  ["start declaration guards", assertStartDeclarationGuards],
+  ["process output guards", assertProcessOutputGuards],
+  ["identity argument guards", assertIdentityArgumentGuards],
+  ["held receipt vs scope conflict", assertHeldReceiptBlocksPreflight],
+  ["dirty preflight leaves no runtime", assertDirtyPreflightLeavesNoCoverageRuntime],
+  ["responsiveHtml v12 schema", assertResponsiveHtmlV12SchemaGuards],
+  ["scoped node-map v13", assertScopedNodeMapV13Guards],
+  ["existing responsiveHtml at preflight", assertExistingResponsiveHtmlStillValidatesAtPreflight],
+  ["deferred responsiveHtml target", assertPreflightDefersPlannedResponsiveHtmlTarget],
+  ["responsiveHtml sources after preflight", assertResponsiveHtmlSourcesAreRequiredAfterPreflight],
+  ["deferred responsiveHtml frozen", assertDeferredResponsiveHtmlStateIsFrozen],
+  ["legacy page-coverage runtime rejected", assertLegacyPageCoverageRuntimeIsRejected],
+  ["responsiveHtml single DOM later phases", assertResponsiveHtmlSingleDomStillGuardsLaterPhases],
+  ["preflight draft guards", assertPreflightDraftGuardCases],
+  ["later phase draft guards", assertLaterPhaseDraftGuards],
+  ["release-check record guards", assertReleaseCheckRecordGuards],
+];
+
+const startedAt = Date.now();
+const elapsed = () => `${((Date.now() - startedAt) / 1000).toFixed(0)}s`;
+console.log(
+  `figma-gate.e2e: 開始（${STEPS.length} 段 / 実測の目安 約100秒）。` +
+    "完了行 'figma-gate.e2e: PASS' が出るまで待つこと。途中で打ち切った場合は「打ち切り」であり、不合格ではない。"
+);
+
+STEPS.forEach(([label, step], index) => {
+  step();
+  console.log(`  [${String(index + 1).padStart(2, " ")}/${STEPS.length}] ${elapsed().padStart(4, " ")} ${label}`);
+});
 
 for (const root of [localWorkflowRoot, cloudWorkflowRoot, missingWorkflowRoot]) {
   rmSync(root, { recursive: true, force: true });
 }
 
-console.log(`figma-gate.e2e: PASS (${assertions} assertions)`);
+console.log(`figma-gate.e2e: PASS (${assertions} assertions, ${elapsed()})`);

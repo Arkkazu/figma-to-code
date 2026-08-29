@@ -264,10 +264,44 @@ function begin(scopeInputPath, stateInputPath) {
   console.log("PASS scope-lock begin: " + scope.scopeId + " with " + scope.allowedPaths.length + " allowed path(s).");
 }
 
+// blocked は行き止まりである。begin も amend も拒否するため、状態ファイルを見ただけでは
+// 「何をすれば再開できるか」が分からない。2026-08-29 の独立検証では、blocked の原因を
+// 既知の未実装欠陥と結び付けられず、直前に行った別作業の副作用と誤読された。
+// 何が起きたか・なぜ復帰できないか・次に誰へ何を求めるかを、出力側で名指しする。
+function blockedGuidance(state, action) {
+  const blocked = state.raw.blocked || {};
+  const paths = Array.isArray(blocked.paths) ? blocked.paths : [];
+  return [
+    "Scope lock is blocked; " + action + " is refused.",
+    "",
+    "  scopeId: " + state.scope.scopeId,
+    "  blocked at: " + (blocked.at || "(記録なし)"),
+    "  reason: " + (blocked.reason || "(記録なし)"),
+    "  out-of-scope paths: " + (paths.length > 0 ? paths.join(", ") : "(記録なし)"),
+    "",
+    "  **これは行き止まりである。** 次の2つはどちらも拒否される。",
+    "    begin  … 既存stateは不変のため拒否する",
+    "    amend  … blocked のscopeは修正できないため拒否する",
+    "  自動でrevertも再baselineもしない。エージェントの判断で回避してはならない。",
+    "",
+    "  reason が out-of-scope-path で、上記パスが**別scopeの正当な作業**である場合、",
+    "  これは既知の未実装欠陥である可能性が高い。scope lockのbaselineは",
+    "  figma-scope-lock.mjs の dirtySnapshot() がリポジトリ全体のdirty集合を取るため、",
+    "  宣言パスが1つも交差しない別scopeの編集でも blocked になる。",
+    "  該当訂正: rules/corrections.md 2026-08-25 concurrent-scope-blocked-by-repo-wide-baseline",
+    "  （同訂正は『blockedからの正規の復帰手順を用意する』ことも求めているが、未実装である）",
+    "",
+    "  次に行うこと: オーナーへ次の3点を示して判断を仰ぐ。",
+    "    1. 上記パスが別scopeの正当な作業か、このscopeの逸脱か",
+    "    2. 前者なら、既知欠陥による誤停止として新しいscopeを起こしてよいか",
+    "    3. 後者なら、逸脱をどう扱うか（revert / 承認してamend用の新scope）",
+  ].join("\n");
+}
+
 function assertEdit(stateInputPath, inputPaths) {
   if (inputPaths.length === 0) fail("assert requires at least one proposed edit path.");
   const state = loadState(stateInputPath);
-  if (state.raw.status !== "active") fail("Scope lock is blocked; do not edit until the owner resolves the scope violation.");
+  if (state.raw.status !== "active") fail(blockedGuidance(state, "editing"));
 
   inputPaths.forEach(function (inputPath, index) {
     const normalized = normalizeRelativePath(state.scope.repoPath, inputPath, "assert path[" + index + "]");
@@ -281,7 +315,7 @@ function assertEdit(stateInputPath, inputPaths) {
 
 function verify(stateInputPath) {
   const state = loadState(stateInputPath);
-  if (state.raw.status !== "active") fail("Scope lock is blocked; do not continue verification or editing.");
+  if (state.raw.status !== "active") fail(blockedGuidance(state, "verification"));
 
   const baselineMap = new Map(state.baseline.map(function (entry) {
     return [entry.path, entry.sha256];
@@ -339,7 +373,7 @@ function verify(stateInputPath) {
 function amend(stateInputPath, amendmentInputPath) {
   const state = loadState(stateInputPath);
   if (state.raw.status !== "active") {
-    fail("Blocked scope locks cannot be amended. Stop and obtain an owner decision before creating a new scope.");
+    fail(blockedGuidance(state, "amend"));
   }
 
   const amendmentPath = assertInside(state.scope.repoPath, resolve(amendmentInputPath), "Scope amendment file");

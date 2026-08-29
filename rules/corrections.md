@@ -1,3 +1,22 @@
+## 2026-08-29: verifier-output-not-self-explaining
+<!-- loop-log: {"id":"correction-verifier-output-not-self-explaining-20260829","kind":"correction","failureClass":"verifier-output-not-self-explaining","recurrenceKey":"verifier-output-not-self-explaining","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/correction-receipt.mjs","tools/figma-scope-lock.mjs","templates/verify/figma-gate.e2e.mjs"]} -->
+- 指摘：オーナー指示「codexが誤認しないようなルールにしないとだめだろ」。検証器の出力が、読み手に
+  正しい解釈を与えていない。独立検証で3件の誤認が同時に起きた。(1) `figma-gate.e2e.mjs` は101秒かかり
+  途中出力が無いため、90秒で打ち切った側が「未合格・未確認」と報告した。(2) 訂正受領証の
+  `Project correction log changed...` は**定常手順**（受領証は記録時のlog hashを固定し、訂正が入るたび
+  全件が失効する。実測115件中105通りのhash）だが、異常な停止と読まれた。(3) scope lockの `blocked` は
+  状態ファイルに `reason` と5パスがあるだけで、既知の未実装欠陥（`figma-scope-lock.mjs` の
+  `dirtySnapshot` がリポジトリ全体をbaselineにする。2026-08-25 `concurrent-scope-blocked-by-repo-wide-baseline`）
+  が原因であることも、`begin` と `amend` が両方拒否して復帰不能であることも出力に無い。
+- 今後：**読み手の注意深さに依存しない。出力そのものに解釈を持たせる。**検証器を書く・直すときは次を満たす。
+  - **失敗メッセージは「定常手順」か「異常」かを名乗る。**定常手順なら、そのまま貼れる復旧コマンドを併記する。
+  - **行き止まりは行き止まりと出力する。**復帰手段が無い、または特定の手段だけが有効なら、
+    どのコマンドが拒否されるかを名指しし、次に誰へ何を求めるかまで書く。既知欠陥が原因なら
+    その訂正IDを出力に含める。
+  - **10秒を超える検証器は、開始時に所要目安を出し、途中で進捗を出す。**無反応に見える時間を作らない。
+  - **打ち切りは「未合格」ではない。**時間で打ち切った場合は「打ち切り（N秒時点、完了行なし）」と書き、
+    合否を断定しない。断定するなら完走させる。
+
 ## 2026-08-29: git-hook-scope-ambiguous
 <!-- loop-log: {"id":"correction-git-hook-figma-vs-receipt-20260829","kind":"correction","failureClass":"git-hook-scope-ambiguous","recurrenceKey":"git-hook-scope-ambiguous","action":"clarify","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md","rules/loop-execution.md"],"verifierTargets":[]} -->
 - 指摘：「Git hookでは実行しない」の対象が、規則本文と実装で食い違っていた。2026-07-18 の訂正は

@@ -96,7 +96,35 @@ try {
   run(["verify", amendStatePath], 1);
   const blockedState = JSON.parse(readFileSync(amendStatePath, "utf8"));
   if (blockedState.status !== "blocked") throw new Error("Expected blocked state after out-of-scope change.");
-  run(["amend", amendStatePath, amendmentPath], 1);
+  const blockedAmend = run(["amend", amendStatePath, amendmentPath], 1);
+
+  // blocked は行き止まりであり、状態ファイルを見るだけでは再開手段の有無が分からない。
+  // 2026-08-29 の独立検証で、blocked の原因を既知の未実装欠陥と結び付けられず、
+  // 直前の別作業の副作用と誤読された。出力が自分で説明することを固定する。
+  // amend / assert / verify のどれで当たっても同じ案内が出ること。
+  const guidanceMarkers = [
+    "これは行き止まりである",
+    "begin",
+    "amend",
+    "concurrent-scope-blocked-by-repo-wide-baseline",
+    "オーナーへ次の3点を示して判断を仰ぐ",
+    "unexpected.md",
+  ];
+  const blockedCommands = [
+    ["amend", blockedAmend],
+    ["verify", run(["verify", amendStatePath], 1)],
+    ["assert", run(["assert", amendStatePath, "outside.md"], 1)],
+  ];
+  for (const [label, result] of blockedCommands) {
+    const output = (result.stdout || "") + (result.stderr || "");
+    for (const marker of guidanceMarkers) {
+      if (!output.includes(marker)) {
+        throw new Error(
+          "blocked scope lock (" + label + ") must explain itself; missing " + JSON.stringify(marker) + "\noutput:\n" + output
+        );
+      }
+    }
+  }
 
   const badScopePath = join(root, "MyBrain", "verify", "scope-glob.json");
   writeJson(badScopePath, {

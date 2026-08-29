@@ -60,7 +60,30 @@ export function validateCorrectionReceipt(root, receiptPathValue) {
   const expectedLogHash = requireString(receipt.projectCorrectionLogSha256, "Owner correction receipt.projectCorrectionLogSha256");
   const actualLogHash = sha256(logPath.absolutePath);
   if (expectedLogHash !== actualLogHash) {
-    throw new Error("Project correction log changed after the owner correction receipt was recorded. Re-record the receipt before preflight.");
+    // これは異常ではなく定常手順である。受領証は記録時点の訂正ログhashを固定するため、
+    // 訂正が1件でも追記・退避されると既存の受領証は**すべて**失効する。
+    // 2026-08-29 実測（rpa-technologies-theme）: 受領証115件が105通りのhashを固定しており、
+    // 現在のログと一致するものは0件だった。にもかかわらず、この文言だけを見た独立検証は
+    // 「scopeが進めない停止経路」と誤読した。何が起きたかと、次に打つコマンドを出す。
+    throw new Error(
+      [
+        "Project correction log changed after the owner correction receipt was recorded.",
+        "",
+        "  これは定常手順であり、異常ではない。受領証は記録時点の訂正ログhashを固定するため、",
+        "  訂正が追記・退避されるたびに既存の受領証は失効する。scopeの欠陥ではない。",
+        "",
+        `  受領証: ${receiptPath.relativePath}`,
+        `  訂正ログ: ${logPath.relativePath}`,
+        `  受領証が固定するhash: ${expectedLogHash}`,
+        `  現在のhash:           ${actualLogHash}`,
+        "",
+        "  復旧（そのまま実行できる）:",
+        `    node MyBrain/verify/correction-receipt.mjs record ${receiptPath.relativePath} ${logPath.relativePath} ${id} ${classification}`,
+        "",
+        "  再記録が担保するのは「この id の訂正がログに存在し、記録以降ログが変わっていない」ことまでで、",
+        "  オーナー承認そのものは証明しない。訂正の内容に合意が要る場合はオーナーへ確認すること。",
+      ].join("\n")
+    );
   }
   requireString(receipt.recordedAt, "Owner correction receipt.recordedAt");
   return {
