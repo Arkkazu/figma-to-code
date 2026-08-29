@@ -1247,6 +1247,44 @@ function assertProcessOutputGuards() {
   }
 }
 
+// 正本リポジトリのルートで実行すると、案件側を指す `MyBrain/...` が正本側の公開メモリ
+// `MyBrain/`（2026-08-22 追加）へ解決される。`MyBrain/README.md` の「ここに verify/ を作るな」
+// だけでは読み手の注意に頼ることになるため、機械で止まることをここで確かめる。
+function assertPlaybookRootGuard() {
+  const playbookRootFixture = createWorkflowPreflightStub("local");
+  const projectFixture = createFixture("figma-gate-playbook-root-");
+  try {
+    // cwd が正本ルートと一致する呼び出しは、サブコマンドを問わず落ちる。
+    for (const args of [
+      ["start"],
+      ["preflight", "MyBrain/verify/gate-x.json"],
+      ["close", "MyBrain/verify/gate-x.json"],
+    ]) {
+      reject(args, "not at the figma-to-code playbook root", playbookRootFixture, {
+        FIGMA_TO_CODE_ROOT: playbookRootFixture,
+      });
+    }
+    // 落ちる前に正本側を触っていない（`MyBrain/` を作らない）。
+    assert(
+      !existsSync(join(playbookRootFixture, "MyBrain")),
+      "the playbook-root guard creates no MyBrain/ in the playbook root"
+    );
+    // 案件ルートでの通常の呼び出しは、この検査で落ちない。
+    const started = gate(["start"], projectFixture.root);
+    assert(started.result.status === 0, "start still succeeds at a project repository root");
+    assert(
+      !started.output.includes("not at the figma-to-code playbook root"),
+      "the playbook-root guard does not fire at a project repository root"
+    );
+    // `versions` は正本側で検証器の版を確認する用途があるため対象外にしている。
+    const versions = gate(["versions"], playbookRootFixture, { FIGMA_TO_CODE_ROOT: playbookRootFixture });
+    assert(versions.result.status === 0, "versions stays usable at the playbook root");
+  } finally {
+    rmSync(projectFixture.root, { recursive: true, force: true });
+    rmSync(playbookRootFixture, { recursive: true, force: true });
+  }
+}
+
 // このE2Eは毎回100秒前後かかる（1ケースごとに使い捨てGitリポジトリを作り、実gateを起動するため）。
 // 従来は完了行まで一切出力が無く、2026-08-29 の独立検証は90秒で打ち切って「未合格・未確認」と報告した。
 // 実際には101秒でPASSしていた。無反応に見える時間を作らないよう、所要目安と各段の進捗を出す。
@@ -1254,6 +1292,7 @@ const STEPS = [
   ["workflow preflight guards", assertWorkflowPreflightGuards],
   ["start declaration guards", assertStartDeclarationGuards],
   ["process output guards", assertProcessOutputGuards],
+  ["playbook root guard", assertPlaybookRootGuard],
   ["identity argument guards", assertIdentityArgumentGuards],
   ["held receipt vs scope conflict", assertHeldReceiptBlocksPreflight],
   ["dirty preflight leaves no runtime", assertDirtyPreflightLeavesNoCoverageRuntime],

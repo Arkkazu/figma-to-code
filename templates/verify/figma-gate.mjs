@@ -1892,6 +1892,13 @@ function runGitLines(gitArgs, label) {
     .filter(Boolean);
 }
 
+// Windowsはドライブレターの大小が揺れる（cwdは c:\ 、git は C:\ を返すことがある）。
+// 大小だけの差でFAILさせない。Linux/macOSはパスが大小を区別するため比較を変えない。
+function normalizePathForComparison(value) {
+  const normalized = resolve(value).replace(/\\/g, "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
 function assertGitRepositoryRoot() {
   const result = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: repoRoot, encoding: "utf8", shell: false });
   if (result.error || result.status !== 0) {
@@ -1899,15 +1906,25 @@ function assertGitRepositoryRoot() {
   }
   const top = result.stdout.trim().replace(/\\/g, "/");
   if (!top) fail("SPEC FAIL: figma-gate requires a Git working tree to prove that edits happened after preflight.");
-  // Windowsはドライブレターの大小が揺れる（cwdは c:\ 、git は C:\ を返すことがある）。
-  // 大小だけの差でFAILさせない。Linux/macOSはパスが大小を区別するため比較を変えない。
-  const normalizePath = (value) => {
-    const normalized = resolve(value).replace(/\\/g, "/");
-    return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-  };
-  if (normalizePath(top) !== normalizePath(repoRoot)) {
+  if (normalizePathForComparison(top) !== normalizePathForComparison(repoRoot)) {
     fail(`SPEC FAIL: figma-gate must run at the Git repository root. repoRoot=${repoRoot} gitRoot=${resolve(top)}`);
   }
+}
+
+// この検証器は「案件リポジトリのルートで動く」前提で、案件側の `MyBrain/...` を cwd から
+// 解決する（例: closedScopeFileHashes の `MyBrain/verify/checkpoints`）。
+// 2026-08-22 に figma-to-code 自身へクラウドエージェント用の公開メモリ `MyBrain/` を置いたため、
+// `MyBrain/` という名前が1つのリポジトリ内で2義になった。正本リポジトリのルートで実行すると、
+// 案件側を指すはずのパスが正本側の公開メモリへ解決され、`MyBrain/verify/` を正本に作りかねない。
+// `MyBrain/README.md` は「ここに verify/ を作るな」と書いているが、それは読み手の注意に頼る対策で、
+// 機械では止まらなかった（共通Vault rules/corrections.md 2026-08-29）。ここで fail-closed にする。
+function assertNotPlaybookRoot() {
+  if (normalizePathForComparison(repoRoot) !== normalizePathForComparison(FIGMA_TO_CODE_ROOT)) return;
+  fail(
+    `SPEC FAIL: figma-gate must run at a project repository root, not at the figma-to-code playbook root (${resolve(repoRoot)}). ` +
+      "案件側を指す MyBrain/... が、正本リポジトリの公開メモリ MyBrain/ へ解決される。" +
+      "案件リポジトリへ移動してから実行する。正本の位置が既定と異なる環境では FIGMA_TO_CODE_ROOT で正本の位置を指定する。"
+  );
 }
 
 // P-3 comparison records the identity observed by the real preflight. This adds
@@ -3254,6 +3271,10 @@ function releaseCheck(manifestPath, releaseRecordPathArg) {
   });
   pass("Release check completed. Record the passed release record in STATE.md before reporting public completion.");
 }
+
+// `versions` は検証器自身の版を出すだけで、案件側の `MyBrain/...` を解決しない。
+// 正本リポジトリで版を確認する用途があるため、この1つだけ対象外にする。
+if (command !== "versions") assertNotPlaybookRoot();
 
 if (command === "start") {
   start();

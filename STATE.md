@@ -24,6 +24,15 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [196] 2026-08-29 / Claude（`MyBrain/` の名前衝突を機械で止める）
+
+- owner指示: 共通Vaultの検討で洗い出した3件のうち、優先順位が高いものから対応するよう指示を受けた。最優先は `MyBrain/` の二義性である。
+- 事実: 2026-08-22 に本リポジトリ直下へクラウドエージェント用の公開メモリ `MyBrain/` を置いたため、`MyBrain/` が「本リポジトリの公開メモリ」と「案件側の私的メモリ」の2つを指すようになった。`figma-gate.mjs` は `repoRoot = process.cwd()` を基準に案件側の `MyBrain/verify/checkpoints` 等を解決するため（`closedScopeFileHashes`）、本リポジトリのルートで実行すると案件側パスが公開メモリ側へ解決される。`assertGitRepositoryRoot` は本リポジトリもGitルートなので通過する。`MyBrain/README.md` は「ここに `verify/` を作るな」と書いていたが、これは読み手の注意に頼る対策で機械では止まらなかった（共通Vault `rules/corrections.md` 2026-08-29「読み手の注意深さに頼る出力を作ったこと自体が原因である」）。
+- 適用: `assertNotPlaybookRoot()` を追加し、`repoRoot` が `FIGMA_TO_CODE_ROOT` と一致する場合はコマンド分岐の前に fail-closed する。案件側パスを解決しない `versions` だけを対象外とした。Windowsのドライブレター差を吸収する正規化は `assertGitRepositoryRoot` と重複していたため `normalizePathForComparison` へ切り出して共用した。`MyBrain/README.md` に機械強制であることと負のテストの所在を追記した。
+- 検証: `figma-gate.e2e` PASS（467 assertions, 191s。従来454から新規13）。新規段「playbook root guard」は `start` / `preflight` / `close` の3コマンドが落ちること、落ちる前に正本へ `MyBrain/` を作らないこと、案件ルートでは発火しないこと、`versions` は使えることを確認する。実環境でも `node templates/verify/figma-gate.mjs start` が本リポジトリのルートで exit 1、`versions` は exit 0 を返した。
+- **効くことを確認した**: 呼び出しを `if (false && …)` で無効化すると、E2Eは4段目「playbook root guard」で `start rejects invalid invocation` により停止した。確認後に復元し、復元後の実行で同じ fail-closed メッセージが出ることを再確認した。
+- 併走検査: `doc-command-audit` checked 37 / violations 0、`vendored-verifier-audit` findings 0、`public-memory-scan` findings 0。
+- 未了: (1) 本変更の独立レビューが未了。別contextで受けること。(2) `figma-gate.mjs` は案件へ配布する検証器であり、既存の配布済みコピーは再配布まで旧版のままである。(3) `MyBrain/reports/` 配下の生成物8件が未追跡かつ `.gitignore` 未登録で、`git add -A` で意図せず取り込まれる経路が残っている（次の対応候補）。
 ## [195] 2026-08-22 / Codex（workflow-preflightのローカル誤判定修正）
 
 - owner指示: 実際にローカル環境である案件セッションを、`CODEX_CI=1` だけで `cloud-restricted` と判定した不整合を修正するよう指示を受けた。

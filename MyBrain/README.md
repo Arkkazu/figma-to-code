@@ -53,5 +53,11 @@ owner, not by its name.
 Do not create `verify/`, gate manifests, spec files, or node maps under this
 directory, and do not resolve a project-side path against this repository.
 
+This is enforced by machine, not by attention. `templates/verify/figma-gate.mjs`
+refuses every subcommand except `versions` when its working directory equals
+`FIGMA_TO_CODE_ROOT`, because the project-side `MyBrain/...` paths it resolves
+from the working directory would land in this public-memory directory. The
+negative test lives in `figma-gate.e2e.mjs` under `playbook root guard`.
+
 The repository root `WORKFLOW.md` is the only execution rulebook.
 `MyBrain/` stores public memory and its content policy only.
