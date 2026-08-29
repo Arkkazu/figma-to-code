@@ -238,13 +238,17 @@ writeFileSync(resolvedSummaryPath, JSON.stringify(summary, null, 2) + "\\n", "ut
 
 // WORKFLOW.md「着手前ゲート」の5点を受領証にしたもの。manifestと突き合わせるので、
 // fileKey / nodeId / specPath はフィクスチャのmanifestと一致させる必要がある。
+// declaredAt は固定値にしない。着手宣言は「いま着手する」記録であり、preflight は 24時間より
+// 古い宣言を落とす（2026-08-29 追加）。固定日付にすると、その日を過ぎた瞬間に全ケースが落ちる。
+const fixtureDeclaredAt = new Date().toISOString();
+
 function validStartDeclaration() {
   return {
     version: 1,
     scopeId: "fixture-gate",
-    declaredAt: "2026-08-25T00:00:00.000Z",
+    declaredAt: fixtureDeclaredAt,
     ownerInstruction: "fixture: ファーストビューをFigmaどおりに実装する（着手宣言の検査用）",
-    environmentPreflight: { mode: "local", checkedAt: "2026-08-25T00:00:00.000Z" },
+    environmentPreflight: { mode: "local", checkedAt: fixtureDeclaredAt },
     figma: {
       fileKey: "fixture-file",
       nodeIds: { pc: ["fixture-pc-page-root"], sp: ["fixture-sp-page-root"] },
@@ -1174,6 +1178,32 @@ function assertStartDeclarationGuards() {
       expected: "declaredAt must be an ISO 8601 timestamp",
       mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.declaredAt = "きのう"; }),
     },
+    // 2026-08-29 追加。着手宣言を「ゲートを通す書類」として使い回す経路を塞ぐ。
+    // 実測（rpa-technologies-theme）: 新しい依頼に対し、3日前の依頼文と3日前の日付を書いた
+    // 宣言が作られた。形式はすべて満たすが、目の前の依頼を表していない。
+    {
+      label: "declaredAtが24時間より古い（前回の宣言の使い回し）",
+      expected: "着手宣言は着手時点の記録なので、24時間より古い宣言で preflight は通せない",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => {
+        value.declaredAt = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+      }),
+    },
+    {
+      label: "declaredAtが未来（時計をずらして鮮度検査を通す）",
+      expected: "着手宣言は着手時点の記録であり、未来の日付では作れない",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => {
+        value.declaredAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+      }),
+    },
+    {
+      label: "ownerInstructionが別scopeの宣言の写し",
+      expected: "別scopeの依頼文を写している",
+      mutate: (fixture) => {
+        const other = validStartDeclaration();
+        other.scopeId = "another-scope-declaration";
+        writeJson(join(fixture.directory, "start-another-scope.json"), other);
+      },
+    },
   ];
 
   for (const testCase of cases) {
@@ -1196,7 +1226,7 @@ function assertStartDeclarationGuards() {
     const state = readJson(resolveActiveReceiptPath(fixture.root));
     assert(state.startDeclarationSha256 === before, "preflight freezes the start declaration hash");
     assert(state.startDeclarationPath === declarationRelativePath, "preflight records the start declaration path");
-    assert(state.startDeclaredAt === "2026-08-25T00:00:00.000Z", "preflight records when the scope was declared");
+    assert(state.startDeclaredAt === fixtureDeclaredAt, "preflight records when the scope was declared");
 
     mutateJson(declarationPath, (value) => { value.ownerInstruction = "fixture: 宣言をpreflight後に書き換えた（凍結違反の検査）"; });
     reject(["section-start", fixture.manifestRelativePath, "fixture-section"], "start declaration changed after preflight", fixture.root);

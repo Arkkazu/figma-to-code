@@ -665,8 +665,59 @@ function validateStartDeclaration(scope, context) {
   }
 
   const declaredAt = requireString(document.declaredAt, `${label}.declaredAt`);
-  if (Number.isNaN(Date.parse(declaredAt))) {
+  const declaredAtMs = Date.parse(declaredAt);
+  if (Number.isNaN(declaredAtMs)) {
     fail(`${label}.declaredAt must be an ISO 8601 timestamp; got ${declaredAt}.`);
+  }
+
+  // 着手宣言は「いま着手する」ことの記録である。したがって preflight の直前にしか作れない。
+  //
+  // 2026-08-29 実測（rpa-technologies-theme）: 新しい依頼を受けたエージェントが、3日前の
+  // 依頼文と3日前の日付を書いた宣言を作って再preflightを通そうとした。形式はすべて満たすが、
+  // 目の前の依頼を表していない。着手宣言が「着手の記録」ではなく「ゲートを通す書類」になると、
+  // これが担保している5点は意味を失う。
+  //
+  // 鮮度で落とす。未来日付も落とす（時計をずらして通す経路を塞ぐ）。
+  const nowMs = Date.now();
+  const declarationMaxAgeMs = 24 * 60 * 60 * 1000;
+  if (declaredAtMs > nowMs + 5 * 60 * 1000) {
+    fail(
+      `${label}.declaredAt is in the future: ${declaredAt}. 着手宣言は着手時点の記録であり、未来の日付では作れない。`
+    );
+  }
+  if (nowMs - declaredAtMs > declarationMaxAgeMs) {
+    const ageHours = Math.floor((nowMs - declaredAtMs) / (60 * 60 * 1000));
+    fail(
+      `${label}.declaredAt is ${ageHours} hours old (${declaredAt}). 着手宣言は着手時点の記録なので、24時間より古い宣言で preflight は通せない。\n` +
+        "  いまの依頼で着手し直すこと。`npm run figma:gate -- start` を実行し、\n" +
+        `  ${declarationPath.relativePath} の ownerInstruction を**今回オーナーが実際に言ったこと**へ、` +
+        "declaredAt を現在時刻へ書き直してから preflight する。\n" +
+        "  前回の宣言を日付だけ変えて使い回さない。scopeの目的が変わっているなら scope から作り直す。"
+    );
+  }
+
+  // 別scopeの宣言をそのまま写す経路も塞ぐ。scopeId は一致検査があるが、依頼文は素通りする。
+  // 同じ ownerInstruction を持つ別scopeの宣言が案件内に在るなら、それは写しである。
+  const declarationDirectory = dirname(declarationPath.absolutePath);
+  if (existsSync(declarationDirectory)) {
+    for (const name of readdirSync(declarationDirectory)) {
+      if (!/^start-.*\.json$/.test(name)) continue;
+      const otherPath = resolve(declarationDirectory, name);
+      if (otherPath === declarationPath.absolutePath) continue;
+      let other = null;
+      try {
+        other = JSON.parse(readFileSync(otherPath, "utf8"));
+      } catch {
+        continue; // 読めない宣言は「無い」として扱う。読めないものを根拠にしない。
+      }
+      if (typeof other?.ownerInstruction !== "string") continue;
+      if (other.ownerInstruction.trim() === ownerInstruction.trim() && other.scopeId !== scopeId) {
+        fail(
+          `${label}.ownerInstruction is identical to another scope's declaration (${name}, scopeId=${other.scopeId}). ` +
+            "別scopeの依頼文を写している。今回オーナーが実際に言ったことを書く。"
+        );
+      }
+    }
   }
 
   return {
@@ -2172,7 +2223,20 @@ function start() {
   for (const item of checklist) console.log(`  ${item}`);
   console.log(`\n[3] 停止・未確認として報告する条件（${stopConditions.length}件）— どれかに当たったら進めない`);
   for (const condition of stopConditions) console.log(`  - ${condition}`);
-  console.log("\n[4] 次に実行するコマンド");
+  // 着手宣言は「ゲートを通す書類」ではなく「いま着手することの記録」である。
+  // 2026-08-29 実測（rpa-technologies-theme）: 新しい依頼に対し、3日前の依頼文と3日前の日付を
+  // 書いた宣言が作られ、しかも**今回直すべきファイルが outOfScopePaths に入っていた**。
+  // 形式は満たすが、その宣言のまま進めると依頼は構造的に実行不能になる。
+  // 書く前にこの3点を目に入れる。preflight 側でも declaredAt の鮮度と依頼文の写しは落とす。
+  console.log("\n[4] 着手宣言を書くときの3点（MyBrain/verify/start-<scope-id>.json）");
+  console.log("  1. ownerInstruction は**今回オーナーが実際に言ったこと**を書く。");
+  console.log("     前回の宣言や別scopeの依頼文を写さない。写しは preflight で落ちる。");
+  console.log("  2. declaredAt は**いまの時刻**を書く。24時間より古い宣言では preflight を通せない。");
+  console.log("  3. outOfScopePaths に、**今回の依頼を実現するために触る必要があるファイルを入れない**。");
+  console.log("     入れた時点で、その依頼はこのscopeでは実行不能になる。");
+  console.log("     触る必要があるなら changeTargets へ入れるか、scope を分けてオーナーに確認する。");
+
+  console.log("\n[5] 次に実行するコマンド");
   console.log("  node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local");
   console.log("  npm run figma:gate -- preflight <manifest.json> --implementation-actor <actor> --implementation-context-id <context>");
   console.log("\nFIGMA GATE: start は工程を出力しただけで、preflight の代わりにならない。編集はまだ許可されていない。");
