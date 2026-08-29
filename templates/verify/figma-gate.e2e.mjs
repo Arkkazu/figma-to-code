@@ -26,8 +26,31 @@ function assert(condition, label) {
 // 上位層 WORKFLOW.md に依存せずに、gateが判定へ委ねていることだけを検査する。
 // 工程と停止条件の正本。stubへは実物を複製する。合成した見出しを置くと、正本側で節が
 // 改名・移動したときにこのE2Eが素通りしてしまうため（gateは正本のMarkdownから抽出する）。
-const playbookRoot = resolve(dirname(fixturePath), "..", "..");
 const PLAYBOOK_PROCESS_DOCS = Object.freeze(["WORKFLOW.md", join("rules", "figma-spec-pipeline.md")]);
+
+// 正本の所在。正本リポジトリ内で走るときは ../.. がそれにあたるが、このE2Eは案件の
+// MyBrain/verify/ へ配布される。配布後は ../.. が案件ルートを指し、そこに WORKFLOW.md は
+// 無い（2026-08-29 実測：配布後 e2e が ENOENT で落ち、verifier-distribute が巻き戻した）。
+// gate 本体と同じ規則で解決する（FIGMA_TO_CODE_ROOT、既定 C:\AI\figma-to-code）。
+// 読めない環境で「工程を検査したことにして」通さないよう fail-closed とする。
+function resolvePlaybookRoot() {
+  const candidates = [
+    process.env.FIGMA_TO_CODE_ROOT,
+    resolve(dirname(fixturePath), "..", ".."),
+    "C:\\AI\\figma-to-code",
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string" || candidate.trim() === "") continue;
+    const root = resolve(candidate);
+    if (PLAYBOOK_PROCESS_DOCS.every((relativePath) => existsSync(join(root, relativePath)))) return root;
+  }
+  throw new Error(
+    `fixture failed: 工程と停止条件の正本が見つからない（${PLAYBOOK_PROCESS_DOCS.join(" / ")}）。` +
+      "FIGMA_TO_CODE_ROOT で正本の位置を指定する。"
+  );
+}
+
+const playbookRoot = resolvePlaybookRoot();
 
 function copyPlaybookProcessDocs(root) {
   for (const relativePath of PLAYBOOK_PROCESS_DOCS) {
