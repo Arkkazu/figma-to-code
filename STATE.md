@@ -24,6 +24,14 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [195] 2026-08-22 / Codex（workflow-preflightのローカル誤判定修正）
+
+- owner指示: 実際にローカル環境である案件セッションを、`CODEX_CI=1` だけで `cloud-restricted` と判定した不整合を修正するよう指示を受けた。
+- 原因: `workflow-preflight.mjs` は上位層WORKFLOWの実読を判定の正本と規定していたが、実装は補助シグナルの存在だけでも `cloud-restricted` にしていた。
+- 適用: モード判定を上位層WORKFLOWの可読性だけに基づく形へ修正し、補助シグナルはJSON診断出力として保持した。E2Eは補助シグナル付きかつ上位層可読のケースを `local` と固定した。Windowsで子プロセスを起動できるよう、E2Eフィクスチャへ `SystemRoot` を渡した。
+- 検証: `workflow-preflight.e2e.mjs` はPASS。実環境の `workflow-preflight --assert-local` は `CODEX_CI=1` を診断出力に残したまま `local`・exit 0 を返した。
+- 記録: MCPアクセスエラーを実アカウント権限と誤断定した失敗は、`figma-log-promote record` で記録した。新しい失敗分類のため昇格提案は `waiting-human` であり、正本ルールへの自動昇格は行っていない。
+
 ## [194] 2026-08-12 / Codex（P-3 R4 return allocation v2 authorityのowner承認最終化）
 
 - owner承認: v4 design SHA-256 `8c4fb215a0a3ead792fc3742eb336d45c9517501b40fcb5e59f1d807993d2313`を採用し、2/10/12/0/4/0の28 target完全分割、hero-laurelのsequence 3単独所有、v5 return plan／protocol v2／journal v2束縛だけを最終化する権限を受けた。role packet、delivery／launch、implementation、browser/Figma測定、P-11解除は承認範囲外である。
@@ -1389,3 +1397,222 @@
   - 対応: 規範文書のコマンド行17箇所を `C:/AI/figma-to-code/...` へ変更（PowerShell・cmd・Git Bashのいずれでも通る）。散文中の所在表記はWindows表記のまま残した。
   - 再発防止: `tools/gate-command-doc-audit.mjs` を `tools/doc-command-audit.mjs` へ改名し、検査を2つにした。(1) ゲート起動の実引数契約、(2) `node` / `npm` のコマンド行にバックスラッシュ絶対パスが無いこと。コマンド行だけを見るため、散文中のパス表記は誤検出しない。
   - 実測: `doc-command-audit.e2e.mjs` に正負（バックスラッシュのコマンド行＝違反、`C:/` のコマンド行と散文中のWindowsパス＝違反でない）を追加してPASS。正本自身の exit 0 も回帰として維持。
+
+- [2026-08-24 claude / 入口のクラウド分岐] **雛形にクラウド分岐が無く、案件が入口を手編集して塞いでいた。雛形へ統合した。**
+  - 発端: オーナーがCodexへ「Figma URLを渡してデザインどおりに実装する工程」を尋ねたところ、scope lock、page coverage、provenance、report-readiness-audit など機械検査がほぼ全て欠けた要約が返った。原因を「Codexが規則を守らない」ではなく配送で切り分けた。
+  - 実測1: 案件入口が `--check` で **drift**。本文は「`MyBrain/WORKFLOW.md` を読め」＋クラウド分岐の手書きで、雛形が持つ起動条件（最初のツール実行で環境判定 / 着手前ゲート5点まで編集禁止）が無い。祖先チェーン上の入口はテーマディレクトリの1枚のみ。
+  - 実測2: 案件側 `MyBrain/verify/figma-gate.mjs` は 2074行、雛形は 2925行。**851行分の検査が案件に無く**、`workflow-preflight` 起動の実装も 0件。つまり入口とゲートの両方で強制が切れていた。`figma-page-coverage.mjs`（483/524）、`gate-contract-audit.mjs`（193/234）、`verify-layout.mjs`、`checkpoint-capture.mjs` も旧世代。
+  - **雛形側の欠陥**: 旧雛形は「非0終了、またはJSON判定が得られない場合は着手してはいけません」で停止するだけだった。案件リポジトリのクラウドセッションには `C:/AI/figma-to-code` 自体が無いため必ずここに落ち、クラウドで許可された作業（リポジトリ内で完結するlint・静的整合確認・独立レビュー）にも入れない。案件はこの穴を入口の手編集で塞ぎ、その結果 drift した。**案件が規則に従わなかったのではなく、雛形に受け皿が無かった。**2026-08-21 の引数契約、2026-08-22 のシェル可搬性に続き、同じ構造の欠陥の3件目である。
+  - 変更: 雛形を `mode` での分岐に書き換えた。`local` は従来どおり着手前ゲート5点。`cloud-restricted`（および `mode` を得られない場合）は、案件クローンで唯一読める `MyBrain/cloud/` を規則の所在とし、ローカル実測・Figma照合・デプロイはローカルへ差し戻す。`MyBrain/cloud/` が無い案件は着手しない。13行→15行。入口はポインタのままで、規則本文は複製していない（2026-08-22「入口の縮小」の方針を維持）。
+  - 判定方法も是正された: 案件の手書き分岐は「`MyBrain/WORKFLOW.md` が存在するか」の単一シグナル判定で、`WORKFLOW.md`「クラウド判定の正本は上位層の `WORKFLOW.md` を実際に読めるかとする」に反していた。雛形へ寄せたことで正本の判定方式に揃った。
+  - 実測: `doc-command-audit` 38件 violations 0 / `project-entry-install.e2e` PASS / `doc-command-audit.e2e` PASS / `workflow-preflight.e2e` PASS / `public-memory-scan` findings 0。案件へ再設置し `--check` が `current` / exit 0。案件cwdから `workflow-preflight` が `mode: "local"`（vault と web-development の両WORKFLOWを `ok` で解決）。**2026-08-21 に「未実施」としていた案件側での実設置と `local` 判定の実測は、これで済んだ。**
+  - 未実施: 独立批評（LOOPの批評役 codex）。案件側 `MyBrain/verify/` の851行同期は別scope。入口・検証キットの世代差を定期検出する仕組みは未導入で、今回も誰も気づいていなかった。案件側での `npm run figma:gate -- preflight` 実測は検証キット更新後に行う。
+
+- [2026-08-24 kazu指示 / 相互チェック体制の担当固定を廃止] **起草役=claude／批評役=codex（およびその逆）の二者固定をやめた。**
+  - 指示の理由: codexの独立批評が二重チェックとして機能していない、というオーナーの判定。
+  - 変更: `LOOP.md` の4箇所（agents 2行、手順3、手順4）からエージェント名を外し、「開始時にkazuが指定する」「起草役との兼任を禁止」「同一エージェントを充てる場合は起草に使ったcontextとは別のcontext」へ書き換えた。特定エージェントを既定の批評役として固定しない旨を明記。
+  - **独立検証の要件そのものは変更していない。**`spec/12-loop-design.md` §の「reviewerは実装役とactorまたはcontextの少なくとも一方が異なる。両方が同じならpreflightは拒否する」は既に機械判定であり、cross-agentを要求していない。したがって別contextのClaudeセッションで要件を満たせる。page coverageの独立レビュー、component decisionのnew判定、log promotionの独立レビューも要件は無傷。
+  - 影響範囲の実測: 名指しが残っていたのは本 `LOOP.md` だけだった。案件側 `LOOP.md` は 2026-07-15 に担当者名の固定を廃止済み、`templates/LOOP.md` と `spec/12-loop-design.md` は元からエージェント非依存。`rules/loop-execution.md`「担当者」は既に「特定のエージェントへ固定しない」と規定しており、本 `LOOP.md` の名指しだけがこれと字面で衝突していた。今回で解消。
+  - 触れていないもの: `spec/02-tokens.md` と `spec/10-fix-order.md` の「独立批評（codex）待ち」は当時の履歴記録であり、規則ではないため書き換えない。
+  - 記録: 共通Vault `rules/corrections.md` へ 2026-08-24 として追記（39件 / 200行、上限内）。あわせて重複していた 2026-07-04 の1行を `corrections-archive.md` へ退避した。
+  - 留意点として記録する: 過去にcodexの独立レビューが実際に欠陥を検出した記録が案件側に2件ある（2026-08-01 H3-01のtext leaf未降下、2026-08-02 page coverageの `deferred` 24件が先行scopeの記述のままで承認却下）。同一モデルの別contextは見落としの相関が高く、cross-modelより検出幅が狭くなる可能性がある。この判断はオーナーのものであり、実運用で検出漏れが出た場合は再検討の材料とする。
+
+- [2026-08-24 claude / 実行不能コマンドの検出範囲を広げた] **独立批評の指摘4件を実物で検証し、有効だった4件を修正した。検査を2つ足し、走査範囲を案件へ広げた。**
+  - 経緯: Figma実装工程の手順書に対する独立批評。6件の指摘のうち4件が有効、2件が誤りだった。誤りは「イテレーション上限30 / 同一セクション3連続不合格は正本の表現でない」（案件 `LOOP.md` 停止条件に逐語で存在。`spec/10-fix-order.md` の未収束判定と混同）と「最終承認はオーナーは一律の必須でない」（案件 `LOOP.md` ゴール条件の判定方法5に明記）。
+  - **実測した欠陥（3・4件目）**: `page-complete` は案件gateにも `templates/verify/figma-gate.mjs` にも実装が無い（両方0件）のに、案件 `LOOP.md` が3箇所、案件 `MyBrain/rules/corrections.md` が1箇所で判定手段として指定していた。実在するのは `preflight / checkpoint / section-start / section-close / close / release-check` の6つ。あわせて `section-close` が `if (!args[2]) fail("section-close requires a sectionId")` で必須にしている第2引数を欠いた記述も見つかった。`doc-command-audit` は引数フラグ契約とパス表記しか見ておらず、**存在しないサブコマンドと必須オペランドの欠落を検査していなかった**。走査範囲も本リポジトリ内だけで、規則を写した案件文書は対象外だった。
+  - 検査の追加: `unknown-gate-subcommand` と `missing-gate-operand` を追加し、検査を4つにした。**正解集合は `templates/verify/figma-gate.mjs` の実装から導出する**（`command === "x"` と `!args[2]) fail("x requires` を読む）。手で表を持つとそこが古くなるため。
+  - 走査範囲の拡張: 位置引数で追加ルート（ファイル / ディレクトリ）を受け取れるようにした。`node_modules` 等はスキップし、`STATE-` / `AUDIT-` / `REVIEW-` で始まる記録は従来どおり対象外。
+  - 拡張直後の実測: 案件文書45件を走査し、**誰も気づいていなかった違反を2件検出**した。(1) 案件 `LOOP.md:64` の `preflight` が `--implementation-actor` / `--implementation-context-id` を欠いていた（2026-08-21に正本で直した欠陥が、案件側に残っていた。走査範囲の穴の実証）。(2) 案件 `MyBrain/rules/corrections.md:1725` の `page-complete`。両方修正し、45件が violations 0。
+  - 副次的に判明: 訂正注記に不正な実行形を再掲すると監査が正しく発火する。注記ではサブコマンド名だけを書き、実行形を再掲しない運用にした。迂回用の除外マーカーは設けない。
+  - 案件側の修正: `LOOP.md` の判定方法2と報告禁止条件を、実在する手段（`close` の `target sections <verified>/<target>` と close-report の `coverage.targetSectionIds`）へ置き換え、`LOOP.md:64` に必須フラグを追加。`MyBrain/rules/corrections.md:1725` に訂正注記。`MyBrain/verify/verify-accessibility.mjs` は `accessibility-top.config.json` をハードコードしていたため、config を必須の第1引数にした（他ページのconfigが4本あるのに切り替えられず、別ページを検査したつもりでトップを検査し得た）。呼び出し元は0件で、破壊的変更にならないことを確認済み。`package.json` に `docs:audit` を追加。
+  - 記録: `learning/log-promotions/correction-unrunnable-documented-command-20260824.input.json` として `figma-log-promote record` を実行（recurrenceKey: `documented-command-not-executable`）。手書きでの `mistakes.md` 追記はしていない。`rules/log-promotion-policy.json` の `allowedVerifierTargets` に `tools/doc-command-audit.mjs` と同 e2e を追加した（既存要求を削らない追加のみ）。
+  - 実測: `doc-command-audit.e2e` PASS（負のE2E4件を追加 — 未実装サブコマンド、第2引数欠落、追加ルートのファイル指定、追加ルートのディレクトリ走査。正のケースとして `section-close <manifest> <sectionId>` が通ることも固定）。`project-entry-install.e2e` / `workflow-preflight.e2e` / `gate-contract-audit.e2e` / `figma-scope-lock.e2e` / `figma-log-promote.e2e` / `public-memory-scan.e2e` に回帰なし。正本38件・案件45件ともに violations 0。
+  - 未実施: `rules/figma-spec-pipeline.md` への反映は promotion の review / apply 契約に従うため未着手（記録は `waiting-human`）。案件側 `MyBrain/verify/` の851行同期、入口 `--check` の定期化、リポジトリルートへの入口設置は別scopeのまま。案件の検証ツール変更に coding gate manifest は作っていない（検証基盤の変更は正本が別scope扱いと定めており、オーナーが本作業を明示指示したため）。
+
+- [2026-08-24 codex / P3研究スパイクの配布ディレクトリ分離] **`templates/verify/` の配布対象外P3研究成果物35ファイルを `research/p3/` へ `git mv` した。**
+  - 移動: P3実行器・E2E・JSON雛形32件とP3文書3件、合計35件・16,416行。`templates/verify/` にP3研究成果物は残していない。
+  - 参照更新: `.claude/settings.json`、`templates/verify/README.md`、P3 E2E 5件、P3を参照する `tools/` 14件を `research/p3/` へ更新した。`rules/`、`spec/`、`templates/LOOP.md`、既存の履歴ファイル、`.r4-coordinator-stage/` は未変更。READMEの配布一覧から `fidelity-benchmark.mjs` を外し、P3研究物は案件配布キットに含めないことを明記した。
+  - 参照事前確認: P3相互importは移動後も同一ディレクトリ内で解決する。移動後の旧パス `templates/verify/(p3-*|fidelity-benchmark*)` は設定・README・P3研究物・toolsから0件。既存 `rules/corrections.md` のP3文字列は履歴のため変更していない。
+  - E2E基準線: 移動前は `fidelity-benchmark`、`p3-clean-room-probe`、`p3-p11-app-server-spike`、`p3-page-provider`、`p3-path-boundary`、`p3-role-packet`、`p3-role-return` の7件がすべてexit 0。移動後も最終実行は同じ7件すべてexit 0。`p3-p11-app-server-spike` は移動後の途中2回で `SPIKE_PROCESS_TREE_CLEANUP_FAILED` とTemp配下の `EBUSY` が出たが、同一内容の再実行でexit 0となった。移動前の失敗はなし。
+  - 完了条件: `doc-command-audit` は checked 35 / violations 0、同E2E PASS、`project-entry-install.e2e` PASS、`workflow-preflight.e2e` PASS、`public-memory-scan` は findings 0。案件側同期監査は一致19 / 乖離11 / 未配布36 / 案件側限定3となり、未配布は基準値71から35件減少した。
+
+- [2026-08-25 claude / 同梱コピーの腐りを機械検出可能にした] **`scope-conflict-audit.mjs` は正本が web-development にあり、ここの同梱コピーだけが116行古かった。**
+  - 発端: 案件の `scope-conflict-audit.mjs`（471行、scope単位の受領証 `active/<manifestId>.json`）が本リポジトリのテンプレート（397行、1枠 `active.json`）より先行していると判断し、案件→正本の昇格作業を始めた。
+  - **判断が誤りだった**: `C:\AI\web-development\verify\scope-conflict-audit.mjs` も471行で、案件版と**改行コードを除いて差分0行**。案件は正本と同期しており、腐っていたのは本リポジトリの同梱コピーだけだった。同じファイルが2つの正本に存在し、片方だけが更新されていた。
+  - 重複の実測: `lint-units.mjs`（288/288 差分0）、`responsive-html-guard.mjs`（81/81 差分0）、`scope-coordination.mjs`（135/135 差分0）、`scope-conflict-audit.mjs`（471/397 **差分116**）。3件はたまたま一致していただけである。
+  - **同梱をやめられない理由**: `templates/verify/figma-gate.e2e.mjs:199` が `scope-coordination.mjs` と `scope-conflict-audit.mjs` をフィクスチャへコピーして使う。絶対パスで web-development を参照すると、上位層を持たないクラウドセッションで「このリポジトリ内で完結するE2E」が回らなくなる（`WORKFLOW.md`「クラウドセッションでの実行範囲」が明示的に許可している作業）。
+  - 対応: (1) 同梱コピーを web-development の471行版へ同期。(2) `tools/vendored-verifier-audit.mjs` を追加し、同梱4ファイルと正本の一致を機械検査する。正本を読める環境でだけ照合し、読めない環境は `mode: "skipped"` で exit 0 とする（検査できないことを一致と報告しないため `mode` を必ず出力する）。`WEB_DEVELOPMENT_VERIFY_DIR` で差し替え可能。(3) `templates/verify/README.md` に「正本が web-development にある同梱ファイル」節を追加し、ここで独自に編集しないことと経緯を明記。
+  - 実測: `vendored-verifier-audit` は `mode: checked / checked 4 / findings 0 / exit 0`。負のE2Eは、正本不読=skipped、改行コードのみの差=乖離としない、中身の乖離=`vendored-drift`、同梱欠落=`vendored-missing`、正本欠落=`upstream-missing`、CLIの exit 0/2/64、本リポジトリ自身の一致を回帰として固定。`figma-gate.e2e` は同期後も **PASS (323 assertions)**。`doc-command-audit` 35件 violations 0、`project-entry-install` / `workflow-preflight` / `gate-contract-audit` / `figma-scope-lock` / `figma-log-promote` / `public-memory-scan` に回帰なし。
+  - 案件側の副産物: `MyBrain/verify/scope-conflict-preflight.e2e.mjs` が落ちていた。原因は1枠時代の期待値（保持中の受領証があれば止まる）と、作業ツリー内 `.coding-gate/active.json` を前提とした保管場所で、どちらもコードではなくテストが古かった。**ただし web-development に546行・13テストの新しい版が既にあり、私が書いた修正と同じ分割（交差しない=通る / 交差する=止まる）を含んでいた。**案件版を web-development 版で置き換え、自分の修正は破棄した。上流を先に見ていれば不要な作業だった。置換後 PASS / exit 0。
+  - **未解決として残す**: 案件の旧e2eにあった `testFigmaReceiptAndPageCoveragePreserved`（figma受領証保持時にpreflightが止まり、受領証とpage coverage runtimeを改変しないこと）は web-development 版に無い。figma gate側の検査なので web-development にあるべきものではない。`figma-gate.e2e.mjs` は引数契約（フラグ重複・未知引数・phase拒否・v13でのmanifest.scope.implementationActor禁止）は検査しているが、**受領証保持時の停止と非改変は未カバー**。そのまま移植できないのは、上流gateが `manifest.scope.implementationActor` を禁止しており、旧テストがそれを読むため。figma-gate同期の作業に含めて適合させる。
+  - 併せて確認: `templates/verify/` に `p3-*` は0件、`research/p3/` に35件。p3分離は完了している。
+
+- [2026-08-25 claude / figma-gate群の同期と契約v13への移行] **案件の検証キットを正本世代へ同期し、案件のE2E 12本すべてをPASSにした。**
+  - 配布: `figma-gate.mjs`(2074→2932) / `cdp-browser.mjs`(485→1082) / `figma-page-coverage.mjs`(483→524) / `gate-browser-batch.mjs`(新規275、新gateの必須依存) / `gate-contract-audit.mjs`(193→234) / `accessibility-verify.mjs`(新規678) / `asset-verify.mjs`(413) / `motion-verify.mjs`(578) / `figma-feature-coverage.mjs`(298) と対応するE2E 9本・雛形5件。
+  - 同期状況: 一致16→45件、乖離13→6件、未配布72→16件（`verifier-sync-audit.mjs` 実測）。
+  - 正本への昇格: `--discard-checkpoints` を `templates/verify/figma-gate.mjs` へ配線した（`DISCARD_CHECKPOINTS_FLAG` 定義、preflight引数解析での分離、`scope-conflict-audit` への引き渡し、Usage更新）。案件独自だった機能が正本に載った。`figma-gate.e2e` は PASS (323 assertions) のまま回帰なし。
+  - **p3分離の回帰を修正**: `templates/verify/gate-browser-batch.e2e.mjs` が `./p3-page-provider.mjs` を import しており、`research/p3/` への移動で正本・案件の両方が壊れていた。`gate-browser-batch.mjs` 本体は使わず、そのE2Eだけが hermetic な静的サーバとして使う依存である。研究成果物ではなく配布物のテスト依存なので `templates/verify/` へ戻し、参照していた research 側5ファイルのパスを更新した。`gate-browser-batch.e2e` / `p3-page-provider.e2e` / `p3-path-boundary.e2e` いずれもPASS。**依頼文の完了条件に「p3に依存する非p3のE2Eを回す」が無かったのが見落としの一因である。**移動作業の完了条件には、移動対象だけでなく移動対象へ依存する側の実行を含めること。
+  - 契約v13への移行: 正本gateは `manifest.scope.implementationActor` を禁止する（`figma-gate.mjs:216`）。案件のgate manifest 50件がこれを持っていたため、同期後に `figma:audit` が未承認49件で exit 1 になった。既にclose/退避済みのscopeで再実行はされないが、監査は正しく「現行契約では未検証」と判定している。
+  - 台帳化: 49件を `legacy-scopes.json` へ宣言し、`figma:audit` を exit 0 に戻した（acknowledged 62件）。免除ではなく台帳であり、宣言は「現行契約で未検証」と認める行為である。`plannedMigration` はページ単位の `<page>-recontract` に統一し、**10単位**へ集約した（components 16 / service-detail 12 / case-studies 10 / event-detail 6 / services 5 / case-study-detail 5 / service-brand 3 / blog 2 / blog-detail 2 / events 1）。
+  - 集約時の確認: `blog-detail` と `blog/detail`、`case-study-detail` と `case-studies-detail` はURLの不整合ではなく、案件のルーティングが定義するエイリアスだった（`inc/common/blog-route.php` / `case-studies-route.php`）。再契約の単位だけを統合し、各entryの `verifyUrl` 実データは書き換えていない。一部に `http://localhost:3000/case/` という旧ホスト表記が残っている。
+  - 案件のE2E実測（12本すべてPASS）: figma-gate / gate-browser-batch / gate-contract-audit / verify-layout / scope-conflict-preflight / accessibility-verify / asset-verify / motion-verify / figma-feature-coverage / checkpoint-diff / loop-learn / correction-receipt。
+  - 未着手: 残る乖離6件・未配布16件。`testFigmaReceiptAndPageCoveragePreserved` 相当（figma受領証保持時の停止と非改変）は `figma-gate.e2e` に依然未カバー。10単位の再契約そのもの。案件の `verify-accessibility.mjs`（web-development のエンジンを呼ぶ32行のラッパー）と、新たに配布した `accessibility-verify.mjs`(678行) が併存しており、どちらを使うかは未整理。
+
+- [2026-08-25 claude / fidelity-benchmark を配布物へ戻した] **p3分離の2件目の回帰。`C:\AI\MyBrain\manifest.json` が required 宣言していた配布物を、research へ移していた。**
+  - 検出: 共通Vaultの `scripts/verify-vault.sh` が NG。「案件側雛形（C:/AI/MyBrain）の自己検査でNG: figma-to-code: 正本に無い fidelity-benchmark.mjs」。
+  - 事実: `C:\AI\MyBrain\manifest.json:91` が `fidelity-benchmark.mjs` を `"required": true` として宣言していた。理由欄は「figma-gate が .figma-gate/active.json に記録した checkpoint 試行から初回PASS率・試行数・初回FAIL分類を出す。import依存ではないが、これが無いと『Figmaどおりに初回で出せたか』を数値で残せない」。研究成果物ではなく、ゲートの実績を集計する配布物である。
+  - 加えて `templates/verify/fidelity-comparison-template.json`（案件へ配布済み）が `node MyBrain/verify/fidelity-benchmark.mjs ...` を4箇所で呼び、`templates/verify/README.md:263` も案件コマンドとして記載していた。
+  - **原因は私の依頼文である。**p3分離をCodexへ渡すとき、ファイル名の見た目だけで `fidelity-benchmark.mjs` / `.e2e.mjs` / `-v11-fixtures.mjs` を移動対象に列挙した。配布台帳（`C:\AI\MyBrain\manifest.json`）を確認していない。この台帳は 2026-08-24 の mistakes.md に「正本を探す手がかりの3つ目」として自分で書いたものだった。
+  - 対応: 3ファイルを `templates/verify/` へ戻し、参照3箇所（`fidelity-benchmark.e2e.mjs` / `p3-p11-app-server-spike.e2e.mjs` / `p3-path-boundary.e2e.mjs`）のパスと `README.md` の見出しを修正。同居に戻ったため `fidelity-benchmark.mjs` の `p3-page-provider.mjs` 動的importを `./` 相対へ復元した。
+  - 実測: `verify-vault.sh` 合格。`fidelity-benchmark.e2e` / `p3-path-boundary.e2e` / `p3-page-provider.e2e` / `gate-browser-batch.e2e` すべてPASS。`doc-command-audit` / `vendored-verifier-audit` / `public-memory-scan` すべて exit 0。
+  - 付随して判明: `fidelity-benchmark.e2e` は STATE 2026-08-21 の記録で「同一の理由で失敗したまま（既存の未解決）」とされていたが、現在はPASSする。今回の修正が原因かは未確認であり、因果は主張しない。
+  - 移動作業の完了条件は、移動対象のテストだけでなく **(1)移動対象へ依存する側のテスト (2)配布台帳（`C:\AI\MyBrain\manifest.json`）との整合 (3)`verify-vault.sh`** まで含めること。今回はp3分離で2件の回帰（`gate-browser-batch.e2e` の import、本件）を出しており、どちらも依頼文の完了条件に穴があった。
+
+- [2026-08-25 claude / 受領証保持時の検査を figma-gate.e2e へ追加] **独立レビューで未カバーと判明した「他scopeが受領証を保持しているときの停止と非改変」を固定した。**
+  - 経緯: 案件側の旧 `scope-conflict-preflight.e2e.mjs` が持っていた `testFigmaReceiptAndPageCoveragePreserved` は、案件版を web-development の546行版へ置き換えた際に失われた。figma gate 側の検査なので web-development にあるべきものではなく、`figma-gate.e2e.mjs` に置くのが正しい。旧テストは `manifest.scope.implementationActor` を読むためそのまま移植できず（v13が禁止、`figma-gate.mjs:216`）、現行契約で書き直した。
+  - 追加した検査 `assertHeldReceiptBlocksPreflight()`: 他scopeが `.figma-gate/active.json` を保持している状態で preflight を実行し、(1) 保持者を名指しして拒否すること、(2) scope conflict audit まで到達していること、(3) 保持中の受領証がバイト単位で不変であること、(4) page coverage runtime を作らないこと、を固定する。
+  - 実装上の注意を2点、実測で確定した。受領証の `manifestPath` が実在しないと保持の検査へ到達する前に別の理由で落ちる。保持者の識別は `state.manifestId` から行われる（`scope-conflict-audit.mjs:103`、無いと `unknown` になる）。フィクスチャはこの2つを満たす形にした。
+  - **効くことを確認した**: `scope-conflict-audit.mjs:375` の `violations.push` を `if (false)` で一時的に無効化すると、追加した検査は `preflight rejects invalid invocation` で落ちる（preflightが通ってしまう）。確認後に復元し、復元差分0行を確認した。
+  - 実測: `figma-gate.e2e` は 323 → **331 assertions** で PASS。`vendored-verifier-audit` findings 0（同梱コピーは web-development 正本と一致したまま）。`doc-command-audit` / `project-entry-install` / `workflow-preflight` / `figma-scope-lock` / `figma-log-promote` / `public-memory-scan` / `gate-contract-audit` / `verify-layout` に回帰なし。
+  - 未配布: 案件の `MyBrain/verify/figma-gate.e2e.mjs` はまだ旧版。案件は現在オーナーの blog scope が active のため、配布は再開の合図後に行う。
+
+- [2026-08-25 claude / 着手区間を機械の管轄下へ入れた] **`preflight` より前の工程には機械の助けが一切なかった。`start` を新設し、着手宣言を受領証にした。**
+  - 発端: Figma実装の工程を要約させたところ、工程名は概ね正しく出るのに**停止条件が1件も出てこなかった**。原因を追うと、工程を教える唯一のコマンドが `preflight` であり、それは取得・spec・page coverage が終わった後にしか動かない。着手宣言・取得・換算・構造一致ゲートはすべてそれより前にあり、任意読みの散文しか無い区間だった。
+  - **`start` を新設**（`figma-gate.mjs`）。引数なしで呼べる着手時点の入口。着手前ゲートの5点、フェーズ0の固定チェックリスト、停止・未確認として報告する条件、次に実行するコマンドを出力する。**内容はgate側に複製せず、`WORKFLOW.md` と `rules/figma-spec-pipeline.md` から抽出する**（2026-08-24 doc-command-audit の教訓：正解集合は正本から導出する）。節が改名・欠落したら工程を出さないまま通さず SPEC FAIL とする。`start` はゲートではなく編集を許可しない旨を出力に明示した。
+  - **抽出を入れた副産物として、正本の欠陥を1件検出した**。`rules/figma-spec-pipeline.md:99` でチェックリスト項目2件が1行に連結しており（`…（対象外変更0件）[ ] URLから fileKey…`）、人が読む限り気づかない。抽出すると1項目として数えるため発覚した。分割済み。
+  - **停止条件を `preflight` の出力と受領証へ追加**。従来は適用規則のファイル名しか出しておらず、落ちるのは「どのファイルを読むか」ではなく「どこで止まるか」のほうだった。`state.stopConditions` に残す。
+  - **着手宣言を受領証にした**（`scope.startDeclarationPath`）。この体系は訂正・close・scope lock・凍結入力のすべてが受領証で担保されているのに、着手宣言だけがチャット上の発言のままで、「宣言せずに着手した」ことを検出できなかった。`preflight` が `scopeId`＝manifest `id`、`figma.fileKey` と `nodeIds.pc/.sp`＝`manifest.figma.viewportNodes`、`specPath`＝`manifest.scope.specPath` を突き合わせ、`scopeLockStatePath` の実在、`outOfScopePaths` と `changeTargets` の非重複、`ownerInstruction` 20文字以上、`environmentPreflight.mode: "local"`、`declaredAt` のISO 8601を検査する。SHA-256は他の凍結入力と同じく固定する。
+  - **担保の限界を明記した**: これが保証するのは「5点が凍結された成果物として存在し、manifestと整合していること」までで、宣言の内容が真実かは検査できない。効くのはcloseがpreflightを、preflightが宣言を要求する鎖による。`preflight` の呼び出し自体は依然として強制できない。
+  - 複製対策: `scopeId` 不一致で落とす。page coverage の `scopeId` 検査（2026-08-03）と同じ理由で、非空文字列が並んでいるだけの写しを通さない。
+  - 実測: `figma-gate.e2e` は 331 → **447 assertions** で PASS。負のE2Eは着手宣言12件（未宣言・ファイル不在・scopeId複製・fileKey不一致・未登録node・SP未宣言・specPath不一致・scope lock未開始・scope外とchangeTargetの重複・オーナー指示が実質空・環境判定がlocalでない・declaredAtが時刻でない）と、工程出力（startのexit 0と各出力、編集非許可の明示、preflightの停止条件出力と受領証記録、正本の節が欠けたときのstart/preflight両方のFAIL、成果物を残さないこと）。凍結違反（preflight後に宣言を書き換え→section-startで停止）も固定した。
+  - **効くことを確認した**: `scopeId` 一致検査を `if (false && …)` で無効化すると追加した検査が `preflight rejects invalid invocation` で落ちる。確認後に復元し、復元差分0行を確認した。
+  - E2Eの stub には合成した見出しではなく**正本の `WORKFLOW.md` と `rules/figma-spec-pipeline.md` を複製する**。合成すると、正本側で節が改名されたときにE2Eが素通りする。
+  - 契約強化のため既存gate manifestは旧契約になる。`gate-contract-audit.mjs` の必須キーへ `startDeclarationPath` を追加し、棚卸しで見えるようにした。配布台帳 `C:\AI\MyBrain\manifest.json` へ `start-declaration-template.json` を required として登録済み（2026-08-25 fidelity-benchmark の教訓の適用）。
+  - 実測（回帰）: `gate-browser-batch` / `gate-contract-audit` / `verify-layout` / `loop-learn` / `correction-receipt` / `accessibility-verify` / `asset-verify` / `motion-verify` / `figma-feature-coverage` すべてPASS。`doc-command-audit` 35件 violations 0（`start` は実装から自動導出されるため表の手入力は不要）、`vendored-verifier-audit` findings 0、`public-memory-scan` findings 0、`C:/AI/MyBrain/bootstrap.mjs --check` 合格、`verify-vault.sh` 合格。
+  - **既存の未解決を1件検出**（本作業とは無関係）: `templates/verify/checkpoint-diff.e2e.mjs:20` が `<repo>/MyBrain/verify/checkpoint-diff.mjs` の実在を要求するが、本リポジトリの `MyBrain/` は公開メモリで `MyBrain/README.md` が `verify/` の作成を明示的に禁止している。このE2Eは正本リポジトリでは構造的に通らない。修正はこのscopeの対象外として報告のみ。
+  - 未実施: 案件側への配布。案件の `MyBrain/verify/figma-gate.mjs` は旧版のままなので、案件の50件のmanifestは影響を受けない。配布時に全manifestが旧契約となるため、`legacy-scopes.json` への宣言または移行が同時に必要になる。
+
+## 2026-08-25 coverage 再承認の行き止まりを塞ぐ（claude / オーナー指示「これを改善しろ」）
+
+### 直した問題
+
+page coverage の独立レビュー承認は現在のcoverageハッシュにだけ有効で、対象を1つ足すだけで失効する。
+承認は独立性の要件により**実装役が自分では作れない**。この2条件が重なると実装役は自力で越えられない壁に当たるが、
+規則には「次に誰へ何を頼むか」が無かった。実装役は必須条件を述べて停止し、オーナーからは**指示の拒否に見えた**。
+工程の欠落であって実装役の判断ミスではない。
+
+### 変更（3点）
+
+1. `templates/verify/figma-page-coverage.mjs`
+   - 承認判定を条件ごとに分解する `reviewApprovalBlockers()` を追加。1行で落とさず、何が不足しているかを列挙する。
+   - `reviewRequestMessage()` を追加。承認が無効なとき、**コピー可能な独立レビュー依頼書**を出力する。
+     内容は scopeId / coverageパス / 現在のSHA-256 / 直前に承認済みだったSHA-256 / 過去round数 /
+     承認ファイルのパスと必須フィールド / 実装役のidentity / レビュー役のidentity制約。
+   - `loadRuntime` の凍結入力チェックを、**どの入力が動いたか**（manifest / components / coverage / review）を
+     名指しする形へ変更。4件まとめて「変わった」とだけ言う実装をやめた。
+2. `rules/figma-spec-pipeline.md` に「coverage を変更したときの再承認導線」を追加。
+   実装役が承認失効を理由に待機状態へ入ることを禁止し、同じターンで依頼書を出してレビュー役へ渡すまでを工程とした。
+   レビュー役の既定は同一エージェントの別contextセッション（共通Vault corrections 2026-08-24）。兼任は禁止し、
+   オーナー指示でやむを得ず兼任した場合は受領証へ明記して close までに独立性を回復する。
+3. `rules/log-promotion-policy.json` の `allowedVerifierTargets` へ
+   `templates/verify/figma-page-coverage.mjs` を追加。中核検証器なのに学習駆動の変更対象として登録されておらず、
+   記録の登録自体ができなかった。
+
+### 検証
+
+- `node --check` PASS。
+- 案件側 `figma-gate.e2e.mjs` **PASS（323 assertions）**。
+- 実際の失効ケース（round 3 承認 `bc2fb060…` に対し現在 `f0156884…`）で `manifestContext()` を読み取り専用で再現し、
+  新しい依頼書が想定どおり描画されることを確認。
+- `node tools/doc-command-audit.mjs` → checked 36 / violations 0。
+- 案件側へ配布し `verifier-sync-audit` で正本と一致を確認。
+- `figma-log-promote.mjs record` で `correction-coverage-reapproval-deadend-20260825` を登録（waiting-human）。
+
+### 未了
+
+`rules/figma-spec-pipeline.md` の直接編集は、本ファイル329行「独立レビューとオーナー承認なしに rules/ を書き換えない」に対し
+**オーナー承認はあるが独立レビューが未了**である。この変更自体のレビューを別contextで受けること。
+
+## 2026-08-29 検証キットが3日間配布できていなかった（claude / オーナー指示「推奨の改善案を実行しろ」）
+
+発端は案件 rpa-technologies-theme の原因調査レビュー。「規則もspecもゲートも検証器も設置済みなのに
+Figma作業がゲートを通らない」の原因を、案件側ではなく**正本側**で特定した。
+
+### 根本原因
+
+`templates/verify/` が未コミットのまま止まっており、`verifier-distribute.mjs` は未コミットファイルの
+配布を拒否する（その拒否は2026-08-25・26の実害を受けて入れた正しい仕様）。結果、2026-08-25 に新設した
+`start` / 着手宣言 / `startDeclarationPath` が案件へ1つも届いていなかった。案件の `figma-gate.mjs` には
+`"start"` が **0件**で、`WORKFLOW.md` と入口が指示する `npm run figma:gate -- start` は**実行不能**だった。
+これは 2026-08-24 correction `documented-command-not-executable` の再発であり、
+`doc-command-audit` は正本内では通る（正本には実装がある）ため検出できない位置にあった。
+
+### 止まっていた理由
+
+`figma-gate.e2e.mjs` が失敗していた。同じ 2026-08-25 の2つの変更が矛盾していた。
+
+1. 受領証の per-manifest 移行（`active/<manifestId>.json`）に対し、E2Eが旧1枠 `active.json` を
+   2箇所で直書きしていた。既存ヘルパー `resolveActiveReceiptPath` へ揃えた。
+2. `assertHeldReceiptBlocksPreflight` が「保持者がいれば必ず止まる」という1枠時代の契約を固定していた。
+   `scope-conflict-audit` は同日、オーナー指摘 `concurrent-scope-blocked-by-repo-wide-baseline` を受けて
+   既に「交差時のみ停止」へ移っており、テストだけが古かった。検査を2経路へ分け、
+   独立レビューが守りたかった「保持中の受領証を書き換えない」は両経路で固定したまま、
+   交差しない=通る / 交差する=止まる を検査する。**効くことを確認した**——
+   `scope-conflict-audit.mjs:374` の `violations.push` を `if (false)` で無効化すると交差経路が落ちる。
+   確認後に復元し、復元差分0行。
+
+### 配布して初めて出た欠陥
+
+`figma-gate.e2e.mjs` は工程と停止条件の正本を `resolve(dirname(fixturePath), "..", "..")` で探していた。
+正本リポジトリでは figma-to-code ルートになるが、**このE2Eは案件へ配布される検証器**であり、
+配布後は案件ルートを指す。案件に `WORKFLOW.md` は無く `ENOENT` で落ちた。
+`verifier-distribute` が退避から8件を自動で巻き戻した（ツールは設計どおり機能した）。
+gate本体と同じ規則（`FIGMA_TO_CODE_ROOT`、既定 `C:\AI\figma-to-code`、`figma-gate.mjs:2909`）へ揃えた。
+**正本リポジトリ内でだけ回すE2Eは、配布先で動くことを証明しない。**
+
+### 発火条件を意図ベースへ広げた
+
+`WORKFLOW.md`「着手前ゲート」と `templates/project-entry.md` の両方。旧文
+「Figma URLや『デザインどおりに直して』という依頼」には、新規実装で普通に使う
+「Figmaデザインを実装して」「Figmaどおりにコーディングして」「このFigmaを再現して」が無かった。
+入口だけ直しても入口が指す先が狭いままになるため両方を直した。判断に迷う依頼は実行する側へ倒す。
+
+### Git hookの書き分け
+
+`rules/corrections.md` に `git-hook-scope-ambiguous` を追加。2026-07-18「Git操作を止める条件にはしない」と、
+案件の `close-coverage-hook/v1`（pre-commit、hash照合のみ）が字面で衝突していた。対象で書き分ける——
+**禁止**はhookでのFigma照合・ゲートphase・学習器の**実行**、**許可**は発行済み受領証とhashの
+**照合だけ**による停止。後者は「ゲートを起動しなければ何も言わない」抜け道を塞ぐ唯一の常駐点である。
+
+### 検証
+
+- 正本 `figma-gate.e2e` **PASS（447 → 454 assertions）**。案件配布後も **PASS（454）**。
+- `figma-page-coverage.e2e` PASS（22/0）、`fidelity-benchmark.e2e` PASS、
+  `workflow-preflight.e2e` PASS、`doc-command-audit.e2e` PASS。
+- `doc-command-audit WORKFLOW.md templates/project-entry.md rules` → **checked 51 / violations 0**。
+- `vendored-verifier-audit` PASS、`public-memory-scan` findings 0、`project-entry-install --check` ok。
+- `rule-size-audit`（figma-to-code）PASS 10件、必読合計 124,344 bytes（上限 143,360）。
+- 案件側: `gate-contract-audit` **PASS**（従来は不正JSONで中断、72 manifest完走）、
+  `rule-size-audit` **PASS**、`verifier-sync-audit` 乖離 6→**2** / 未配布 4→**0** / 一致 67→**75**。
+
+### 配布時の注意（実測で確定）
+
+`verifier-distribute` はファイル名を省略すると「配布先に既に存在する `.mjs`/`.json` すべて」を対象にする。
+案件には**意図的に正本と違う**ファイルがあり、e2eが落ちないため自動巻き戻しも効かない。
+rpa-technologies-theme では `accessibility-verify-template.json`（オーナー承認済みの色検査停止）と
+`rule-size-audit.config.json`（案件の必読上限）の2件。**配布は必ずファイル名を明示する。**
+`verifier-sync-audit` はこの2件を「乖離」として数え続けるため、恒久的に赤が残る。
+意図的な案件固有設定を宣言して別枠で数える仕組みが要る（正本は web-development / 未着手）。
+
+### 未了
+
+- 本変更は**オーナー承認はあるが独立レビューが未了**である。別contextでのレビューを受けること。
+  レビュー対象は `templates/verify/figma-gate.e2e.mjs`（受領証パス・保持契約・playbook root）、
+  `WORKFLOW.md`・`templates/project-entry.md` の発火条件、`rules/corrections.md` の書き分け。
+- 案件の推奨案5（`coding:gate` の `kinds:["figma"]` 必須化の機械検査）は未実施。正本が
+  `C:\AI\web-development\verify\coding-rule-gate.mjs` にあり別層の手順を要すること、
+  「Figma由来パス」の案件宣言が存在せず汎用検証器からは導出できないことによる。
+- ブランチ `fix/figma-gate-start-declaration-distribution` に4コミット。master へは未マージ。
+- `templates/verify/` の残りWIP（p3研究成果物の `research/p3/` への staged rename 等）は本scopeの対象外。
+  `fidelity-benchmark*.mjs` 3件だけは配布台帳 `C:\AI\MyBrain\manifest.json` が required 宣言しているため
+  staged rename を取り消して `templates/verify/` へ戻した（2026-08-25 の回帰の再々発防止）。
