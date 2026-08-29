@@ -957,21 +957,30 @@ export async function navigateAndWait(browser, { url, width, height = 2000, sele
   await browser.evaluate(`(() => {
     const selectors = ${JSON.stringify(uniqueSelectors)};
     const roots = selectors.map((selector) => document.querySelector(selector)).filter(Boolean);
+    const force = (image) => {
+      image.loading = "eager";
+      image.removeAttribute("loading");
+      image.fetchPriority = "high";
+      // Chromeのnative lazy-loadはloading属性の変更だけでは再スケジュールしない場合がある。
+      // 同じURLを代入して、対象画像のリクエストを明示的に開始する。
+      const source = image.currentSrc || image.src;
+      if (source) image.src = source;
+    };
+    // 測定rootが1つも解決しないviewportがある。SP専用/PC専用の要素を持つcomponentの
+    // checkpointがこれにあたる。このとき readiness はページ全体の画像を待つ側へ落ちるが、
+    // 画面外のlazy画像は誰も読み込まないため imagesReady が永久にfalseになり、
+    // 実装が正しくてもLAYOUT FAILになる。rootが無いときはページ全体を強制読込する。
+    if (roots.length === 0) {
+      for (const image of Array.from(document.images || [])) force(image);
+      return;
+    }
     for (const root of roots) {
       root.scrollIntoView({ block: "center", inline: "nearest" });
       const images = [
         ...(root.tagName === "IMG" ? [root] : []),
         ...Array.from(root.querySelectorAll("img")),
       ];
-      for (const image of images) {
-        image.loading = "eager";
-        image.removeAttribute("loading");
-        image.fetchPriority = "high";
-        // Chromeのnative lazy-loadはloading属性の変更だけでは再スケジュールしない場合がある。
-        // 同じURLを代入して、対象画像のリクエストを明示的に開始する。
-        const source = image.currentSrc || image.src;
-        if (source) image.src = source;
-      }
+      for (const image of images) force(image);
     }
   })()`);
 

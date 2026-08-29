@@ -23,6 +23,7 @@
   "id": "replace-with-task-id",
   "scope": {
     "kind": "new",
+    "startDeclarationPath": "MyBrain/verify/start-<scope-id>.json",
     "changeTargets": [
       "page-example.php",
       "assets/scss/example.scss",

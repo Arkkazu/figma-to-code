@@ -1,7 +1,7 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, relative, resolve } from "node:path";
 
 // 検証契約のバージョン。必須入力・検査を足したら上げる。close-report へ刻み、
 // 「どの契約の下で合格したのか」を後から機械的に判定できるようにする。
@@ -36,6 +36,466 @@ function requireString(value, label) {
     fail(label + " must be a non-empty string");
   }
   return value;
+}
+
+// 承認を「ファイルのバイト列」ではなく「レビューが実際に判定した意味内容」に紐づける。
+//
+// 2026-08-26 実測：1 scope で coverage が7世代作られ、そのたびに承認が失効して
+// 人手の再レビューが発生した。失効の中には、分類を1文字も変えていない変更が含まれる
+// （coverageExpansion の宣言追加、注記の文言修正など）。バイト一致で判定していると、
+// レビューが見てもいない差分で承認が飛ぶ。
+//
+// digest に含めるのは、独立レビューが判定している内容すべてとする。
+// 分類（role・componentIds・figmaNodeIds・measurement・追跡先）だけでなく、
+// **説明文も含める**。レビュー役が判定しているのは「deferred の理由が実態と合っているか」
+// 「PC/SP非等価の根拠が事実か」であり、説明が書き換われば判定はやり直しになる。
+// 説明を除外すると、対象外の理由を後から書き換えても承認が生き残る穴になる
+// （2026-08-26 の自己レビューで検出。当初この4項目を除外していた）。
+//
+// 除外するのは次の2つだけである。
+//   1. 整形・キー順（正規化して比較するため自然に無視される）
+//   2. coverageExpansion … ゲート自身が「宣言しろ」と要求する項目。
+//      これを含めると、宣言した瞬間に承認が失効して永久に満たせない循環になる。
+// digest の算出対象を変えたら上げる。版が違う digest 同士は比較できない。
+// v1: 説明文（reason / viewportPairingNote / singleViewportReason / inventory.source）を除外していた版。
+//     対象外の理由を後から書き換えても承認が生き残る穴があり、v2 で廃止した。
+// v2: 説明文を含む。除外するのは整形・キー順と coverageExpansion のみ。
+const COVERAGE_DIGEST_VERSION = "v2";
+
+export function canonicalCoverageDigest(coverage) {
+  const canonicalSection = (section) => ({
+    sectionId: section.sectionId ?? null,
+    role: section.role ?? null,
+    contextKind: section.contextKind ?? null,
+    componentIds: Array.isArray(section.componentIds) ? [...section.componentIds] : null,
+    figmaNodeIds: {
+      pc: section.figmaNodeIds?.pc ?? null,
+      sp: section.figmaNodeIds?.sp ?? null,
+    },
+    measurementFigmaNodeIds: {
+      pc: Array.isArray(section.measurementFigmaNodeIds?.pc) ? [...section.measurementFigmaNodeIds.pc] : null,
+      sp: Array.isArray(section.measurementFigmaNodeIds?.sp) ? [...section.measurementFigmaNodeIds.sp] : null,
+    },
+    followUpScope: section.followUpScope ?? null,
+    completedByScope: section.completedByScope ?? null,
+    // 説明文は digest に含める。レビュー役が判定しているのは
+    // 「deferred の理由が実態と合っているか」「非等価の根拠が事実か」であり、
+    // 説明が書き換われば、その判定はやり直す必要がある。
+    // 除外すると、対象外の理由を書き換えても承認が生き残る穴になる。
+    reason: section.reason ?? null,
+    viewportPairingNote: section.viewportPairingNote ?? null,
+    singleViewportReason: section.singleViewportReason ?? null,
+    figmaNodeUnknownReason: section.figmaNodeUnknownReason ?? null,
+    closeReportPath: section.closeReportPath ?? null,
+  });
+  const canonical = {
+    version: coverage.version ?? null,
+    scopeId: coverage.scopeId ?? null,
+    pageKind: coverage.pageKind ?? "page-design",
+    pages: coverage.pages
+      ? {
+        pc: { nodeId: coverage.pages.pc?.nodeId ?? null, metadataSha256: coverage.pages.pc?.metadataSha256 ?? null },
+        sp: { nodeId: coverage.pages.sp?.nodeId ?? null, metadataSha256: coverage.pages.sp?.metadataSha256 ?? null },
+      }
+      : null,
+    inventorySource: coverage.inventory?.source ?? null,
+    inventory: (coverage.inventory?.sections ?? []).map((entry) => ({
+      sectionId: entry.sectionId ?? null,
+      figmaNodeIds: { pc: entry.figmaNodeIds?.pc ?? null, sp: entry.figmaNodeIds?.sp ?? null },
+      note: entry.note ?? null,
+    })),
+    sections: (coverage.sections ?? []).map(canonicalSection),
+    plannedScopes: (coverage.plannedScopes ?? []).map((entry) => ({
+      scopeId: entry.scopeId ?? null,
+      status: entry.status ?? null,
+    })),
+    sharedWithScopes: Array.isArray(coverage.sharedWithScopes) ? [...coverage.sharedWithScopes].sort() : [],
+  };
+  // digest にアルゴリズム版を刻む。算出対象を変えると同じ coverage でも値が変わるため、
+  // 版を持たないと「分類が変わった」と誤検出する（2026-08-26 に v1→v2 で実際に発生）。
+  // 版が異なる過去の digest は比較対象にしない。
+  return COVERAGE_DIGEST_VERSION + "-" + createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+// 独立レビュー承認が現在のcoverageに対して有効かを、条件ごとに分解して返す。
+// 「まとめて1行で落とす」と、実装役には何を直せば通るのかが分からない。
+function reviewApprovalBlockers(review, coverageSha256, implementationIdentity, coverageDigest) {
+  const blockers = [];
+  if (!review || typeof review !== "object") {
+    blockers.push("review ファイルがJSONオブジェクトではない。");
+    return blockers;
+  }
+  if (review.version !== 2) blockers.push(`review.version が 2 ではない（現在: ${JSON.stringify(review.version)}）。`);
+  if (review.status !== "approved") blockers.push(`review.status が "approved" ではない（現在: ${JSON.stringify(review.status)}）。`);
+  if (review.reviewerRole !== "independent-reviewer") {
+    blockers.push(`review.reviewerRole が "independent-reviewer" ではない（現在: ${JSON.stringify(review.reviewerRole)}）。`);
+  }
+  for (const field of ["reviewerActor", "reviewerContextId", "reviewedAt"]) {
+    if (typeof review[field] !== "string" || review[field].trim() === "") {
+      blockers.push(`review.${field} が空、または文字列ではない。`);
+    }
+  }
+  // digest を宣言している承認は digest で判定する。分類を変えていない編集
+  // （注記の修正、coverageExpansion の宣言追加、キー順の変更）では失効しない。
+  // digest 未宣言の承認は旧来どおりバイト一致で判定する（移行互換）。
+  if (typeof review.pageCoverageDigest === "string" && review.pageCoverageDigest.trim() !== "") {
+    if (review.pageCoverageDigest !== coverageDigest) {
+      blockers.push(
+        "review.pageCoverageDigest が現在の page coverage の分類内容と一致しない。" +
+          `\n      承認済み digest: ${review.pageCoverageDigest}` +
+          `\n      現在値   digest: ${coverageDigest}` +
+          "\n      → role・componentIds・figmaNodeIds・measurement・追跡先のいずれかが変わっている。" +
+          "\n        これは分類の変更であり、再承認が必要な正常な状態である。"
+      );
+    }
+  } else if (review.pageCoverageSha256 !== coverageSha256) {
+    blockers.push(
+      "review.pageCoverageSha256 が現在の page coverage と一致しない。" +
+        `\n      承認済み: ${review.pageCoverageSha256 ?? "(未宣言)"}` +
+        `\n      現在値  : ${coverageSha256}` +
+        "\n      → coverage を変更したため、前回の承認は失効している。これは実装役の落ち度ではなく、再承認が必要な正常な状態である。" +
+        "\n      → この承認は pageCoverageDigest を宣言していないためバイト一致で判定している。" +
+        "\n        次の承認から pageCoverageDigest を宣言すると、分類を変えない編集では失効しなくなる。"
+    );
+  }
+  if (
+    review.reviewerActor === implementationIdentity.actor
+    && review.reviewerContextId === implementationIdentity.contextId
+  ) {
+    blockers.push(
+      "review の reviewer が実装役と完全に同一（actor・contextId の両方が一致）。" +
+        "\n      → actor か contextId の少なくとも一方が実装役と異なる必要がある。"
+    );
+  }
+  return blockers;
+}
+
+// 失敗をそのまま「依頼書」にする。実装役は独立レビュー承認を自分では作れないため、
+// ここで止まると手詰まりに見える。誰に何を頼めば前へ進むのかを、出力の時点で確定させる。
+function reviewRequestMessage({ blockers, manifestId, coveragePath, coverageSha256, coverageDigest, reviewPath, review, implementationIdentity, repoRoot }) {
+  const rel = (absolutePath) => relative(repoRoot, absolutePath).replace(/\\/g, "/");
+  const previous = Array.isArray(review?.previousReviews) ? review.previousReviews : [];
+  const lines = [];
+  lines.push("page coverage の独立レビュー承認が、現在のcoverageに対して有効ではありません。");
+  lines.push("");
+  lines.push("【不足している条件】");
+  for (const blocker of blockers) lines.push(`  - ${blocker}`);
+  lines.push("");
+  lines.push("【実装役が次にやること】");
+  lines.push("  承認は実装役が自分で作れません（独立性の要件）。ここで待機に入らず、下の依頼書をそのまま");
+  lines.push("  レビュー役（既定は同一エージェントの別contextセッション）へ渡してください。渡すまでが実装役の工程です。");
+  lines.push("  レビュー役が承認を書いたら preflight を再実行すれば、そのまま編集へ進めます。");
+  lines.push("");
+  lines.push("--- ここから依頼書（そのままコピーして渡す） ---");
+  lines.push(`scopeId: ${manifestId}`);
+  lines.push(`page coverage: ${rel(coveragePath)}`);
+  lines.push(`page coverage SHA-256（参考。ファイル全体のバイト列）: ${coverageSha256}`);
+  lines.push(`page coverage digest（この値に対して承認する）: ${coverageDigest}`);
+  lines.push(`承認を書き込むファイル: ${rel(reviewPath)}`);
+  if (review?.pageCoverageSha256) lines.push(`直前に承認済みだったSHA-256: ${review.pageCoverageSha256}`);
+  if (previous.length > 0) {
+    lines.push(`過去のレビュー: ${previous.length + 1} 回目になる（前回まで: ${previous.map((entry) => `round ${entry.round}=${entry.status}`).join(" / ")}）`);
+  }
+  lines.push(`実装役の identity: actor=${implementationIdentity.actor} / contextId=${implementationIdentity.contextId}`);
+  lines.push("レビュー役の identity 制約: actor か contextId の少なくとも一方を上と変えること。");
+  lines.push("");
+  lines.push("承認ファイルの必須フィールド:");
+  lines.push('  version: 2 / status: "approved" / reviewerRole: "independent-reviewer"');
+  lines.push("  reviewerActor / reviewerContextId / reviewedAt（ISO8601）");
+  lines.push(`  pageCoverageSha256: ${coverageSha256}`);
+  lines.push(`  pageCoverageDigest: ${coverageDigest}`);
+  lines.push("    ↑ digest を宣言すると、分類を変えない編集（注記の修正・宣言の追加）では承認が失効しません。");
+  lines.push("  findings: []（不合格が残る場合は status を changes-requested にして findings を埋める）");
+  lines.push("");
+  lines.push("レビュー役は、実装役の申告値を採用せず、凍結metadataとファイル実体から再計算して照合すること。");
+  lines.push("--- ここまで依頼書 ---");
+  return lines.join("\n");
+}
+
+// scope の途中で coverage を小刻みに広げると、そのたびに独立レビュー承認が失効し、
+// 人間を経由した再承認が1往復ずつ増える。実測（2026-08-26）で1 scope に6往復発生し、
+// オーナーからは「コードの修正を行わない」という問題として観測された。
+// 規則（figma-spec-pipeline.md「coverage は scope 開始時に確定させる」）だけでは工程が守られないため、
+// 「承認済みcoverageを後から変えた」ことを機械的に可視化し、オーナー指示によるものだと宣言させる。
+//
+// 禁止ではなく宣言の強制である。オーナーが対象を追加するのは正当な運用であり、
+// 止めたいのは「実装しながら気づいた順に足していく」ほうだけである。
+function assertCoverageExpansionIsDeclared(coverage, review, coveragePath, repoRoot, coverageDigest) {
+  const previous = Array.isArray(review?.previousReviews) ? review.previousReviews : [];
+  // 数えるのは「分類を変えた失効」だけにする。バイト単位で数えると、注記の修正や
+  // coverageExpansion の宣言追加そのものが回数に入り、宣言した瞬間に条件が動いて
+  // 永久に満たせなくなる（2026-08-26 に実際に発生させた）。
+  // digest を持たない過去のroundは、分類が変わったかを判定できないため数えない。
+  // 版が違う digest は比較しない。算出対象を変えただけで「分類が変わった」と数えてしまう。
+  const versionPrefix = COVERAGE_DIGEST_VERSION + "-";
+  const supersededApprovals = previous.filter((entry) => entry
+    && entry.status === "approved"
+    && typeof entry.pageCoverageDigest === "string"
+    && entry.pageCoverageDigest.startsWith(versionPrefix)
+    && entry.pageCoverageDigest !== coverageDigest);
+  if (supersededApprovals.length === 0) return;
+
+  const latest = supersededApprovals[supersededApprovals.length - 1];
+  const latestSha256 = typeof latest.pageCoverageDigest === "string" ? latest.pageCoverageDigest : null;
+  const relativeCoveragePath = relative(repoRoot, coveragePath).replace(/\\/g, "/");
+  const declaration = coverage.coverageExpansion;
+
+  const explain = (reason) => fail(
+    "承認済みの page coverage を後から変更しています。" + reason + "\n" +
+    `  この coverage は既に ${supersededApprovals.length} 回、承認を得たあとで分類が変更されています。\n` +
+    (latestSha256 ? `  直近で失効した承認の digest: ${latestSha256}\n` : "") +
+    "\n" +
+    "  原則は、scope 開始時にページ全体の coverage を確定させ、承認は1回にすることです。\n" +
+    "  実装しながら対象を継ぎ足すと、そのたびに承認が失効し再承認の往復が発生します\n" +
+    "  （figma-to-code/rules/figma-spec-pipeline.md「coverage は scope 開始時に確定させる」）。\n" +
+    "\n" +
+    "  この追加がオーナーの明示指示によるものなら、続けて構いません。\n" +
+    `  その場合は ${relativeCoveragePath} に次を宣言してください。\n` +
+    "\n" +
+    '  "coverageExpansion": {\n' +
+    `    "supersededApprovalDigest": ${JSON.stringify(latestSha256 ?? "<直近で失効した承認のdigest>")},\n` +
+    '    "ownerInstruction": "<オーナーが対象追加を指示した内容。20文字以上>",\n' +
+    '    "addedSectionIds": ["<今回targetへ加えたsectionId>"]\n' +
+    "  }\n" +
+    "\n" +
+    "  オーナー指示によるものでないなら、この追加は別scopeとして起票してください。"
+  );
+
+  if (!declaration || typeof declaration !== "object" || Array.isArray(declaration)) {
+    explain(" coverageExpansion の宣言がありません。");
+  }
+  if (typeof declaration.ownerInstruction !== "string" || declaration.ownerInstruction.trim().length < 20) {
+    explain(" coverageExpansion.ownerInstruction が空、または20文字未満です。");
+  }
+  if (!Array.isArray(declaration.addedSectionIds)) {
+    explain(" coverageExpansion.addedSectionIds が配列ではありません（role変更のみなら空配列で構いません）。");
+  }
+  // 宣言が古いまま放置されると、2回目以降の拡張が素通りする。
+  // 直近で失効した承認を指していることを必須にして、拡張のたびに書き直させる。
+  if (latestSha256 && declaration.supersededApprovalDigest !== latestSha256) {
+    explain(
+      " coverageExpansion.supersededApprovalDigest が、直近で失効した承認を指していません" +
+      `（宣言: ${declaration.supersededApprovalDigest ?? "(未宣言)"}）。前回の拡張のまま更新されていません。`
+    );
+  }
+}
+
+// 凍結metadataの raw は Figma MCP が返すXML風の木。タグ名にはハイフンを含むもの
+// （rounded-rectangle 等）があるため `[\w-]+` で拾う。`\w+` だと取りこぼす。
+const FROZEN_METADATA_TAG = /<([\w-]+)\s+([^>]*?)(\/?)>|<\/([\w-]+)>/g;
+const FROZEN_METADATA_ATTR = /(\w+)="([^"]*)"/g;
+
+function parseFrozenMetadata(raw, label) {
+  if (typeof raw !== "string" || raw.trim() === "") {
+    fail(label + " has no raw metadata tree to parse");
+  }
+  const nodes = new Map();
+  const stack = [];
+  let rootId = null;
+  FROZEN_METADATA_TAG.lastIndex = 0;
+  let match;
+  while ((match = FROZEN_METADATA_TAG.exec(raw)) !== null) {
+    if (match[4]) {
+      stack.pop();
+      continue;
+    }
+    const attributes = {};
+    FROZEN_METADATA_ATTR.lastIndex = 0;
+    let attribute;
+    while ((attribute = FROZEN_METADATA_ATTR.exec(match[2])) !== null) {
+      attributes[attribute[1]] = attribute[2];
+    }
+    const id = attributes.id;
+    const parent = stack.length > 0 ? stack[stack.length - 1] : null;
+    if (id) {
+      nodes.set(id, {
+        id,
+        name: attributes.name ?? null,
+        parent,
+        hidden: attributes.hidden === "true" || attributes.visible === "false",
+        children: [],
+      });
+      if (parent && nodes.has(parent)) nodes.get(parent).children.push(id);
+      if (rootId === null) rootId = id;
+    }
+    if (!match[3]) stack.push(id ?? null);
+  }
+  return { nodes, rootId };
+}
+
+function ancestorsOf(nodes, id) {
+  const out = [];
+  let current = nodes.get(id);
+  while (current && current.parent) {
+    out.push(current.parent);
+    current = nodes.get(current.parent);
+  }
+  return out;
+}
+
+function inheritsHidden(nodes, id) {
+  let current = nodes.get(id);
+  while (current) {
+    if (current.hidden) return true;
+    current = current.parent ? nodes.get(current.parent) : null;
+  }
+  return false;
+}
+
+function descendantsOf(nodes, id) {
+  const out = new Set();
+  const stack = [id];
+  while (stack.length > 0) {
+    const current = nodes.get(stack.pop());
+    if (!current) continue;
+    for (const child of current.children) {
+      out.add(child);
+      stack.push(child);
+    }
+  }
+  return out;
+}
+
+// 凍結metadataを構文解析して、機械で判定できる coverage の不備をここで落とす。
+//
+// 2026-08-26 まで、この5件は独立レビューの手作業だった。実測では round 1〜3 の指摘
+// F-1（page root 直下の被覆漏れ）・F-2（PC/SP対の非等価）・F-3（測定ノードの二重計上）が
+// すべてこの範囲で、機械で出せる不合格を人手の往復で発見していた。往復がそのまま待ち時間になる。
+// 判断を要しないものはレビュー役に残さない（rules/figma-spec-pipeline.md）。
+//
+// componentのfigmaNodeIdは意図的に対象外にしている。coverage契約はcomponentの
+// figmaNodeIdとsectionノードの一致を要求しておらず、ページroot基準の座標specを持つ
+// componentがrootをanchorにする運用が実在する（painted:false のため画像差分の基準にもならない）。
+export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionById, repoRoot) {
+  if ((coverage.pageKind ?? "page-design") !== "page-design") return;
+
+  const trees = {};
+  for (const viewport of ["pc", "sp"]) {
+    const page = coverage.pages[viewport];
+    const metadataPath = resolve(dirname(coveragePath), page.metadataPath);
+    const metadata = readJson(metadataPath);
+    const label = "Figma page metadata (" + viewport + ")";
+    // metadataPath は生ツリー（raw を持つ）を直接指す場合と、node evidence
+    // （p3-figma-node-evidence/v1）を指して、その中から viewport ごとの生ツリーを
+    // 参照する場合の両方が実在する。後者は1段たどる。
+    if (typeof metadata.raw === "string") {
+      trees[viewport] = parseFrozenMetadata(metadata.raw, label);
+      continue;
+    }
+    const evidence = Array.isArray(metadata.evidence) ? metadata.evidence : null;
+    if (!evidence) {
+      fail(label + " must contain either a raw metadata tree or a p3-figma-node-evidence/v1 evidence list");
+    }
+    const entry = evidence.find((item) => item
+      && item.viewport === viewport
+      && (item.nodeId === page.nodeId || item.role === "page-root"));
+    if (!entry || typeof entry.metadataPath !== "string") {
+      fail(label + " has no page-root evidence entry for " + viewport);
+    }
+    const rawPath = resolve(repoRoot, entry.metadataPath);
+    if (!existsSync(rawPath)) fail(label + " references a missing metadata file: " + entry.metadataPath);
+    if (typeof entry.metadataSha256 === "string" && sha256File(rawPath) !== entry.metadataSha256) {
+      fail(label + " metadata hash mismatch: " + entry.metadataPath);
+    }
+    trees[viewport] = parseFrozenMetadata(readJson(rawPath).raw, label);
+  }
+
+  const problems = [];
+  const declare = (message) => problems.push("  - " + message);
+
+  // (1) 実在: coverage が参照するノードが凍結metadataにあること
+  // (4) hidden継承: 非表示を継承したノードを対象にしていないこと
+  const registered = [];
+  for (const section of coverage.sections) {
+    for (const viewport of ["pc", "sp"]) {
+      const nodeId = section.figmaNodeIds?.[viewport] ?? null;
+      if (nodeId) registered.push({ label: "section " + section.sectionId, viewport, nodeId });
+      for (const measurement of section.measurementFigmaNodeIds?.[viewport] ?? []) {
+        registered.push({ label: "measurement " + section.sectionId, viewport, nodeId: measurement, measurement: true, sectionId: section.sectionId });
+      }
+    }
+  }
+  for (const entry of registered) {
+    const tree = trees[entry.viewport];
+    if (!tree.nodes.has(entry.nodeId)) {
+      declare(`${entry.label} の ${entry.viewport} ノード ${entry.nodeId} が凍結metadataに存在しません。`);
+      continue;
+    }
+    if (inheritsHidden(tree.nodes, entry.nodeId)) {
+      declare(`${entry.label} の ${entry.viewport} ノード ${entry.nodeId} は hidden を継承しています。非表示要素を検証対象にできません。`);
+    }
+  }
+
+  // (2) 包含: measurement は自 section ノードの子孫であること
+  for (const section of coverage.sections) {
+    for (const viewport of ["pc", "sp"]) {
+      const own = section.figmaNodeIds?.[viewport] ?? null;
+      if (!own) continue;
+      const tree = trees[viewport];
+      if (!tree.nodes.has(own)) continue;
+      for (const measurement of section.measurementFigmaNodeIds?.[viewport] ?? []) {
+        if (!tree.nodes.has(measurement)) continue;
+        if (measurement === own) continue;
+        if (!ancestorsOf(tree.nodes, measurement).includes(own)) {
+          declare(`${section.sectionId} の ${viewport} measurement ${measurement} が、自section のノード ${own} の子孫ではありません。`);
+        }
+      }
+    }
+  }
+
+  // (3) 二重計上: 同じ測定ノードを複数の section が宣言していないこと
+  const measurementOwners = new Map();
+  for (const section of coverage.sections) {
+    for (const viewport of ["pc", "sp"]) {
+      for (const measurement of section.measurementFigmaNodeIds?.[viewport] ?? []) {
+        const key = viewport + ":" + measurement;
+        if (!measurementOwners.has(key)) measurementOwners.set(key, []);
+        measurementOwners.get(key).push(section.sectionId);
+      }
+    }
+  }
+  for (const [key, owners] of measurementOwners) {
+    if (owners.length > 1) {
+      declare(`測定ノード ${key} を複数の section が宣言しています（${owners.join(" / ")}）。二重計上になります。`);
+    }
+  }
+
+  // (5) 被覆: page root 直下の子が inventory で被覆されていること
+  // hidden の子は表示されないため対象外にする。
+  const inventorySections = coverage.inventory?.sections ?? [];
+  for (const viewport of ["pc", "sp"]) {
+    const tree = trees[viewport];
+    const rootId = coverage.pages[viewport].nodeId;
+    if (!tree.nodes.has(rootId)) {
+      declare(`page root ${rootId}（${viewport}）が凍結metadataに存在しません。`);
+      continue;
+    }
+    const registeredIds = inventorySections
+      .map((entry) => entry.figmaNodeIds?.[viewport] ?? null)
+      .filter((value) => typeof value === "string" && tree.nodes.has(value));
+    for (const child of tree.nodes.get(rootId).children) {
+      if (tree.nodes.get(child).hidden) continue;
+      const subtree = descendantsOf(tree.nodes, child);
+      subtree.add(child);
+      const coveredFromBelow = registeredIds.some((id) => subtree.has(id));
+      const coveredFromAbove = registeredIds.some((id) => descendantsOf(tree.nodes, id).has(child));
+      if (!coveredFromBelow && !coveredFromAbove) {
+        declare(
+          `page root 直下の ${viewport} ノード ${child}` +
+          `（${tree.nodes.get(child).name ?? "名称なし"}）が inventory で被覆されていません。`
+        );
+      }
+    }
+  }
+
+  if (problems.length > 0) {
+    fail(
+      "page coverage が凍結Figma metadataと整合しません。\n" +
+      problems.join("\n") + "\n\n" +
+      "  これらは凍結metadataの構文解析で機械的に判定できる項目です。独立レビューを依頼する前に解消してください\n" +
+      "  （figma-to-code/rules/figma-spec-pipeline.md「機械で判定できる検査を、人手のレビューに残さない」）。"
+    );
+  }
 }
 
 function requireImplementationIdentity(value, label) {
@@ -165,22 +625,21 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   }
 
   const coverageSha256 = sha256File(coveragePath);
-  if (
-    review.version !== 2 ||
-    review.status !== "approved" ||
-    review.reviewerRole !== "independent-reviewer" ||
-    typeof review.reviewerActor !== "string" ||
-    review.reviewerActor.trim() === "" ||
-    typeof review.reviewerContextId !== "string" ||
-    review.reviewerContextId.trim() === "" ||
-    typeof review.reviewedAt !== "string" ||
-    review.reviewedAt.trim() === "" ||
-    review.pageCoverageSha256 !== coverageSha256
-  ) {
-    fail("page coverage needs an approved independent review for the current coverage hash");
-  }
-  if (review.reviewerActor === implementationIdentity.actor && review.reviewerContextId === implementationIdentity.contextId) {
-    fail("page coverage review must be performed by a different actor or a different context from implementation");
+  const coverageDigest = canonicalCoverageDigest(coverage);
+  assertCoverageExpansionIsDeclared(coverage, review, coveragePath, repoRoot, coverageDigest);
+  const reviewBlockers = reviewApprovalBlockers(review, coverageSha256, implementationIdentity, coverageDigest);
+  if (reviewBlockers.length > 0) {
+    fail(reviewRequestMessage({
+      blockers: reviewBlockers,
+      manifestId,
+      coveragePath,
+      coverageSha256,
+      coverageDigest,
+      reviewPath,
+      review,
+      implementationIdentity,
+      repoRoot,
+    }));
   }
 
   const targetIds = new Set();
@@ -298,6 +757,8 @@ function manifestContext(manifestPath, implementationIdentityInput) {
     requireViewportNodes(entry.figmaNodeIds, "inventory section " + sectionId, entry);
     inventoryIds.add(sectionId);
   }
+  assertFrozenMetadataConsistency(coverage, coveragePath, sectionById, repoRoot);
+
   const unclassified = [...inventoryIds].filter((sectionId) => !sectionById.has(sectionId));
   if (unclassified.length > 0) {
     fail("inventory sections are not classified as target/context/deferred: " + unclassified.join(", "));
@@ -398,8 +859,34 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   };
 }
 
+// runtime も scope ごとに1ファイルにする。manifestのディレクトリだけで決めていた頃は
+// MyBrain/verify/ 配下の全manifestが同じ page-coverage-runtime.json を共有し、
+// Figma gate の受領証を per-manifest 化しても、並行した2つ目のscopeが1つ目の
+// セクション状態（next / current / verified）を上書きしていた（2026-08-25）。
+function runtimeDirectory(absoluteManifestPath) {
+  return resolve(dirname(absoluteManifestPath), ".figma-gate");
+}
+
+// 旧1枠形式。移行期間は読むだけで、新規の書き込みはしない。
+function legacyRuntimePath(absoluteManifestPath) {
+  return resolve(runtimeDirectory(absoluteManifestPath), "page-coverage-runtime.json");
+}
+
 function runtimePath(manifestPath) {
-  return resolve(dirname(resolve(manifestPath)), ".figma-gate", "page-coverage-runtime.json");
+  const absolute = resolve(manifestPath);
+  const name = basename(absolute).replace(/\.json$/i, "").replace(/[^A-Za-z0-9._-]/g, "_");
+  return resolve(runtimeDirectory(absolute), "runtime", `${name}.json`);
+}
+
+// 読み出しは新形式を優先し、無ければ旧1枠を見る。移行中に runtime を持っている
+// scope（checkpoint 実行中のもの）を壊さないための経路。
+function existingRuntimePath(manifestPath) {
+  const absolute = resolve(manifestPath);
+  const scoped = runtimePath(absolute);
+  if (existsSync(scoped)) return scoped;
+  const legacy = legacyRuntimePath(absolute);
+  if (existsSync(legacy)) return legacy;
+  return scoped;
 }
 
 function writeRuntime(path, runtime) {
@@ -408,7 +895,9 @@ function writeRuntime(path, runtime) {
 }
 
 function loadRuntime(manifestPath, implementationIdentityInput) {
-  const path = runtimePath(manifestPath);
+  // 新形式を優先し、無ければ旧1枠を見る。移行前に preflight した scope は
+  // 旧パスに runtime を持っており、以降の checkpoint もそのファイルを読み書きし続ける。
+  const path = existingRuntimePath(manifestPath);
   if (!existsSync(path)) fail("page coverage runtime is missing; run preflight after independent approval");
   const runtime = readJson(path);
   const context = manifestContext(manifestPath, implementationIdentityInput);
@@ -422,13 +911,24 @@ function loadRuntime(manifestPath, implementationIdentityInput) {
   ) {
     fail("page coverage runtime implementationIdentity differs from active gate state");
   }
-  if (
-    runtime.manifestSha256 !== sha256File(context.absoluteManifestPath) ||
-    runtime.componentsSha256 !== sha256File(context.componentsPath) ||
-    runtime.coverageSha256 !== context.coverageSha256 ||
-    runtime.reviewSha256 !== sha256File(context.reviewPath)
-  ) {
-    fail("page coverage frozen inputs changed; run preflight again");
+  // どの入力が動いたのかを名指しする。4つまとめて「変わった」とだけ言うと、
+  // 実装役は毎回4ファイルを突き合わせ直すことになる。
+  const frozenInputs = [
+    ["manifest", runtime.manifestSha256, sha256File(context.absoluteManifestPath)],
+    ["components", runtime.componentsSha256, sha256File(context.componentsPath)],
+    ["page coverage", runtime.coverageSha256, context.coverageSha256],
+    ["page coverage review", runtime.reviewSha256, sha256File(context.reviewPath)],
+  ];
+  const movedInputs = frozenInputs.filter(([, frozen, current]) => frozen !== current);
+  if (movedInputs.length > 0) {
+    fail(
+      "preflightで凍結した入力が変更されています。preflight を再実行してください。\n" +
+        movedInputs
+          .map(([label, frozen, current]) => `  - ${label}: 凍結 ${String(frozen).slice(0, 12)}… → 現在 ${String(current).slice(0, 12)}…`)
+          .join("\n") +
+        "\n  page coverage が動いている場合は、独立レビュー承認も同時に失効している。" +
+        "\n  preflight を再実行すると、承認が現在のcoverageに対して有効かどうかを依頼書つきで報告する。"
+    );
   }
   return { path, runtime, context };
 }

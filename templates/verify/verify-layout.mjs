@@ -102,6 +102,7 @@ async function runWithBrowser(browser) {
           page: {
             htmlFontSize: getComputedStyle(document.documentElement).fontSize,
             scrollWidth: document.body.scrollWidth,
+            layoutViewportWidth: document.documentElement.clientWidth,
           },
           els: {},
         };
@@ -120,6 +121,7 @@ async function runWithBrowser(browser) {
             top: +rect.top.toFixed(1),
             width: +rect.width.toFixed(1),
             height: +rect.height.toFixed(1),
+            centerX: +(rect.left + rect.width / 2).toFixed(1),
             topInSection: section ? +(rect.top - section.getBoundingClientRect().top).toFixed(1) : null,
             // ページ上の絶対座標は先行セクションの実データ高で変動する。
             // mask対象の画像・本文はカード内部の相対位置も照合し、データ差で隠した配置崩れを防ぐ。
@@ -211,6 +213,18 @@ async function runWithBrowser(browser) {
         for (const [key, expected] of Object.entries(element)) {
           // provenance は取得元のメタ情報でDOMの測定項目ではない。sel / note と同じくスキップする。
           if (key === "sel" || key === "note" || key === "provenance" || key === "textPatternReason") continue;
+          // 横中央配置は幅だけの検証では検出できない。要素の中心とレイアウトviewport中心を照合する。
+          // 案件側実装からの昇格（2026-08-24）。left の期待値だけでは、コンテナ幅が変わったときに
+          // 「中央に見えるが中央ではない」状態を見逃す。
+          if (key === "centeredInline") {
+            if (expected !== true) {
+              failCount += 1;
+              console.log(`FAIL  ${element.sel} centeredInline  期待値はtrueのみ指定できる`);
+              continue;
+            }
+            check(`${element.sel} centerX`, measured.centerX, data.page.layoutViewportWidth / 2);
+            continue;
+          }
           if (key === "text" || key === "innerText") {
             check(`${element.sel} ${key}`, normalizeText(measured[key]), normalizeText(expected));
             continue;

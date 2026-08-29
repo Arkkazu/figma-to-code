@@ -14,6 +14,39 @@ tags: [Figma, verify, CDP, lint, template, Codex, Claude]
 ## 導入（案件ごとに1回）
 
 
+## 正本が web-development にある同梱ファイル
+
+次の4ファイルは、このディレクトリにあるが**正本ではない**。正本は `C:\AI\web-development\verify\` にある。
+
+| ファイル | 役割 |
+|---|---|
+| `scope-conflict-audit.mjs` | gate受領証・担当台帳・共有所有権の衝突検査 |
+| `scope-coordination.mjs` | scope予約台帳の読み書きとpreflight lock |
+| `responsive-html-guard.mjs` | PC/SPの同一本文重複検査 |
+| `lint-units.mjs` | SCSS単位規約lint |
+
+**ここで独自に編集しない。**直すときは web-development の正本を直し、こちらへ同期する。
+
+同梱している理由は、`figma-gate.e2e.mjs` がこのうち2件をフィクスチャへコピーして使うためである。
+絶対パスで web-development を参照すると、上位層を持たないクラウドセッションで
+「このリポジトリ内で完結するE2E」が回らなくなる（`WORKFLOW.md`「クラウドセッションでの実行範囲」）。
+
+同梱は乖離する。実際、2026-08-25 に `scope-conflict-audit.mjs` が正本より **116行古い**状態で
+見つかった（同梱397行 / 正本471行）。案件側は正本と一致していたので、腐っていたのはここだけだった。
+誰も2箇所を突き合わせていなかったため、静かに残り続けていた。
+
+そのため一致を機械検査する。正本を読める環境でだけ照合し、読めない環境（クラウド）は
+`skipped` として通す。検査できないことを「一致している」と報告しないよう、`mode` を必ず出力する。
+
+```bash
+node C:/AI/figma-to-code/tools/vendored-verifier-audit.mjs
+```
+
+    exit 0  一致、または照合不能（mode: skipped）
+    exit 2  同梱コピーが正本と乖離、または片側が欠落
+
+正本の場所は `WEB_DEVELOPMENT_VERIFY_DIR` で差し替えられる。
+
 <!-- executable-figma-gate -->
 ## figma-gate.mjs — コーディング反復中の強制ゲート
 
@@ -21,6 +54,10 @@ tags: [Figma, verify, CDP, lint, template, Codex, Claude]
 
 マニフェストには少なくとも、実装actor/context、対象Figma PC/SP node、取得した可視/非表示レイヤー、採用アセットのFigma MCP export URLとSHA-256、spec、DOM対応表、機械可読なnode map（`scope.nodeMapPath`）、component decision manifestを記録する。
 **Q-13 / Q-08の同一session接続（contract v3）。** `scope.accessibilityPath` と `scope.motionPath` に案件側の `accessibility-<scope>.json` / `motion-<scope>.json` を明示する。preflightは両設定と `accessibility.axe.sourcePath` の存在・SHA-256を凍結し、各batchの復帰後にも再照合する。checkpoint、close、release-checkは `gate-browser-batch.mjs` がQ-09のPC/SPレイアウト実測・撮影、Q-13（axe・コントラスト・キーボード）、Q-08（hover/open/中間値）を**一つのChrome/CDP session**で実行する。release-checkはcomponentごとの公開URL再測定に加え、全specを一つのfull-page batchで再測定し、単体`verify-layout.mjs`を別Chromeで後付け起動しない。未承認axe違反、未承認コントラスト未達、キーボード失敗、状態期待値不一致はSPEC FAILとして停止する。コントラスト人間判定リストは証跡へ保存するだけで機械FAILには混ぜない。単体の `accessibility-verify.mjs` / `motion-verify.mjs` は設定作成時の隔離実行に使えるが、gate内で別Chromeを起動して後付けする経路はない。DOM対応表（Markdown）はハッシュ固定のみで内容を検査できないため、同じ内容を `nodemap-example.json` の書式で機械可読にし、`preflight` の `assertNodeMapCoverage` がFigma子ノード単位のカバレッジを検査する。`mapped` ノードがspecで測定されていない、未対応ノードに `reason` がない、specセレクタがnode mapに追跡できない、PC/SPどちらかの登録が無い場合はpreflightを通らない。component manifestの各componentにはspacingOwnershipを必ず持たせ、rootPaddingはnoneまたはinternal、interSectionSpacingはparent-layoutまたはnot-applicableにする。コンポーネントrootに外側のセクション間余白をpaddingとして持たせる宣言はpreflightで拒否する。page coverage reviewとnew判定のreviewer actor/contextは、実装actor/contextと同一組合せを禁止する。変更前後の手入力スクリーンショット・矩形はgateの合否に使わないため要求しない。
+
+**`start` は着手時点の入口。** 引数を取らず、`WORKFLOW.md`「着手前ゲート」の5点、フェーズ0の固定チェックリスト、停止・未確認として報告する条件、次に実行するコマンドを出力する。内容は `FIGMA_TO_CODE_ROOT` の正本Markdownから抽出するため、gate側に工程表の複製を持たない。正本側で該当節が改名・欠落した場合は、工程を出さないまま通さず SPEC FAIL とする。**`start` はゲートではなく、編集の許可を与えない。** `preflight` は適用規則に加えて停止条件も出力し、受領証の `stopConditions` に残す。
+
+**着手宣言は受領証にする。** `scope.startDeclarationPath` に `MyBrain/verify/start-<scope-id>.json` を宣言する（書式は `start-declaration-template.json`）。`preflight` は `scopeId` = manifest `id`、`figma.fileKey` と `figma.nodeIds.pc` / `.sp` = `manifest.figma.viewportNodes`、`specPath` = `manifest.scope.specPath` を突き合わせ、`scopeLockStatePath` の実在、`outOfScopePaths` と `changeTargets` の非重複、`ownerInstruction` 20文字以上、`environmentPreflight.mode: "local"`、`declaredAt` のISO 8601形式を検査する。宣言のSHA-256は他の凍結入力と同じく固定し、preflight後の書き換えは後続phaseで落ちる。先行scopeの宣言を複製すると `scopeId` 不一致で落ちる。既存manifestはこの項目を持たないため旧契約となり、`gate-contract-audit.mjs` が欠落を一覧する。
 
 **`preflight` はGitリポジトリのルートで実行する。** 変更対象がすでに編集済み（dirty）ならその場で SPEC FAIL となる。「編集してから通す」経路を塞ぐための判定で、gitが使えない環境では実行できない。ビルド生成物は `scope.generatedTargets`（`changeTargets` の部分集合）へ宣言し、中断作業の再開など編集済みで開始する場合だけ `scope.preEditApproval = { instruction, paths[] }` にオーナー承認を記録する。specには `viewportPolicy.scrollbars`（`hidden` / `visible`）が必須で、実測と撮影の両方で同じ値を使う。
 
@@ -82,7 +119,7 @@ node templates/verify/gate-contract-audit.e2e.mjs
 node templates/verify/gate-browser-batch.e2e.mjs  # Chromeを使用
 ```
 
-1. `cdp-browser.mjs`、`checkpoint-capture.mjs`、`checkpoint-diff.mjs`、`gate-browser-batch.mjs`、`gate-contract-audit.mjs`、`lint-units.mjs`、`verify-layout.mjs`、`loop-learn.mjs`、`loop-learning-policy.json`、`fidelity-benchmark.mjs`、`accessibility-verify.mjs`、`accessibility-verify-template.json`、`motion-verify.mjs`、`motion-verify-template.json`、`figma-feature-coverage.mjs`、`figma-feature-coverage-template.json` を案件リポジトリの `MyBrain/verify/` へ同じ版でコピーする。**あわせて `figma-page-coverage.mjs`、`correction-receipt.mjs`、`responsive-html-guard.mjs`、`scope-coordination.mjs` も必ずコピーする**（`figma-gate.mjs` が `./` 相対で import しており、欠けると `ERR_MODULE_NOT_FOUND` で起動しない）。`scope-conflict-audit.mjs` は import ではなく別プロセスとして起動されるが、これが無いと preflight が必ず落ちるため同様に必須で、案件側に `MyBrain/verify/scope-coordination.json` と `MyBrain/verify/shared-component-ownership.json` の2つの台帳を用意する必要がある（受領証は gate 種別ごとに1枠しかなく、これが並行scopeによる上書きを止める唯一の仕組み。詳細は `C:\AI\web-development\verify\README.md`）。`figma-visible-asset-audit.mjs` は `manifest.scope.visibleAssetAuditPath` を宣言した案件でだけ必要。`components-example.json`、`component-decisions-example.json`、`page-coverage-example.json`、`page-coverage-review-template.json`、`release-check-template.json`、`correction-receipt-template.json` は各manifest・独立承認・公開照合record・受領証跡の書式見本としてコピーして記入する。`spec-example.json` は書式見本（コピー不要、参照のみ）。配布物の一覧は `C:\AI\MyBrain\manifest.json` を機械可読な正本とし、`node C:/AI/MyBrain/bootstrap.mjs --check` が import の取りこぼしを検査する。`figma-dom-mapping-template.md` はフェーズ0の全件対応表・未対応/余計要素リストの書式（対象ごとに案件側 `MyBrain/verify/` へコピーして記入する）。
+1. `cdp-browser.mjs`、`checkpoint-capture.mjs`、`checkpoint-diff.mjs`、`gate-browser-batch.mjs`、`gate-contract-audit.mjs`、`lint-units.mjs`、`verify-layout.mjs`、`loop-learn.mjs`、`loop-learning-policy.json`、`accessibility-verify.mjs`、`accessibility-verify-template.json`、`motion-verify.mjs`、`motion-verify-template.json`、`figma-feature-coverage.mjs`、`figma-feature-coverage-template.json` を案件リポジトリの `MyBrain/verify/` へ同じ版でコピーする。**あわせて `figma-page-coverage.mjs`、`correction-receipt.mjs`、`responsive-html-guard.mjs`、`scope-coordination.mjs` も必ずコピーする**（`figma-gate.mjs` が `./` 相対で import しており、欠けると `ERR_MODULE_NOT_FOUND` で起動しない）。`scope-conflict-audit.mjs` は import ではなく別プロセスとして起動されるが、これが無いと preflight が必ず落ちるため同様に必須で、案件側に `MyBrain/verify/scope-coordination.json` と `MyBrain/verify/shared-component-ownership.json` の2つの台帳を用意する必要がある（受領証は scope ごとに `<stateDir>/active/<manifestId>.json` へ分かれており、この2つの台帳と `scope-conflict-audit.mjs` が、宣言パスの交差するscope同士の上書きを止める。詳細は `C:\AI\web-development\verify\README.md`）。`figma-visible-asset-audit.mjs` は `manifest.scope.visibleAssetAuditPath` を宣言した案件でだけ必要。`components-example.json`、`component-decisions-example.json`、`page-coverage-example.json`、`page-coverage-review-template.json`、`release-check-template.json`、`correction-receipt-template.json`、`start-declaration-template.json` は各manifest・独立承認・公開照合record・受領証跡・着手宣言の書式見本としてコピーして記入する。`spec-example.json` は書式見本（コピー不要、参照のみ）。配布物の一覧は `C:\AI\MyBrain\manifest.json` を機械可読な正本とし、`node C:/AI/MyBrain/bootstrap.mjs --check` が import の取りこぼしを検査する。`figma-dom-mapping-template.md` はフェーズ0の全件対応表・未対応/余計要素リストの書式（対象ごとに案件側 `MyBrain/verify/` へコピーして記入する）。
 2. 案件側 `MyBrain/rules/units.md`（単位規約）が無ければ、既存CSSの `html { font-size }` とビルド済みCSSから規約を特定し、**先に units.md を作ってから**実装に入る。
 3. 要件：Node 22+（WebSocket内蔵）、Google Chrome。Chromeが標準パスに無い場合は環境変数 `CHROME_PATH` で指定する。Figmaから採用するアセットが無いscopeでは、manifestの `assets` は空配列または省略でよい。
 
@@ -201,6 +238,9 @@ HTML/PHP変更にW3Cの記録が無いなど、実行器や正本ルールの変
 
 ## fidelity-benchmark.mjs — ワンショット忠実度ベンチマーク
 
+P-3の研究用実行器・E2E・契約文書は 
+esearch/p3/ に置く。案件へ配布する検証キットには含めない。
+
 このプロジェクトの成果は「Figmaデザインどおりのコードを初回実装で出せること」であり、正本・テンプレート・実行器の改善が実際に効いたかは推測ではなく計測で判定する。`figma-gate checkpoint` は各試行の結果を `.figma-gate/active.json` の `benchmark.attempts` に追記する。1件は `{ elementId, viewports, painted, attempt, finalRecheck, outcome, failureClass, message, at }` で、`outcome` は `PASS` / `FAIL`、`failureClass` はFAIL時に `SPEC` / `LAYOUT` / `VISUAL` / `OTHER` のいずれかである。記録はcheckpointの合否に影響しない（記録できない場合は黙って諦める）。
 
 ### P-3 v13の契約・実行順
@@ -277,9 +317,9 @@ baseline/currentはsharedのgate manifestが持つ同一`verifyUrl`（同一prov
 
 **P-3の比較契約v13（判断Jの改訂起草、独立批評・owner承認前）。** A/Bは同一Figma root nodeに対し、同じ未実装source Git commit/treeと`git archive`実バイトSHA-256を照合した別clean worktreeで実装する。契約はworktreeの作成手段そのものを証明しない。pair-begin/preflight/close/report/compareは1つの置換不能なlifecycleとして実行し、checkpointの検証試行数は初回PASS指標の一部として別途記録する。
 
-`p3-page-provider.mjs` はP-3比較契約だけの付属実行器であり、P-3のowner採用・独立批評前は `C:\AI\MyBrain\manifest.json` のrequired配布物に登録しない。P-3パイロットをownerが採用した案件では、`fidelity-benchmark.mjs`、`p3-page-provider.mjs`、[P3-CONTRACT-RECORDS.md](P3-CONTRACT-RECORDS.md)を同じ版で案件側 `MyBrain/verify/` へ併せてコピーする。
+`p3-page-provider.mjs` はP-3比較契約だけの付属実行器であり、P-3のowner採用・独立批評前は `C:\AI\MyBrain\manifest.json` のrequired配布物に登録しない。P-3パイロットをownerが採用した案件では、`p3-page-provider.mjs`、[P3-CONTRACT-RECORDS.md](../../research/p3/P3-CONTRACT-RECORDS.md)を同じ版で案件側 `MyBrain/verify/` へ併せてコピーする。
 
-pair-begin前のowner recordは[P3-CONTRACT-RECORDS.md](P3-CONTRACT-RECORDS.md)に従う。`p3-evaluator-plan`は12本のroot、依存閉包、execution bundleとbaseline record雛形を出力し、`p3-decision-input-plan`は承認済みpre-implementation proof、baseline record、shared.cleanRoomAuthorizationからDecision J v2雛形を出力する。J v2は全A/B隔離planを承認するがevidenceのbyte SHA-256を参照しない。次にcondition別evidence v2がJ file SHA-256とplan SHA-256へ参照を張り、contractが各evidenceのfileSha256を凍結する。`p3-json-hash`の`fileSha256`をrecord参照の`sha256`へ入れる。baseline/currentを同じcontract pathに置くため、templateの`_currentVariant`どおりcurrentではcondition、receipt path、evaluatedChange.id、approvalRecord、cleanRoom.evidenceだけを置換する。
+pair-begin前のowner recordは[P3-CONTRACT-RECORDS.md](../../research/p3/P3-CONTRACT-RECORDS.md)に従う。`p3-evaluator-plan`は12本のroot、依存閉包、execution bundleとbaseline record雛形を出力し、`p3-decision-input-plan`は承認済みpre-implementation proof、baseline record、shared.cleanRoomAuthorizationからDecision J v2雛形を出力する。J v2は全A/B隔離planを承認するがevidenceのbyte SHA-256を参照しない。次にcondition別evidence v2がJ file SHA-256とplan SHA-256へ参照を張り、contractが各evidenceのfileSha256を凍結する。`p3-json-hash`の`fileSha256`をrecord参照の`sha256`へ入れる。baseline/currentを同じcontract pathに置くため、templateの`_currentVariant`どおりcurrentではcondition、receipt path、evaluatedChange.id、approvalRecord、cleanRoom.evidenceだけを置換する。
 
 preImplementationProof v2はowner承認済みでなければならず、凍結component manifestとcomponent decision manifestから導出した`unimplementedComponents`（elementId / selector / figmaNodeId / codePath）および`unimplementedTargetPaths`と完全一致させる。`unimplementedTargetPaths`は凍結`changeTargets`と完全一致し、source Git treeと各`pair-preflight`直前worktreeのどちらにも存在してはならない。さらにGit管理対象・未追跡・無視された実ソースをselector文字列ごとに検索し、対象componentを既に描画していれば拒否する。検索対象から除外するのは`MyBrain/`、`.figma-gate/`、`node_modules/`だけであり、比較証跡は`MyBrain/`配下に置く。`frozen/`、`out/`、`comparison/`などの任意ディレクトリは実ソースとして検索する。無視された実行時成果物がsource側に残る場合も開始を拒否する。これは開始条件を機械的に固定するものであり、会話等の非参照をコードだけで暗号学的に証明するものではない。
 

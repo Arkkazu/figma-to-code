@@ -33,14 +33,16 @@ try {
   return {
     async evaluate() {
       return {
-        page: { htmlFontSize: "16px", scrollWidth: 375 },
+        page: { htmlFontSize: "16px", scrollWidth: 375, layoutViewportWidth: 375 },
         els: {
           ".hidden": { display: "none" },
+          ".offcenter": { left: 0, top: 0, width: 200, height: 10, centerX: 100, topInSection: 0 },
           ".title": {
             left: 20,
             top: 80,
             width: 335,
             height: 48,
+            centerX: 187.5,
             topInSection: 40,
             offsetLeft: 20,
             offsetTop: 40,
@@ -113,6 +115,7 @@ export async function navigateAndWait(_browser, args) { if (args.selectors.inclu
             objectPosition: "50% 50%",
             borderRadius: "8px",
             paddingTop: "0px",
+            centeredInline: true,
           },
           { sel: ".hidden", display: "none" },
         ],
@@ -123,6 +126,34 @@ export async function navigateAndWait(_browser, args) { if (args.selectors.inclu
   const passResult = runVerify("MyBrain/verify/pass-spec.json");
   if (passResult.status !== 0) {
     throw new Error(`expected pass spec to pass:\n${passResult.stdout}\n${passResult.stderr}`);
+  }
+
+  // centeredInline の負のケース（2026-08-24 昇格時に追加）
+  // (1) 中心がレイアウトviewport中心とずれていればFAIL
+  const offCenterSpec = structuredClone(passSpec);
+  offCenterSpec.viewports[0].elements = [{ sel: ".offcenter", centeredInline: true }];
+  write("MyBrain/verify/off-center-spec.json", offCenterSpec);
+  const offCenterResult = runVerify("MyBrain/verify/off-center-spec.json");
+  if (offCenterResult.status === 0) {
+    throw new Error(`expected an off-center element to fail centeredInline:
+${offCenterResult.stdout}`);
+  }
+  if (!offCenterResult.stdout.includes("centerX")) {
+    throw new Error(`the centeredInline failure must name centerX:
+${offCenterResult.stdout}`);
+  }
+  // (2) true 以外の期待値は宣言そのものを拒否する（false で「中央でないこと」を検証させない）
+  const centeredFalseSpec = structuredClone(passSpec);
+  centeredFalseSpec.viewports[0].elements[0].centeredInline = false;
+  write("MyBrain/verify/centered-false-spec.json", centeredFalseSpec);
+  const centeredFalseResult = runVerify("MyBrain/verify/centered-false-spec.json");
+  if (centeredFalseResult.status === 0) {
+    throw new Error(`expected centeredInline:false to be rejected:
+${centeredFalseResult.stdout}`);
+  }
+  if (!centeredFalseResult.stdout.includes("centeredInline")) {
+    throw new Error(`the rejection must name centeredInline:
+${centeredFalseResult.stdout}`);
   }
 
   const failSpec = structuredClone(passSpec);

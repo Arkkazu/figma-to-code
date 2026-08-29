@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "_comment": "WORKFLOW.md『着手前ゲート』の5点を受領証にしたもの。ソースを1行も編集する前に MyBrain/verify/start-<scope-id>.json として作成し、gate manifest の scope.startDeclarationPath へ登録する。preflight が中身を manifest と突き合わせ、SHA-256 を凍結する。<...> は実値へ置き換える。",
+  "scopeId": "<gate manifest の id と同じ値。別scopeの宣言を複製すると落ちる>",
+  "declaredAt": "<ISO 8601。例 2026-08-25T09:30:00.000Z>",
+  "ownerInstruction": "<オーナーが実際に依頼した内容。20文字以上>",
+  "environmentPreflight": {
+    "mode": "local",
+    "checkedAt": "<workflow-preflight --assert-local を通した時刻>"
+  },
+  "figma": {
+    "fileKey": "<manifest.figma.fileKey と同じ値>",
+    "nodeIds": {
+      "pc": ["<manifest.figma.viewportNodes の pc の nodeId>"],
+      "sp": ["<manifest.figma.viewportNodes の sp の nodeId>"]
+    }
+  },
+  "specPath": "<manifest.scope.specPath と同じ値>",
+  "scopeLockStatePath": "<figma-scope-lock begin が作った state のパス。実在すること>",
+  "outOfScopePaths": [
+    "<今回のscope外だと宣言するパス。changeTargets と重複させない。無ければ空配列>"
+  ]
+}

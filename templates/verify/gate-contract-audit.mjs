@@ -53,7 +53,7 @@ function contractGaps(manifest, manifestPath) {
   const gaps = [];
   const scope = manifest.scope;
   if (!scope || typeof scope !== "object") return ["scope"];
-  for (const key of ["specPath", "nodeMapPath", "componentsPath", "componentDecisionPath", "pageCoveragePath", "accessibilityPath", "motionPath"]) {
+  for (const key of ["specPath", "nodeMapPath", "componentsPath", "componentDecisionPath", "pageCoveragePath", "accessibilityPath", "motionPath", "startDeclarationPath"]) {
     if (typeof scope[key] !== "string" || scope[key].trim() === "") gaps.push(key);
   }
   if (typeof scope.specPath === "string" && scope.specPath.trim() !== "") {

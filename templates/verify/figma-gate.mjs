@@ -4,7 +4,7 @@ import { validateCorrectionReceipt } from "./correction-receipt.mjs";
 import { assertResponsiveHtmlSingleDom } from "./responsive-html-guard.mjs";
 import { markCoordinationGateActive, markCoordinationGateClosed, withScopePreflightLock } from "./scope-coordination.mjs";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -14,8 +14,64 @@ const gateEntrypointPath = fileURLToPath(import.meta.url);
 const args = process.argv.slice(2);
 const command = args[0];
 const IMPLEMENTATION_IDENTITY_FLAGS = Object.freeze(["--implementation-actor", "--implementation-context-id"]);
+const DISCARD_CHECKPOINTS_FLAG = "--discard-checkpoints";
 const stateDirectory = resolve(repoRoot, ".figma-gate");
-const statePath = resolve(stateDirectory, "active.json");
+// 保持中の受領証は scope ごとに1ファイル（active/<manifestId>.json）。
+// 1枠（active.json）だと、宣言パスが1つも重ならない scope 同士でも受領証を奪い合い、
+// Figma実装がページ単位で全部直列になる。coding gate は同じ理由で per-manifest へ
+// 移行済みで、その実装をここへ移植した（2026-08-25）。衝突判定は
+// scope-conflict-audit のパス交差に委ねる。
+const activeStateDirectory = resolve(stateDirectory, "active");
+// 旧1枠形式。移行期間は読むだけで、新規の書き込みはしない。
+const legacyStatePath = resolve(stateDirectory, "active.json");
+const safeReceiptName = (manifestId) => String(manifestId).replace(/[^A-Za-z0-9._-]/g, "_");
+const statePathFor = (manifestId) => resolve(activeStateDirectory, `${safeReceiptName(manifestId)}.json`);
+// ベンチマーク追記が、いまどの受領証を触っているかを覚えておく。
+// appendBenchmarkAttempt は manifest を引数に取らない位置から呼ばれるため。
+let activeReceiptPathInUse = null;
+
+function activeReceiptPaths() {
+  if (!existsSync(activeStateDirectory)) return [];
+  try {
+    return readdirSync(activeStateDirectory)
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => resolve(activeStateDirectory, name));
+  } catch {
+    return [];
+  }
+}
+
+// Windowsではドライブレターの大小が実行経路で揺れる（C: と c:）。受領証の探索に
+// 単純な文字列一致を使うと、同じmanifestなのに「受領証が無い」と判定しうる。
+// coding gate が worktreeRoot を小文字化して扱うのと同じ方針で吸収する。
+function samePathValue(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  return process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+
+// 対象manifestの受領証ファイルを探す。新形式を先に見て、無ければ旧1枠が同じ
+// manifestを指しているときだけ採用する。移行中に旧受領証を持っているscopeを壊さない。
+function activeStatePathForManifest(absoluteManifestPath) {
+  for (const receiptPath of [...activeReceiptPaths(), legacyStatePath]) {
+    if (!existsSync(receiptPath)) continue;
+    try {
+      const candidate = JSON.parse(readFileSync(receiptPath, "utf8"));
+      if (candidate && samePathValue(candidate.manifestPath, absoluteManifestPath)) return receiptPath;
+    } catch {
+      // 壊れた受領証は「無い」として扱う。読めないものを根拠にしない。
+    }
+  }
+  return null;
+}
+
+function readActiveState(absoluteManifestPath, label) {
+  const receiptPath = activeStatePathForManifest(absoluteManifestPath);
+  if (!receiptPath) {
+    fail(`${label} requires an active Figma gate receipt for this manifest. Run preflight first.`);
+  }
+  activeReceiptPathInUse = receiptPath;
+  return readJson(receiptPath, "Active Figma gate state");
+}
 // v13 adds a scoped Figma-inventory topology.  Active state version 4 (the
 // v12 state schema) has no assertion that its node-map used that topology, so
 // it must never advance.
@@ -44,13 +100,14 @@ function benchmarkFailureClass(message) {
 function appendBenchmarkAttempt(entry) {
   // ベンチマークの記録失敗が、本来の合否判定を隠してはならない。
   try {
-    if (!existsSync(statePath)) return;
-    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    const receiptPath = activeReceiptPathInUse;
+    if (!receiptPath || !existsSync(receiptPath)) return;
+    const state = JSON.parse(readFileSync(receiptPath, "utf8"));
     const benchmark = state.benchmark && typeof state.benchmark === "object" ? state.benchmark : {};
     const attempts = Array.isArray(benchmark.attempts) ? benchmark.attempts : [];
     attempts.push(entry);
-    mkdirSync(stateDirectory, { recursive: true });
-    writeFileSync(statePath, `${JSON.stringify({ ...state, benchmark: { ...benchmark, attempts } }, null, 2)}\n`, "utf8");
+    mkdirSync(dirname(receiptPath), { recursive: true });
+    writeFileSync(receiptPath, `${JSON.stringify({ ...state, benchmark: { ...benchmark, attempts } }, null, 2)}\n`, "utf8");
   } catch {
     // 記録できない場合は黙って諦める（合否には影響させない）
   }
@@ -80,7 +137,80 @@ function hashBuffer(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-function gateRuntimeEvidence() { return { entryPath: gateEntrypointPath, entrySha256: hashFile(gateEntrypointPath) }; }
+// 検証器そのものの版を証跡へ刻む。
+//
+// 2026-08-26 実測：稼働中のセッションが古い figma-page-coverage.mjs で digest を計算し、
+// 承認と一致しないまま停止した。症状（digest 不一致）だけが見え、原因（検証器の世代差）は
+// どこにも出ていなかったため、レビュー要件の問題と誤認された。
+// エントリのハッシュだけでは、gate が読み込む他モジュールの差し替えを検出できない。
+const VERIFIER_MODULES = Object.freeze([
+  "figma-page-coverage.mjs",
+  "correction-receipt.mjs",
+  "responsive-html-guard.mjs",
+  "scope-coordination.mjs",
+  "scope-conflict-audit.mjs",
+  "gate-browser-batch.mjs",
+  "verify-layout.mjs",
+  "accessibility-verify.mjs",
+  "motion-verify.mjs",
+  "checkpoint-capture.mjs",
+  "checkpoint-diff.mjs",
+  "cdp-browser.mjs",
+]);
+
+function verifierModuleHashes() {
+  const directory = dirname(gateEntrypointPath);
+  const hashes = {};
+  for (const name of [...VERIFIER_MODULES].sort()) {
+    const modulePath = resolve(directory, name);
+    // 案件によっては未配布のモジュールがある。無いものは "missing" と記録して、
+    // 「あったものが消えた」「無かったものが増えた」を後から区別できるようにする。
+    hashes[name] = existsSync(modulePath) ? hashFile(modulePath) : "missing";
+  }
+  return hashes;
+}
+
+function gateRuntimeEvidence() {
+  return {
+    entryPath: gateEntrypointPath,
+    entrySha256: hashFile(gateEntrypointPath),
+    contractVersion: FIGMA_GATE_CONTRACT_VERSION,
+    modules: verifierModuleHashes(),
+  };
+}
+
+// preflight で凍結した検証器と、いま動いている検証器を突き合わせる。
+// close / release-check は受領証を書く工程なので止める。途中フェーズは報告に留める
+// （止めても実装役は前に進めず、原因が見えれば自分で直せるため）。
+function assertVerifierRuntimeUnchanged(state, phase) {
+  const frozen = state.runtime && typeof state.runtime === "object" ? state.runtime : null;
+  if (!frozen || !frozen.modules || typeof frozen.modules !== "object") {
+    // 版を持たない古い受領証。判定材料が無いので黙って通す（移行互換）。
+    return;
+  }
+  const current = verifierModuleHashes();
+  const changed = [];
+  if (typeof frozen.entrySha256 === "string" && frozen.entrySha256 !== hashFile(gateEntrypointPath)) {
+    changed.push(`figma-gate.mjs: 凍結 ${frozen.entrySha256.slice(0, 12)}… → 現在 ${hashFile(gateEntrypointPath).slice(0, 12)}…`);
+  }
+  for (const [name, frozenHash] of Object.entries(frozen.modules)) {
+    const currentHash = current[name] ?? "missing";
+    if (frozenHash !== currentHash) {
+      const format = (value) => (value === "missing" ? "(未配布)" : `${value.slice(0, 12)}…`);
+      changed.push(`${name}: 凍結 ${format(frozenHash)} → 現在 ${format(currentHash)}`);
+    }
+  }
+  if (changed.length === 0) return;
+
+  const detail =
+    `検証器が preflight 後に差し替わっています（${phase}）。\n` +
+    changed.map((line) => `  - ${line}`).join("\n") + "\n" +
+    "  凍結時と別の検証器で判定すると、受領証がどの契約の下で通ったのか特定できません。\n" +
+    "  preflight を引き直してください。引き直すと現在の検証器で凍結し直します。";
+
+  if (phase === "close" || phase === "release-check") fail(`SPEC FAIL: ${detail}`);
+  pass(detail);
+}
 
 function hashFile(filePath) {
   return hashBuffer(readFileSync(filePath));
@@ -229,8 +359,12 @@ function requireActiveImplementationIdentity(state, phase) {
 }
 
 function parsePreflightArguments(rawArgs) {
-  const manifestPath = requireString(rawArgs[0], "manifest path");
-  const optionArgs = rawArgs.slice(1);
+  // 実行済みcheckpointを持つ自分の受領証を引き直すときだけ付ける。
+  // 何を破棄するかは scope-conflict-audit が列挙して出力する。検証を省く指定ではない。
+  const discardCheckpoints = rawArgs.includes(DISCARD_CHECKPOINTS_FLAG);
+  const args = rawArgs.filter((value) => value !== DISCARD_CHECKPOINTS_FLAG);
+  const manifestPath = requireString(args[0], "manifest path");
+  const optionArgs = args.slice(1);
   if (optionArgs.length % 2 !== 0) {
     fail("preflight implementation identity flags require a value.");
   }
@@ -254,6 +388,7 @@ function parsePreflightArguments(rawArgs) {
   }
   return {
     manifestPath,
+    discardCheckpoints,
     implementationIdentity: {
       actor: values["--implementation-actor"],
       contextId: values["--implementation-context-id"],
@@ -446,6 +581,102 @@ function assertNoDraftPageCoverageInputs(scope) {
     }
   }
 }
+// 着手宣言（WORKFLOW.md「着手前ゲート」）を受領証にする。
+//
+// この体系は、訂正・close・scope lock・凍結入力のすべてが受領証で担保されているのに、
+// 着手宣言だけがチャット上の発言のままだった。そのため「宣言せずに着手した」ことが
+// 原理的に検出できず、事後に「宣言したつもり」を書き足すことも防げなかった。
+//
+// 検査は宣言の中身をmanifestと突き合わせる形にする。非空文字列であればよい欄を並べても
+// 通ってしまうと、先行scopeの宣言を複製したまま提出できてしまうため（page coverage の
+// scopeId 一致検査で同じ回避策を塞いだのと同じ理由。2026-08-03）。
+//
+// これが担保するのは「5点が凍結された成果物として存在し、manifestと整合していること」
+// までである。宣言の内容が真実かどうかは検査できない。
+function validateStartDeclaration(scope, context) {
+  const declarationPath = inputRepoPath(scope.startDeclarationPath, "manifest.scope.startDeclarationPath");
+  if (!existsSync(declarationPath.absolutePath)) {
+    fail(`SPEC FAIL: start declaration does not exist: ${declarationPath.relativePath}`);
+  }
+  const label = "Start declaration";
+  const document = readExecutionJson(declarationPath.absolutePath, label);
+  requireObject(document, label);
+  if (document.version !== 1) fail(`${label}.version must be 1.`);
+
+  // 1点目: 環境判定。
+  const environment = requireObject(document.environmentPreflight, `${label}.environmentPreflight`);
+  const mode = requireString(environment.mode, `${label}.environmentPreflight.mode`);
+  if (mode !== "local") {
+    fail(`${label}.environmentPreflight.mode must be "local"; Figma実装scopeは上位層を読める環境でしか開始できない。`);
+  }
+
+  // 複製の禁止。scopeIdとfileKeyがmanifestと一致しない宣言は、別scopeの写しである。
+  const scopeId = requireString(document.scopeId, `${label}.scopeId`);
+  if (scopeId !== context.scopeId) {
+    fail(`${label}.scopeId must match manifest.id (${context.scopeId}); got ${scopeId}.`);
+  }
+
+  // 2点目: fileKey と PC/SP の node-id。manifest.figma.viewportNodes と突き合わせる。
+  const figma = requireObject(document.figma, `${label}.figma`);
+  const fileKey = requireString(figma.fileKey, `${label}.figma.fileKey`);
+  if (fileKey !== context.fileKey) {
+    fail(`${label}.figma.fileKey must match manifest.figma.fileKey (${context.fileKey}); got ${fileKey}.`);
+  }
+  const declaredNodeIds = requireObject(figma.nodeIds, `${label}.figma.nodeIds`);
+  for (const viewport of ["pc", "sp"]) {
+    const ids = requireArray(declaredNodeIds[viewport], `${label}.figma.nodeIds.${viewport}`);
+    const known = context.nodeIdsByViewport.get(viewport) ?? new Set();
+    for (const [index, value] of ids.entries()) {
+      const nodeId = requireString(value, `${label}.figma.nodeIds.${viewport}[${index}]`);
+      if (!known.has(nodeId)) {
+        fail(
+          `${label}.figma.nodeIds.${viewport} declares a node that manifest.figma.viewportNodes does not contain: ${nodeId}. ` +
+            "宣言したnodeと実装対象のnodeが違う。"
+        );
+      }
+    }
+  }
+
+  // 3点目: specの所在。manifestのspecPathと一致させる。
+  const declaredSpecPath = requireString(document.specPath, `${label}.specPath`).replace(/\\/g, "/");
+  if (declaredSpecPath !== context.specRelativePath) {
+    fail(`${label}.specPath must match manifest.scope.specPath (${context.specRelativePath}); got ${declaredSpecPath}.`);
+  }
+
+  // 4点目: scope lockの開始と、今回のscope外パス。
+  const scopeLockStatePath = inputRepoPath(document.scopeLockStatePath, `${label}.scopeLockStatePath`);
+  if (!existsSync(scopeLockStatePath.absolutePath)) {
+    fail(`${label}.scopeLockStatePath does not exist: ${scopeLockStatePath.relativePath}. scope lockを開始してから宣言する。`);
+  }
+  if (!Array.isArray(document.outOfScopePaths)) {
+    fail(`${label}.outOfScopePaths must be an array (今回のscope外パス。無い場合は空配列)。`);
+  }
+  for (const [index, value] of document.outOfScopePaths.entries()) {
+    const normalized = requireString(value, `${label}.outOfScopePaths[${index}]`).replace(/\\/g, "/");
+    if (context.changeTargetPaths.has(normalized)) {
+      fail(`${label}.outOfScopePaths[${index}] is also a changeTarget: ${normalized}. scope内と外の両方には置けない。`);
+    }
+  }
+
+  // オーナー指示の写し。scope lock manifestの ownerInstruction と同じ役割を持たせる。
+  const ownerInstruction = requireString(document.ownerInstruction, `${label}.ownerInstruction`);
+  if (ownerInstruction.trim().length < 20) {
+    fail(`${label}.ownerInstruction must record what the owner actually asked for (>=20 chars).`);
+  }
+
+  const declaredAt = requireString(document.declaredAt, `${label}.declaredAt`);
+  if (Number.isNaN(Date.parse(declaredAt))) {
+    fail(`${label}.declaredAt must be an ISO 8601 timestamp; got ${declaredAt}.`);
+  }
+
+  return {
+    relativePath: declarationPath.relativePath,
+    absolutePath: declarationPath.absolutePath,
+    scopeId,
+    declaredAt,
+  };
+}
+
 function validateManifest(manifest, phase, implementationIdentityInput) {
   assertNoDraftMarkers(manifest, "Manifest");
   requireObject(manifest, "manifest");
@@ -680,18 +911,31 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   readJsonEvidenceIfDeclared(layerEvidencePath, "manifest.figma.layerEvidencePath");
   const nodes = requireArray(figma.viewportNodes, "manifest.figma.viewportNodes");
   const nodeViewports = new Set();
+  const nodeIdsByViewport = new Map();
   for (const node of nodes) {
     requireObject(node, "manifest.figma.viewportNodes[]");
-    requireString(node.nodeId, "manifest.figma.viewportNodes[].nodeId");
-    requireString(node.viewport, "manifest.figma.viewportNodes[].viewport");
+    const declaredNodeId = requireString(node.nodeId, "manifest.figma.viewportNodes[].nodeId");
+    const declaredViewport = requireString(node.viewport, "manifest.figma.viewportNodes[].viewport");
     toEvidencePath(node.screenshotPath, "manifest.figma.viewportNodes[].screenshotPath");
-    nodeViewports.add(node.viewport);
+    nodeViewports.add(declaredViewport);
+    if (!nodeIdsByViewport.has(declaredViewport)) nodeIdsByViewport.set(declaredViewport, new Set());
+    nodeIdsByViewport.get(declaredViewport).add(declaredNodeId);
   }
   for (const viewport of ["pc", "sp"]) {
     if (!nodeViewports.has(viewport)) {
       fail(`manifest.figma.viewportNodes must include the ${viewport} node.`);
     }
   }
+
+  // 着手宣言はmanifest・spec・Figma nodeが揃ってからでないと突き合わせられないため、
+  // ここで検査する。宣言そのものは編集前に書かれている必要がある。
+  const startDeclaration = validateStartDeclaration(scope, {
+    scopeId: manifest.id,
+    fileKey: figma.fileKey,
+    specRelativePath: specPath.relativePath,
+    nodeIdsByViewport,
+    changeTargetPaths: uniqueTargets,
+  });
 
   const layers = requireArray(figma.layers, "manifest.figma.layers");
   const visibleLayerIds = new Set();
@@ -757,6 +1001,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
     id: manifest.id,
     scopeKind,
     correctionReceipt,
+    startDeclaration,
     specPath: specPath.relativePath,
     mappingPath: mappingPath.relativePath,
     mappingAbsolutePath: mappingPath.absolutePath,
@@ -1819,6 +2064,103 @@ function applicableRuleRefs(validated) {
   return [...refs];
 }
 
+// 工程と停止条件の正本は Markdown 側（WORKFLOW.md / rules/figma-spec-pipeline.md）にある。
+// gateが自前の表を持つと必ずそこが古くなるため（2026-08-24 doc-command-audit の教訓：
+// 正解集合は実装から導出する）、ここでは正本のMarkdownから抽出する。抽出できない場合は
+// 「工程を出力しないまま通す」より落とすほうが安全なので fail-closed とする。
+const PLAYBOOK_START_GATE_HEADING = "## 着手前ゲート";
+const PLAYBOOK_STOP_HEADING = "## 停止・未確認として報告する条件";
+const PLAYBOOK_CHECKLIST_ANCHOR = "固定チェックリスト";
+const PLAYBOOK_PIPELINE_RULE = "rules/figma-spec-pipeline.md";
+
+function readPlaybookDocument(relativePath) {
+  const absolute = resolve(FIGMA_TO_CODE_ROOT, relativePath);
+  if (!existsSync(absolute)) {
+    fail(
+      `SPEC FAIL: playbook document not found: ${absolute}. ` +
+        "工程と停止条件の正本を読めないため開始できない。FIGMA_TO_CODE_ROOT で正本の位置を指定する。"
+    );
+  }
+  return readFileSync(absolute, "utf8");
+}
+
+// 見出し直下から次の同レベル見出しまでを返す。見出しは日付注記が付くことがあるので前方一致で探す。
+function playbookSectionLines(markdown, headingPrefix, label) {
+  const lines = markdown.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.startsWith(headingPrefix));
+  if (start === -1) {
+    fail(`SPEC FAIL: ${label} の節「${headingPrefix}」が正本に見つからない。工程の正本が移動・改名した可能性がある。`);
+  }
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((line) => /^##\s/.test(line));
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
+function readStartGatePoints() {
+  const lines = playbookSectionLines(readPlaybookDocument("WORKFLOW.md"), PLAYBOOK_START_GATE_HEADING, "着手前ゲート");
+  const points = lines.filter((line) => /^\d+\.\s+\S/.test(line)).map((line) => line.trim());
+  if (points.length === 0) {
+    fail(`SPEC FAIL: 着手前ゲートの番号付き項目を抽出できない（${PLAYBOOK_START_GATE_HEADING}）。`);
+  }
+  return points;
+}
+
+function readStopConditions() {
+  const lines = playbookSectionLines(readPlaybookDocument(PLAYBOOK_PIPELINE_RULE), PLAYBOOK_STOP_HEADING, "停止条件");
+  const conditions = lines.filter((line) => /^-\s+\S/.test(line)).map((line) => line.replace(/^-\s+/, "").trim());
+  if (conditions.length === 0) {
+    fail(`SPEC FAIL: 停止条件の箇条書きを抽出できない（${PLAYBOOK_STOP_HEADING}）。`);
+  }
+  return conditions;
+}
+
+function readPhaseChecklist() {
+  const markdown = readPlaybookDocument(PLAYBOOK_PIPELINE_RULE);
+  const anchor = markdown.indexOf(PLAYBOOK_CHECKLIST_ANCHOR);
+  if (anchor === -1) {
+    fail(`SPEC FAIL: 「${PLAYBOOK_CHECKLIST_ANCHOR}」が ${PLAYBOOK_PIPELINE_RULE} に見つからない。`);
+  }
+  const fenceOpen = markdown.indexOf("```text", anchor);
+  if (fenceOpen === -1) {
+    fail(`SPEC FAIL: 「${PLAYBOOK_CHECKLIST_ANCHOR}」直後の text ブロックが見つからない。`);
+  }
+  const bodyStart = fenceOpen + "```text".length;
+  const fenceClose = markdown.indexOf("```", bodyStart);
+  if (fenceClose === -1) {
+    fail(`SPEC FAIL: 「${PLAYBOOK_CHECKLIST_ANCHOR}」の text ブロックが閉じていない。`);
+  }
+  const items = markdown
+    .slice(bodyStart, fenceClose)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("[ ]"));
+  if (items.length === 0) {
+    fail(`SPEC FAIL: 「${PLAYBOOK_CHECKLIST_ANCHOR}」から項目を抽出できない。`);
+  }
+  return items;
+}
+
+// 着手時点の入口。manifestもspecもまだ無い段階で呼ぶため、引数を取らない。
+// これはゲートではなく工程の出力であり、編集の許可を与えない。
+function start() {
+  assertWorkflowEnvironment();
+  const gatePoints = readStartGatePoints();
+  const checklist = readPhaseChecklist();
+  const stopConditions = readStopConditions();
+
+  console.log("FIGMA GATE: start — 着手前に読む工程と停止条件（正本から抽出。これはゲートではない）");
+  console.log(`\n[1] 着手前ゲート（WORKFLOW.md）— この${gatePoints.length}点を報告するまでソースを1行も編集しない`);
+  for (const point of gatePoints) console.log(`  ${point}`);
+  console.log(`\n[2] フェーズ0の固定チェックリスト（${checklist.length}項目）— 全項目を満たすまで「完了」「Figmaどおり」と報告しない`);
+  for (const item of checklist) console.log(`  ${item}`);
+  console.log(`\n[3] 停止・未確認として報告する条件（${stopConditions.length}件）— どれかに当たったら進めない`);
+  for (const condition of stopConditions) console.log(`  - ${condition}`);
+  console.log("\n[4] 次に実行するコマンド");
+  console.log("  node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local");
+  console.log("  npm run figma:gate -- preflight <manifest.json> --implementation-actor <actor> --implementation-context-id <context>");
+  console.log("\nFIGMA GATE: start は工程を出力しただけで、preflight の代わりにならない。編集はまだ許可されていない。");
+}
+
 function runCapture(program, programArgs, label, failureClass = null) {
   const result = spawnSync(program, programArgs, {
     cwd: repoRoot,
@@ -1983,6 +2325,7 @@ function assertFrozenInputs(state, validated, absoluteManifestPath, phase) {
     ["accessibilitySha256", validated.accessibilityAbsolutePath, "accessibility config"],
     ["motionSha256", validated.motionAbsolutePath, "motion config"],
     ["axeSourceSha256", validated.axeSourceAbsolutePath, "axe source"],
+    ["startDeclarationSha256", validated.startDeclaration.absolutePath, "start declaration"],
   ];
   if (validated.correctionReceipt) {
     frozen.push(["correctionReceiptSha256", validated.correctionReceipt.absolutePath, "owner correction receipt"]);
@@ -1999,11 +2342,12 @@ function assertFrozenInputs(state, validated, absoluteManifestPath, phase) {
 
 function requireFrozenPreflight(manifestPath, phase) {
   const absoluteManifestPath = resolve(repoRoot, requireString(manifestPath, "manifest path"));
-  const state = readJson(statePath, "Active Figma gate state");
+  const state = readActiveState(absoluteManifestPath, "Figma gate");
   if (state.phase !== "preflight" || state.manifestPath !== absoluteManifestPath) {
     fail(`${phase} requires an active preflight state for the same manifest.`);
   }
   const implementationIdentity = requireActiveImplementationIdentity(state, phase);
+  assertVerifierRuntimeUnchanged(state, phase);
   const manifest = readExecutionJson(absoluteManifestPath, "Manifest");
   const validated = validateManifest(manifest, phase, implementationIdentity);
   assertFrozenInputs(state, validated, absoluteManifestPath, phase);
@@ -2017,12 +2361,13 @@ function requireFrozenPreflight(manifestPath, phase) {
 //   4. Recompute the pixel diff and enforce the component threshold.
 function checkpoint(manifestPath, elementIdArg, { finalRecheck = false, release = null } = {}) {
   const absoluteManifestPath = resolve(repoRoot, requireString(manifestPath, "manifest path"));
-  const state = readJson(statePath, "Active Figma gate state");
+  const state = readActiveState(absoluteManifestPath, "Figma gate");
   const expectedStatePhase = release ? "closed" : "preflight";
   if (state.phase !== expectedStatePhase || state.manifestPath !== absoluteManifestPath) {
     fail(`${release ? "Release checkpoints" : "Checkpoints"} require an active ${expectedStatePhase} state for the same manifest.`);
   }
   const implementationIdentity = requireActiveImplementationIdentity(state, release ? "release-checkpoint" : "checkpoint");
+  assertVerifierRuntimeUnchanged(state, release ? "release-checkpoint" : "checkpoint");
 
   const manifest = readExecutionJson(absoluteManifestPath, "Manifest");
   const validated = validateManifest(manifest, release ? "release-check" : "checkpoint", implementationIdentity);
@@ -2457,8 +2802,21 @@ function assertCheckpointsComplete(state, plan, components, validated, checkpoin
 }
 
 function writeState(state) {
-  mkdirSync(stateDirectory, { recursive: true });
-  writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  const manifestId = requireString(state.manifestId, "Figma gate state manifestId");
+  const receiptPath = statePathFor(manifestId);
+  mkdirSync(activeStateDirectory, { recursive: true });
+  writeFileSync(receiptPath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  activeReceiptPathInUse = receiptPath;
+  // 旧1枠に同じ scope の受領証が残っていると、二重に保持しているように見える。
+  // 新形式へ書き写したので取り下げる。別scopeの旧受領証には触れない。
+  if (existsSync(legacyStatePath)) {
+    try {
+      const legacy = JSON.parse(readFileSync(legacyStatePath, "utf8"));
+      if (legacy && legacy.manifestId === manifestId) rmSync(legacyStatePath, { force: true });
+    } catch {
+      // 読めない旧受領証は残す。判断材料が無いまま削除しない。
+    }
+  }
 }
 
 // HTML/PHPを変更したscopeはW3C検証が必須。規則には書いてあったが検査が無く、
@@ -2576,7 +2934,7 @@ function assertWorkflowEnvironment() {
   return toolPath;
 }
 
-function preflight(manifestPath, implementationIdentityInput) {
+function preflight(manifestPath, implementationIdentityInput, { discardCheckpoints = false } = {}) {
   // 規則の所在と上位層の可読性は、manifestを読むより前の前提条件とする。
   assertWorkflowEnvironment();
   const absoluteManifestPath = resolve(repoRoot, requireString(manifestPath, "manifest path"));
@@ -2588,6 +2946,9 @@ function preflight(manifestPath, implementationIdentityInput) {
   // 最後に実行する。manifest / spec / node map の検査で落ちる経路の失敗理由を変えないため。
   const preEdit = assertTargetsUneditedBeforePreflight(validated);
   const applicableRules = applicableRuleRefs(validated);
+  // 規則の所在だけを出しても、落ちるのは「どこで止まるか」のほうである（実測：工程名は
+  // 言えても停止条件が1件も出てこない要約が出た）。停止条件も同じ場所で出す。
+  const stopConditions = readStopConditions();
   const relativeManifestPath = relative(repoRoot, absoluteManifestPath).replace(/\\/g, "/");
   // 受領証は gate 種別ごとに1枠しかない。衝突判定から受領証作成までを同一の排他ロック内で
   // 行わないと、二つのpreflightがどちらも「衝突なし」と判定したあとで、片方がもう片方の
@@ -2605,6 +2966,7 @@ function preflight(manifestPath, implementationIdentityInput) {
             "--gate", "figma",
             "--actor", implementationIdentity.actor,
             "--context-id", implementationIdentity.contextId,
+            ...(discardCheckpoints ? [DISCARD_CHECKPOINTS_FLAG] : []),
             relativeManifestPath,
           ],
           "scope conflict audit",
@@ -2638,6 +3000,7 @@ function preflight(manifestPath, implementationIdentityInput) {
     fail(`SPEC FAIL: scope conflict preflight guard failed: ${error.message}`);
   }
   pass(`Rules that apply to this scope (read before editing):\n  - ${applicableRules.join("\n  - ")}`);
+  pass(`Stop conditions for this scope (do not proceed when any applies):\n  - ${stopConditions.join("\n  - ")}`);
   pass("Preflight evidence is complete. Source edits may begin.");
 
   // 受領証の中身。ロック内で一度だけ書く。宣言は巻き上げられるので使用箇所より後で構わない。
@@ -2662,6 +3025,9 @@ function preflight(manifestPath, implementationIdentityInput) {
     axeSourceSha256: hashFile(validated.axeSourceAbsolutePath),
     correctionReceiptSha256: validated.correctionReceipt ? hashFile(validated.correctionReceipt.absolutePath) : null,
     correctionReceiptId: validated.correctionReceipt ? validated.correctionReceipt.id : null,
+    startDeclarationSha256: hashFile(validated.startDeclaration.absolutePath),
+    startDeclarationPath: validated.startDeclaration.relativePath,
+    startDeclaredAt: validated.startDeclaration.declaredAt,
     manifestId: validated.id,
     implementationIdentity,
     changeTargets: validated.changeTargets.map(({ relativePath }) => relativePath),
@@ -2678,6 +3044,7 @@ function preflight(manifestPath, implementationIdentityInput) {
     benchmark: { plan: [...validated.checkpointPlan], attempts: [] },
     preEdit,
     applicableRules,
+    stopConditions,
     preflightId: randomUUID(),
     preflightAt: new Date().toISOString(),
     };
@@ -2686,11 +3053,12 @@ function preflight(manifestPath, implementationIdentityInput) {
 
 function close(manifestPath) {
   const absoluteManifestPath = resolve(repoRoot, requireString(manifestPath, "manifest path"));
-  const state = readJson(statePath, "Active Figma gate state");
+  const state = readActiveState(absoluteManifestPath, "Figma gate");
   if (state.phase !== "preflight" || state.manifestPath !== absoluteManifestPath) {
     fail("A matching preflight state is required before close.");
   }
   const implementationIdentity = requireActiveImplementationIdentity(state, "close");
+  assertVerifierRuntimeUnchanged(state, "close");
   const manifest = readExecutionJson(absoluteManifestPath, "Manifest");
   const validated = validateManifest(manifest, "close", implementationIdentity);
   assertFrozenInputs(state, validated, absoluteManifestPath, "close");
@@ -2720,7 +3088,7 @@ function close(manifestPath) {
   for (const elementId of validated.checkpointPlan) {
     checkpoint(manifestPath, elementId, { finalRecheck: true });
   }
-  const finalState = readJson(statePath, "Active Figma gate state");
+  const finalState = readActiveState(absoluteManifestPath, "Figma gate");
   assertCheckpointsComplete(finalState, validated.checkpointPlan, validated.components, validated);
 
   const closeReportDirectory = resolve(repoRoot, "MyBrain/verify/checkpoints", validated.id);
@@ -2827,11 +3195,12 @@ function validateReleaseRecord(releaseRecord) {
 
 function releaseCheck(manifestPath, releaseRecordPathArg) {
   const absoluteManifestPath = resolve(repoRoot, requireString(manifestPath, "manifest path"));
-  const state = readJson(statePath, "Active Figma gate state");
+  const state = readActiveState(absoluteManifestPath, "Figma gate");
   if (state.phase !== "closed" || state.manifestPath !== absoluteManifestPath) {
     fail("release-check requires a successful close for the same manifest.");
   }
   const implementationIdentity = requireActiveImplementationIdentity(state, "release-check");
+  assertVerifierRuntimeUnchanged(state, "release-check");
   const manifest = readExecutionJson(absoluteManifestPath, "Manifest");
   const validated = validateManifest(manifest, "release-check", implementationIdentity);
   assertFrozenInputs(state, validated, absoluteManifestPath, "release-check");
@@ -2844,7 +3213,7 @@ function releaseCheck(manifestPath, releaseRecordPathArg) {
   for (const elementId of validated.checkpointPlan) {
     checkpoint(manifestPath, elementId, { finalRecheck: true, release: { publicUrl: releaseRecord.publicUrl } });
   }
-  const finalState = readJson(statePath, "Active Figma gate state");
+  const finalState = readActiveState(absoluteManifestPath, "Figma gate");
   assertCheckpointsComplete(finalState, validated.checkpointPlan, validated.components, validated, "releaseCheckpoints");
   const releaseBrowserBatchEvidence = runReleaseFullPageBrowserBatch(validated, releaseRecord.publicUrl, state, absoluteManifestPath);
 
@@ -2886,9 +3255,11 @@ function releaseCheck(manifestPath, releaseRecordPathArg) {
   pass("Release check completed. Record the passed release record in STATE.md before reporting public completion.");
 }
 
-if (command === "preflight") {
+if (command === "start") {
+  start();
+} else if (command === "preflight") {
   const parsed = parsePreflightArguments(args.slice(1));
-  preflight(parsed.manifestPath, parsed.implementationIdentity);
+  preflight(parsed.manifestPath, parsed.implementationIdentity, { discardCheckpoints: parsed.discardCheckpoints });
 } else if (command === "checkpoint") {
   rejectImplementationIdentityFlagsOutsidePreflight("checkpoint", args.slice(1));
   checkpoint(args[1], args[2]);
@@ -2919,7 +3290,35 @@ if (command === "preflight") {
   rejectImplementationIdentityFlagsOutsidePreflight("release-check", args.slice(1));
   if (!args[2]) fail("release-check requires a release record path");
   releaseCheck(args[1], args[2]);
+} else if (command === "versions") {
+  // いま動いている検証器の版を出す。世代差を疑ったときに、症状ではなく原因を直接見るための出口。
+  // 受領証を渡すと、凍結時との差分も並べる。
+  const modules = verifierModuleHashes();
+  console.log(`contractVersion: ${FIGMA_GATE_CONTRACT_VERSION}`);
+  console.log(`figma-gate.mjs : ${hashFile(gateEntrypointPath)}`);
+  for (const [name, value] of Object.entries(modules)) {
+    console.log(`${name.padEnd(31)}: ${value}`);
+  }
+  if (args[1]) {
+    const absoluteManifestPath = resolve(repoRoot, args[1]);
+    const receiptPath = activeStatePathForManifest(absoluteManifestPath);
+    if (!receiptPath) {
+      console.log("\n受領証なし（このmanifestの preflight はまだ実行されていません）");
+    } else {
+      const state = readJson(receiptPath, "Active Figma gate state");
+      const frozen = state.runtime?.modules;
+      if (!frozen) {
+        console.log("\nこの受領証は検証器の版を持ちません（版を記録する前に preflight したもの）。");
+      } else {
+        const differences = Object.entries(frozen).filter(([name, value]) => (modules[name] ?? "missing") !== value);
+        console.log(`\n凍結時との差分: ${differences.length === 0 ? "なし" : differences.length + "件"}`);
+        for (const [name, value] of differences) {
+          console.log(`  ${name}: 凍結 ${String(value).slice(0, 12)}… → 現在 ${String(modules[name] ?? "missing").slice(0, 12)}…`);
+        }
+      }
+    }
+  }
 } else {
-  console.error("Usage: node MyBrain/verify/figma-gate.mjs preflight <manifest.json> --implementation-actor <actor> --implementation-context-id <context> | <checkpoint|section-start|section-close|close|release-check> <manifest.json> [elementId-or-release-record]");
+  console.error("Usage: node MyBrain/verify/figma-gate.mjs start | versions [manifest.json] | preflight <manifest.json> --implementation-actor <actor> --implementation-context-id <context> [--discard-checkpoints] | <checkpoint|section-start|section-close|close|release-check> <manifest.json> [elementId-or-release-record]");
   process.exit(1);
 }

@@ -71,9 +71,29 @@ function readGateState(root, gateKind) {
   return readJson(statePath, `${gateKind} gate state`);
 }
 
-function activeGateClaim(root, gateKind) {
-  const state = readGateState(root, gateKind);
-  if (!state || ["closed", "aborted"].includes(state.phase)) return null;
+// coding gate の受領証は scope ごとに1ファイル（active/<manifestId>.json）。
+// 1枠だった頃の active.json も移行期間は読む。figma gate も 2026-08-25 に同形式へ移行した。
+function readGateStates(root, gateKind) {
+  const states = [];
+  const activeDir = resolve(gateStateDir(root, gateKind), "active");
+  if (existsSync(activeDir)) {
+    for (const name of readdirSync(activeDir)) {
+      if (!name.endsWith(".json")) continue;
+      states.push(readJson(resolve(activeDir, name), `${gateKind} gate state`));
+    }
+  }
+  const legacy = readGateState(root, gateKind);
+  if (legacy) states.push(legacy);
+  return states;
+}
+
+function activeGateClaims(root, gateKind) {
+  return readGateStates(root, gateKind)
+    .filter((state) => state && !["closed", "aborted"].includes(state.phase))
+    .map((state) => gateClaimOf(state, gateKind));
+}
+
+function gateClaimOf(state, gateKind) {
   let targets = Array.isArray(state.changeTargets) ? state.changeTargets.map(normalizePath) : null;
   if (!targets && typeof state.manifestPath === "string") {
     targets = operationTargets(readJson(state.manifestPath, `${gateKind} gate manifest`), `${gateKind} gate manifest`);
@@ -85,6 +105,21 @@ function activeGateClaim(root, gateKind) {
     targets,
     state,
   };
+}
+
+// 凍結入力を正当に改訂したscopeは、自分の受領証を引き直さないと再preflightできない。
+// checkpointを1件も実行していない受領証に限り、同一scopeの引き直しを許す。
+// 1件でも実行済みなら拒否する — 検証済みの結果を黙って捨てることになるためである。
+function isUntouchedSelfClaim(claim, scopeId) {
+  if (!claim || claim.id !== scopeId) return false;
+  if (claim.state?.phase !== "preflight") return false;
+  const counts = [claim.state?.checkpoints, claim.state?.sections, claim.state?.components]
+    .filter((value) => value && typeof value === "object")
+    .map((value) => (Array.isArray(value) ? value.length : Object.keys(value).length));
+  if (counts.some((count) => count > 0)) return false;
+  const attempts = claim.state?.benchmark?.attempts;
+  if (Array.isArray(attempts) && attempts.length > 0) return false;
+  return true;
 }
 
 function dirtyPaths(root) {
@@ -223,8 +258,9 @@ function dependencySatisfied(root, dependency) {
   return Boolean(state && state.manifestId === dependency.scopeId && state.phase === (dependency.phase ?? "closed"));
 }
 
-function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
+function audit({ root, manifestPath, gateKind, operation, identity = {}, discardCheckpoints = false }) {
   const violations = [];
+  const notes = [];
   const absoluteManifestPath = isAbsolute(manifestPath) ? manifestPath : resolve(root, manifestPath);
   let manifest;
   let ownership;
@@ -294,26 +330,64 @@ function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
     }
   }
 
-  let figmaClaim = null;
-  let codingClaim = null;
+  let figmaClaims = [];
+  let codingClaims = [];
   try {
-    figmaClaim = activeGateClaim(root, "figma");
-    codingClaim = activeGateClaim(root, "coding");
+    figmaClaims = activeGateClaims(root, "figma");
+    codingClaims = activeGateClaims(root, "coding");
   } catch (error) {
     violations.push(error.message);
   }
-  if (gateKind === "figma" && figmaClaim) {
-    violations.push(`Figma gate受領証は ${figmaClaim.id} が保持中です。preflightで上書きできません。`);
-  }
-  if (gateKind === "coding" && operation === "preflight" && codingClaim) {
-    violations.push(`Coding gate受領証は ${codingClaim.id} が保持中です。preflightで上書きできません。`);
+  for (const [kind, claims] of [["figma", figmaClaims], ["coding", codingClaims]]) {
+    if (gateKind !== kind) continue;
+    for (const claim of claims) {
+    if (kind === "coding" && operation !== "preflight") continue;
+    if (isUntouchedSelfClaim(claim, scopeId)) {
+      notes.push(`${kind} gate受領証 ${claim.id} を同一scopeで引き直します（実行済みcheckpoint 0件のため失われる検証結果はありません）。`);
+      continue;
+    }
+    // 凍結入力が正当に変わったのに実行済みcheckpointがある場合、引き直しは検証済みの
+    // 結果を捨てることになる。黙って捨てさせない代わりに、捨てる中身を全部出したうえで
+    // 明示フラグがあるときだけ通す。closeは全checkpointを再実行するので情報は失われない。
+    if (discardCheckpoints && claim.id === scopeId && claim.state?.phase === "preflight") {
+      const discarded = Object.keys(claim.state?.checkpoints ?? {});
+      const discardedSections = Object.keys(claim.state?.sections ?? {});
+      notes.push(
+        `${kind} gate受領証 ${claim.id} を --discard-checkpoints で引き直します。`
+        + ` 破棄するcheckpoint(${discarded.length}件): ${discarded.join("、") || "なし"}。`
+        + ` 破棄するsection(${discardedSections.length}件): ${discardedSections.join("、") || "なし"}。`
+      );
+      continue;
+    }
+    // 別scopeが保持している場合。宣言パスが1つも交差しないなら、同時に進めても
+    // 互いのファイルには触れない。受領証を scope ごとに分けたので枠の奪い合いも起きない。
+    // ここを無条件停止のままにすると、無関係な作業まで直列化して待ちが積み上がる。
+    // 2026-08-25: figma gate も受領証を scope ごとのファイルへ移行したため、coding と同じ判定にする。
+    // 移行前は1枠だったのでパス非交差でも上書きになり、無条件で止めていた。
+    if (claim.id !== scopeId) {
+      const label = kind === "figma" ? "Figma" : "Coding";
+      const overlap = claim.targets.filter((target) => targets.includes(target));
+      if (overlap.length === 0) {
+        notes.push(`${label} gate受領証 ${claim.id} が保持中ですが、宣言パスが交差しないため並行して進めます。`);
+        continue;
+      }
+      violations.push(`${label} gate受領証は ${claim.id} が保持中で、次の宣言パスが交差します: ${overlap.join("、")}。`);
+      continue;
+    }
+    // 同一scopeが既に受領証を持っている場合。引き直しは明示フラグを要求する。
+    violations.push(
+      `${kind === "figma" ? "Figma" : "Coding"} gate受領証は ${claim.id} が保持中です。preflightで上書きできません。`
+      + " 実行済みcheckpointを破棄して引き直すなら --discard-checkpoints を付けます。"
+    );
+    }
   }
   const frozenAmendTargets = new Set();
   if (operation === "amend" && gateKind === "coding") {
-    if (!codingClaim || codingClaim.id !== scopeId || codingClaim.state?.phase !== "preflight") {
+    const ownCodingClaim = codingClaims.find((claim) => claim.id === scopeId) ?? null;
+    if (!ownCodingClaim || ownCodingClaim.state?.phase !== "preflight") {
       violations.push("coding amendには同一scopeのpreflight受領証が必要です。");
     } else {
-      for (const target of [...(codingClaim.state.changeTargets || []), ...(codingClaim.state.deleteTargets || [])]) {
+      for (const target of [...(ownCodingClaim.state.changeTargets || []), ...(ownCodingClaim.state.deleteTargets || [])]) {
         frozenAmendTargets.add(normalizePath(target));
       }
     }
@@ -325,7 +399,7 @@ function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
 
   const claims = [
     ...loadedEntries.map(({ entry, targets: entryTargets }) => ({ id: entry.id, source: `coordination:${entry.status}`, targets: entryTargets })),
-    ...[figmaClaim, codingClaim].filter(Boolean),
+    ...[...figmaClaims, ...codingClaims],
   ];
   let dirty = new Set();
   try {
@@ -357,12 +431,13 @@ function audit({ root, manifestPath, gateKind, operation, identity = {} }) {
   }
 
   if (violations.length > 0) throw new AuditError(violations);
-  return { scopeId, actor, targetCount: targets.length, gateKind, operation };
+  return { scopeId, actor, targetCount: targets.length, gateKind, operation, notes };
 }
 
 function parseArgs(argv) {
   let gateKind = null;
   let operation = "preflight";
+  let discardCheckpoints = false;
   const identity = {};
   const positional = [];
   const named = {
@@ -373,22 +448,24 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
+    if (value === "--discard-checkpoints") { discardCheckpoints = true; continue; }
     const equals = value.indexOf("=");
     const flag = equals >= 0 ? value.slice(0, equals) : value;
     if (!Object.hasOwn(named, flag)) { positional.push(value); continue; }
     named[flag](equals >= 0 ? value.slice(equals + 1) : argv[++index]);
   }
-  return { gateKind, operation, identity, manifestPath: positional[0] };
+  return { gateKind, operation, identity, manifestPath: positional[0], discardCheckpoints };
 }
 
-const { gateKind, operation, identity, manifestPath } = parseArgs(process.argv.slice(2));
+const { gateKind, operation, identity, manifestPath, discardCheckpoints } = parseArgs(process.argv.slice(2));
 if (!manifestPath || !GATE_KINDS.has(gateKind) || !OPERATIONS.has(operation)) {
-  console.error("Usage: node MyBrain/verify/scope-conflict-audit.mjs --gate <figma|coding> [--operation <preflight|amend>] [--actor <name> --context-id <id>] <manifest.json>");
+  console.error("Usage: node MyBrain/verify/scope-conflict-audit.mjs --gate <figma|coding> [--operation <preflight|amend>] [--actor <name> --context-id <id>] [--discard-checkpoints] <manifest.json>");
   process.exit(2);
 }
 
 try {
-  const result = audit({ root: process.cwd(), manifestPath, gateKind, operation, identity });
+  const result = audit({ root: process.cwd(), manifestPath, gateKind, operation, identity, discardCheckpoints });
+  for (const note of result.notes ?? []) console.log(`NOTE: ${note}`);
   console.log(`PASS: scope conflict audit (${result.scopeId}) / ${result.targetCount} target(s) / actor=${result.actor} / gate=${result.gateKind} / operation=${result.operation}`);
 } catch (error) {
   const violations = error instanceof AuditError ? error.violations : [error.message];

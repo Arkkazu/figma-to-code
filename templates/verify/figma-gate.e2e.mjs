@@ -4,7 +4,7 @@
 // Figma, P-11, a role, or a pair lifecycle.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,9 +24,24 @@ function assert(condition, label) {
 
 // 環境判定 workflow-preflight のテストダブル。実際の C:\\AI\\figma-to-code や
 // 上位層 WORKFLOW.md に依存せずに、gateが判定へ委ねていることだけを検査する。
+// 工程と停止条件の正本。stubへは実物を複製する。合成した見出しを置くと、正本側で節が
+// 改名・移動したときにこのE2Eが素通りしてしまうため（gateは正本のMarkdownから抽出する）。
+const playbookRoot = resolve(dirname(fixturePath), "..", "..");
+const PLAYBOOK_PROCESS_DOCS = Object.freeze(["WORKFLOW.md", join("rules", "figma-spec-pipeline.md")]);
+
+function copyPlaybookProcessDocs(root) {
+  for (const relativePath of PLAYBOOK_PROCESS_DOCS) {
+    const source = join(playbookRoot, relativePath);
+    const destination = join(root, relativePath);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(source, destination);
+  }
+}
+
 function createWorkflowPreflightStub(mode) {
   const root = mkdtempSync(join(tmpdir(), `figma-gate-workflow-${mode}-`));
   mkdirSync(join(root, "tools"), { recursive: true });
+  copyPlaybookProcessDocs(root);
   const exitCode = mode === "local" ? 0 : 2;
   writeFileSync(
     join(root, "tools", "workflow-preflight.mjs"),
@@ -112,10 +127,33 @@ function preflightArgs(fixture) {
   ];
 }
 
+// 受領証は scope ごとに active/<manifestId>.json へ書かれる（2026-08-25 の per-manifest 移行）。
+// fixture は1 scope しか持たないので、active/ にある最初の受領証を見る。
+// 受領証がまだ無いときは旧1枠のパスを返す。存在しないことを確かめる検査がそのまま通る。
+function resolveActiveReceiptPath(root) {
+  const activeDirectory = join(root, ".figma-gate", "active");
+  if (existsSync(activeDirectory)) {
+    const names = readdirSync(activeDirectory).filter((name) => name.endsWith(".json"));
+    if (names.length > 0) return join(activeDirectory, names[0]);
+  }
+  return join(root, ".figma-gate", "active.json");
+}
+
+// page coverage runtime も scope ごとに1ファイル（runtime/<manifest名>.json）。
+// 受領証と同じく、まだ無いときは旧1枠のパスを返す。
+function resolveRuntimeReceiptPath(directory) {
+  const runtimeDirectory = join(directory, ".figma-gate", "runtime");
+  if (existsSync(runtimeDirectory)) {
+    const names = readdirSync(runtimeDirectory).filter((name) => name.endsWith(".json"));
+    if (names.length > 0) return join(runtimeDirectory, names[0]);
+  }
+  return join(directory, ".figma-gate", "page-coverage-runtime.json");
+}
+
 function gateArtifactPaths(fixture) {
   return {
-    activePath: join(fixture.root, ".figma-gate", "active.json"),
-    runtimePath: join(fixture.directory, ".figma-gate", "page-coverage-runtime.json"),
+    activePath: resolveActiveReceiptPath(fixture.root),
+    runtimePath: resolveRuntimeReceiptPath(fixture.directory),
   };
 }
 
@@ -173,6 +211,25 @@ mkdirSync(dirname(resolvedSummaryPath), { recursive: true });
 writeFileSync(resolvedSummaryPath, JSON.stringify(summary, null, 2) + "\\n", "utf8");
 `;
   writeFileSync(path, source, "utf8");
+}
+
+// WORKFLOW.md「着手前ゲート」の5点を受領証にしたもの。manifestと突き合わせるので、
+// fileKey / nodeId / specPath はフィクスチャのmanifestと一致させる必要がある。
+function validStartDeclaration() {
+  return {
+    version: 1,
+    scopeId: "fixture-gate",
+    declaredAt: "2026-08-25T00:00:00.000Z",
+    ownerInstruction: "fixture: ファーストビューをFigmaどおりに実装する（着手宣言の検査用）",
+    environmentPreflight: { mode: "local", checkedAt: "2026-08-25T00:00:00.000Z" },
+    figma: {
+      fileKey: "fixture-file",
+      nodeIds: { pc: ["fixture-pc-page-root"], sp: ["fixture-sp-page-root"] },
+    },
+    specPath: "MyBrain/verify/fixture/spec.json",
+    scopeLockStatePath: "MyBrain/verify/fixture/scope-lock.state.json",
+    outOfScopePaths: ["site/other-view.txt"],
+  };
 }
 
 function createFixture(prefix) {
@@ -368,10 +425,14 @@ function createFixture(prefix) {
     axe: { sourcePath: "MyBrain/verify/fixture/axe.js" },
   });
   writeJson(join(directory, "motion.json"), { viewportPolicy: { scrollbars: "hidden" } });
+  // scope lock の state は着手宣言が「lockを開始してから書かれた」ことの根拠になる。
+  writeJson(join(directory, "scope-lock.state.json"), { status: "active", allowedPaths: ["site/view.txt"] });
+  writeJson(join(directory, "start-declaration.json"), validStartDeclaration());
   writeJson(fixture.manifestPath, {
     id: "fixture-gate",
     scope: {
       kind: "new",
+      startDeclarationPath: "MyBrain/verify/fixture/start-declaration.json",
       changeTargets: ["site/view.txt"],
       generatedTargets: [],
       responsiveHtml: { sourceFiles: ["site/view.txt"], deferredSourceFiles: [], exceptions: [] },
@@ -634,6 +695,90 @@ function assertIdentityArgumentGuards() {
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+}
+
+// 他scopeが受領証を保持しているときの preflight の扱い。2026-08-25 の独立レビューで
+// この検査が figma-gate.e2e に無いことが判明し、案件側の旧e2eから書き直して持ち込んだ。
+//
+// 当初は「保持者がいれば必ず止まる」を固定していた。これは受領証が1枠（active.json）
+// だった頃の契約である。同じ 2026-08-25 に、オーナー指摘 concurrent-scope-blocked-by-
+// repo-wide-baseline を受けて受領証を scope ごと（active/<manifestId>.json）へ分け、
+// 判定を scope-conflict-audit のパス交差へ寄せた。枠の奪い合いが構造的に起きなくなった
+// ため、交差しない他scopeを止める理由は無くなっている。
+//
+// そこで固定する性質を2つに分ける。どちらの場合も、保持中の受領証を書き換えないこと
+// （独立レビューが守りたかった性質）は変わらない。
+//   1. 宣言パスが交差しない … preflightは通り、保持中の受領証はバイト単位で不変
+//   2. 宣言パスが交差する  … preflightは交差パスを名指しして止まり、成果物を残さない
+function assertHeldReceiptBlocksPreflight() {
+  // 受領証は scope ごとに1ファイル。保持者の受領証を実形式で置く。
+  const heldReceiptRelativePath = join(".figma-gate", "active", "another-scope-holding-the-receipt.json");
+
+  // 受領証が指す先が実在しないと、保持の検査へ到達する前に別の理由で落ちる。
+  // 保持者の識別は state.manifestId から行われる（scope-conflict-audit.mjs）。
+  function placeHeldReceipt(fixture, heldChangeTargets) {
+    const heldManifestPath = join(fixture.root, "another-scope-manifest.json");
+    writeJson(heldManifestPath, {
+      id: "another-scope-holding-the-receipt",
+      scope: { changeTargets: heldChangeTargets, deleteTargets: [] },
+    });
+    const heldReceiptPath = join(fixture.root, heldReceiptRelativePath);
+    mkdirSync(dirname(heldReceiptPath), { recursive: true });
+    writeJson(heldReceiptPath, {
+      version: 5,
+      phase: "preflight",
+      manifestId: "another-scope-holding-the-receipt",
+      manifestPath: heldManifestPath,
+    });
+    return { heldReceiptPath, heldSha256: sha256(heldReceiptPath) };
+  }
+
+  // 1. 交差しないので並行して進める。保持中の受領証は触らない。
+  const parallel = createFixture("p3-figma-gate-held-receipt-parallel-");
+  try {
+    const { heldReceiptPath, heldSha256 } = placeHeldReceipt(parallel, ["site/another-scope.txt"]);
+    const attempt = accept(preflightArgs(parallel), parallel.root);
+    assert(
+      attempt.output.includes("Running scope conflict audit"),
+      "held receipt (disjoint): preflight reaches the scope conflict audit"
+    );
+    assert(
+      attempt.output.includes("宣言パスが交差しないため並行して進めます"),
+      `held receipt (disjoint): preflight reports why it may proceed (output=${JSON.stringify(attempt.output)})`
+    );
+    assert(
+      sha256(heldReceiptPath) === heldSha256,
+      "held receipt (disjoint): an accepted preflight leaves another scope's receipt byte-identical"
+    );
+  } finally {
+    rmSync(parallel.root, { recursive: true, force: true });
+  }
+
+  // 2. 交差するので止まる。交差パスを名指しし、成果物を残さない。
+  const conflicting = createFixture("p3-figma-gate-held-receipt-conflict-");
+  try {
+    // フィクスチャ自身の changeTargets は site/view.txt。保持者を同じパスに重ねる。
+    const { heldReceiptPath, heldSha256 } = placeHeldReceipt(conflicting, ["site/view.txt"]);
+    const attempt = reject(
+      preflightArgs(conflicting),
+      "Figma gate受領証は another-scope-holding-the-receipt が保持中で、次の宣言パスが交差します: site/view.txt。",
+      conflicting.root
+    );
+    assert(
+      attempt.output.includes("Running scope conflict audit"),
+      "held receipt (overlapping): preflight reaches the scope conflict audit instead of stopping earlier"
+    );
+    assert(
+      sha256(heldReceiptPath) === heldSha256,
+      "held receipt (overlapping): a rejected preflight leaves another scope's receipt byte-identical"
+    );
+    assert(
+      !existsSync(resolveRuntimeReceiptPath(conflicting.directory)),
+      "held receipt (overlapping): a rejected preflight does not create page-coverage runtime"
+    );
+  } finally {
+    rmSync(conflicting.root, { recursive: true, force: true });
   }
 }
 
@@ -941,8 +1086,149 @@ function assertWorkflowPreflightGuards() {
   }
 }
 
+// 着手宣言（WORKFLOW.md「着手前ゲート」の5点）を受領証として要求し、manifestと
+// 突き合わせる。非空文字列が並んでいるだけの複製が通らないことまで固定する。
+function assertStartDeclarationGuards() {
+  const declarationRelativePath = "MyBrain/verify/fixture/start-declaration.json";
+  const cases = [
+    {
+      label: "startDeclarationPath 未宣言",
+      expected: "manifest.scope.startDeclarationPath is required",
+      mutate: (fixture) => mutateJson(fixture.manifestPath, (value) => { delete value.scope.startDeclarationPath; }),
+    },
+    {
+      label: "宣言ファイルが実在しない",
+      expected: "start declaration does not exist",
+      mutate: (fixture) => rmSync(join(fixture.directory, "start-declaration.json")),
+    },
+    {
+      label: "別scopeの宣言を複製",
+      expected: "must match manifest.id",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.scopeId = "another-scope"; }),
+    },
+    {
+      label: "fileKeyがmanifestと違う",
+      expected: "must match manifest.figma.fileKey",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.figma.fileKey = "other-file"; }),
+    },
+    {
+      label: "宣言したnodeが実装対象に無い",
+      expected: "manifest.figma.viewportNodes does not contain",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.figma.nodeIds.pc = ["fixture-pc-unrelated"]; }),
+    },
+    {
+      label: "SP側のnodeを宣言していない",
+      expected: "figma.nodeIds.sp",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.figma.nodeIds.sp = []; }),
+    },
+    {
+      label: "specの所在がmanifestと違う",
+      expected: "must match manifest.scope.specPath",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.specPath = "MyBrain/verify/fixture/other-spec.json"; }),
+    },
+    {
+      label: "scope lockを開始していない",
+      expected: "scopeLockStatePath does not exist",
+      mutate: (fixture) => rmSync(join(fixture.directory, "scope-lock.state.json")),
+    },
+    {
+      label: "scope外パスがchangeTargetでもある",
+      expected: "is also a changeTarget",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.outOfScopePaths = ["site/view.txt"]; }),
+    },
+    {
+      label: "オーナー指示が実質空",
+      expected: "ownerInstruction must record",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.ownerInstruction = "直して"; }),
+    },
+    {
+      label: "環境判定がlocalでない",
+      expected: 'environmentPreflight.mode must be "local"',
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.environmentPreflight.mode = "cloud-restricted"; }),
+    },
+    {
+      label: "declaredAtが時刻でない",
+      expected: "declaredAt must be an ISO 8601 timestamp",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.declaredAt = "きのう"; }),
+    },
+  ];
+
+  for (const testCase of cases) {
+    const fixture = createFixture("figma-gate-start-declaration-");
+    try {
+      testCase.mutate(fixture);
+      reject(preflightArgs(fixture), testCase.expected, fixture.root);
+      assertNoGateArtifacts(fixture, `after rejecting: ${testCase.label}`);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  }
+
+  // 正しい宣言は通り、受領証へ凍結される。preflight後の書き換えは後続phaseで落ちる。
+  const fixture = createFixture("figma-gate-start-declaration-frozen-");
+  try {
+    const declarationPath = join(fixture.directory, "start-declaration.json");
+    const before = sha256(declarationPath);
+    accept(preflightArgs(fixture), fixture.root);
+    const state = readJson(resolveActiveReceiptPath(fixture.root));
+    assert(state.startDeclarationSha256 === before, "preflight freezes the start declaration hash");
+    assert(state.startDeclarationPath === declarationRelativePath, "preflight records the start declaration path");
+    assert(state.startDeclaredAt === "2026-08-25T00:00:00.000Z", "preflight records when the scope was declared");
+
+    mutateJson(declarationPath, (value) => { value.ownerInstruction = "fixture: 宣言をpreflight後に書き換えた（凍結違反の検査）"; });
+    reject(["section-start", fixture.manifestRelativePath, "fixture-section"], "start declaration changed after preflight", fixture.root);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+}
+
+// 工程と停止条件は正本のMarkdownから抽出する。抽出できない環境では通さない。
+function assertProcessOutputGuards() {
+  const fixture = createFixture("figma-gate-process-output-");
+  try {
+    // start は着手時点の入口。manifestもspecも無い段階で呼べる。
+    const started = gate(["start"], fixture.root);
+    assert(started.result.status === 0, "start exits 0");
+    assert(started.output.includes("着手前ゲート"), "start prints the pre-start gate points");
+    assert(started.output.includes("固定チェックリスト"), "start prints the phase 0 checklist");
+    assert(started.output.includes("停止・未確認として報告する条件"), "start prints the stop conditions");
+    assert(started.output.includes("URLにnode-idがない"), "start prints stop conditions from the canonical rule text");
+    assert(
+      started.output.includes("preflight の代わりにならない"),
+      "start states that it does not authorize source edits"
+    );
+    assertNoGateArtifacts(fixture, "after start");
+
+    // preflight は規則の所在だけでなく停止条件も出す。
+    const preflighted = gate(preflightArgs(fixture), fixture.root);
+    assert(preflighted.result.status === 0, "preflight still succeeds with stop conditions attached");
+    assert(preflighted.output.includes("Stop conditions for this scope"), "preflight prints the stop conditions");
+    const state = readJson(resolveActiveReceiptPath(fixture.root));
+    assert(Array.isArray(state.stopConditions) && state.stopConditions.length > 0, "preflight records the stop conditions in the receipt");
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+
+  // 正本側の節が改名・欠落したら、工程を出さないまま通すのではなく落ちる。
+  const brokenRoot = createWorkflowPreflightStub("local");
+  const pipelinePath = join(brokenRoot, "rules", "figma-spec-pipeline.md");
+  writeFileSync(pipelinePath, readFileSync(pipelinePath, "utf8").replace("## 停止・未確認として報告する条件", "## 停止条件（改名）"), "utf8");
+  const brokenFixture = createFixture("figma-gate-process-missing-section-");
+  try {
+    reject(["start"], "が正本に見つからない", brokenFixture.root, { FIGMA_TO_CODE_ROOT: brokenRoot });
+    reject(preflightArgs(brokenFixture), "が正本に見つからない", brokenFixture.root, { FIGMA_TO_CODE_ROOT: brokenRoot });
+    assertNoGateArtifacts(brokenFixture, "after the canonical stop-condition section went missing");
+  } finally {
+    rmSync(brokenFixture.root, { recursive: true, force: true });
+    rmSync(brokenRoot, { recursive: true, force: true });
+  }
+}
+
 assertWorkflowPreflightGuards();
+assertStartDeclarationGuards();
+assertProcessOutputGuards();
 assertIdentityArgumentGuards();
+assertHeldReceiptBlocksPreflight();
 assertDirtyPreflightLeavesNoCoverageRuntime();
 assertResponsiveHtmlV12SchemaGuards();
 assertScopedNodeMapV13Guards();

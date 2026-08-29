@@ -49,9 +49,12 @@ export function normalizeCaptureBatch(document) {
       outputPath: requireString(job.outputPath, `capture batch jobs[${index}].outputPath`),
     };
   });
+  // 遷移・描画完了の待機は cdp-browser 側の遷移用上限に任せる。
+  // timeoutMs はCDPプロトコル往復の上限であって、ページ読み込みの上限ではない。
   const timeoutMs = document.timeoutMs === undefined ? 20000 : requirePositiveNumber(Number(document.timeoutMs), "capture batch timeoutMs");
   const scrollbars = document.scrollbars;
   if (scrollbars !== "hidden" && scrollbars !== "visible") {
+    // CDP実測と同じ測定幅で撮影しないと、画像差分とレイアウト実測が別条件になる。
     throw new Error('capture batch scrollbars must be "hidden" or "visible" (same value as spec.viewportPolicy.scrollbars).');
   }
   return { url, jobs, timeoutMs, scrollbars };
