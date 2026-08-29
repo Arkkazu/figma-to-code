@@ -153,7 +153,9 @@ try {
   }
 
   // manifest改ざんの停止は rebaseline では解除できない。
-  const rebaselinePath = join(root, "MyBrain", "verify", "scope-rebaseline.json");
+  // manifest より前に並ぶ名前にする。controlPaths を並び順で選ぶ実装だと、この承認ファイルを
+  // scope manifest と誤認する（実測 2026-08-29: 案件で route-amendment.json を取り違えた）。
+  const rebaselinePath = join(root, "MyBrain", "verify", "aaa-rebaseline.json");
   writeJson(rebaselinePath, {
     version: 1,
     scopeId: "amend-before-edit",
@@ -220,6 +222,42 @@ try {
   run(["verify", amendStatePath], 0);
   // active な scope に rebaseline はできない。
   run(["rebaseline", amendStatePath, rebaselinePath], 1);
+
+  // glob文字を含む「実在ファイル名」で走査が止まらないこと。glob禁止は宣言パスの検査であり、
+  // git が返す実在パスへ適用すると運用が止まる。実測（案件 rpa-technologies-theme, 2026-08-29）:
+  // ルートに `{` という0バイトファイルが1つあっただけで begin / verify / rebaseline が
+  // 案件全体で実行不能になった。
+  // Windowsでは * ? がファイル名に使えないため、両OSで作成できる { } [ ] だけを対象にする。
+  for (const oddName of ["{", "[bracket].md", "brace{name}.md"]) {
+    append(oddName, "literal glob character in a real file name\n");
+  }
+  const oddVerify = run(["verify", amendStatePath], 0);
+  const oddOutput = (oddVerify.stdout || "") + (oddVerify.stderr || "");
+  if (oddOutput.includes("globs are not allowed")) {
+    throw new Error("A real file name containing glob characters must not stop the scan.\noutput:\n" + oddOutput);
+  }
+  const oddState = JSON.parse(readFileSync(amendStatePath, "utf8"));
+  // Windowsでは * ? がファイル名に使えないため、両OSで作成できる { } [ ] だけを対象にする。
+  for (const oddName of ["{", "[bracket].md", "brace{name}.md"]) {
+    if (!oddState.baseline.some((entry) => entry.path === oddName)) {
+      throw new Error("Expected " + JSON.stringify(oddName) + " to be folded into the baseline.");
+    }
+  }
+  // 取り込んだ後も state を読めること。baseline に glob文字を含むパスが入った state で
+  // 全コマンドが止まらないことを固定する（validateState 側にも同じ誤用があった）。
+  const reloadVerify = run(["verify", amendStatePath], 0);
+  if (((reloadVerify.stdout || "") + (reloadVerify.stderr || "")).includes("globs are not allowed")) {
+    throw new Error("A baseline entry with glob characters must not break state loading.");
+  }
+  run(["status", amendStatePath], 0);
+
+  // 宣言パス側の glob 禁止は維持する。state読み込み時の同種メッセージと区別するため、
+  // assert の引数ラベルまで一致させる（区別しないと、state検証で落ちても通ってしまう）。
+  const globAssert = run(["assert", amendStatePath, "assets/scss/**/*.scss"], 1);
+  const globOutput = (globAssert.stdout || "") + (globAssert.stderr || "");
+  if (!globOutput.includes("assert path[0] must name one exact file; globs are not allowed.")) {
+    throw new Error("Declared paths must still reject globs at assert.\noutput:\n" + globOutput);
+  }
 
   const badScopePath = join(root, "MyBrain", "verify", "scope-glob.json");
   writeJson(badScopePath, {

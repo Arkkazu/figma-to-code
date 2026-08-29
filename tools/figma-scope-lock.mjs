@@ -52,10 +52,21 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function normalizeRelativePath(repoPath, value, label) {
+// glob禁止は「宣言パス」に対する検査である。人間が manifest に `assets/scss/**/*.scss` のような
+// 広い指定を書いてscopeを実質無制限にすることを防ぐためにある。
+//
+// 一方、git が返す**実在パス**にこれを適用してはならない。`{` や `[` はファイル名として正当であり、
+// 実際に案件ルートに `{` という名前の0バイトファイルが1つあっただけで（2026-08-26、シェルの
+// 打ち間違いによる生成物と思われる）、dirtySnapshot() が落ち、begin / verify / rebaseline が
+// 案件全体で実行不能になった。観測値の検査で運用が止まるのは検査の誤用である。
+// 走査済みの実在パスには、リポジトリ外・.git 侵入だけを引き続き禁じる。
+function normalizeRelativePath(repoPath, value, label, options) {
+  const allowGlobCharacters = Boolean(options && options.allowGlobCharacters);
   const input = requireString(value, label).replace(/\\/g, "/");
   if (isAbsolute(input) || /^[A-Za-z]:\//.test(input)) fail(label + " must be relative to the repository root.");
-  if (/[\*\?\[\]\{\}]/.test(input)) fail(label + " must name one exact file; globs are not allowed.");
+  if (!allowGlobCharacters && /[\*\?\[\]\{\}]/.test(input)) {
+    fail(label + " must name one exact file; globs are not allowed.");
+  }
 
   const absolutePath = resolve(repoPath, input);
   const normalized = relative(repoPath, absolutePath).replace(/\\/g, "/");
@@ -111,7 +122,8 @@ function gitPathLines(repoPath, gitArgs) {
   const output = runGit(repoPath, gitArgs).trim();
   if (output === "") return [];
   return output.split(/\r?\n/).map(function (entry) {
-    return normalizeRelativePath(repoPath, entry, "git changed path");
+    // git が返すのは実在パスである。glob文字を含むファイル名も正当なので拒否しない。
+    return normalizeRelativePath(repoPath, entry, "git changed path", { allowGlobCharacters: true });
   });
 }
 
@@ -181,7 +193,14 @@ function validateState(raw, statePath) {
 
   const baseline = raw.baseline.map(function (entry, index) {
     requireObject(entry, "Scope lock state.baseline[" + index + "]");
-    const path = normalizeRelativePath(scope.repoPath, entry.path, "Scope lock state.baseline[" + index + "].path");
+    // baseline は git の走査結果を保存したものなので、宣言パスではなく観測値である。
+    // glob文字を含む実在ファイル名を拒否すると、state を読むだけで全コマンドが止まる。
+    const path = normalizeRelativePath(
+      scope.repoPath,
+      entry.path,
+      "Scope lock state.baseline[" + index + "].path",
+      { allowGlobCharacters: true }
+    );
     if (entry.sha256 !== null && typeof entry.sha256 !== "string") {
       fail("Scope lock state.baseline[" + index + "].sha256 must be a SHA-256 string or null.");
     }
@@ -197,7 +216,13 @@ function validateState(raw, statePath) {
     fail("Scope lock state.controlPaths must contain the manifest and state files.");
   }
   const controlPaths = raw.controlPaths.map(function (entry, index) {
-    return normalizeRelativePath(scope.repoPath, entry, "Scope lock state.controlPaths[" + index + "]");
+    // controlPaths も実在ファイル（manifest / state / amendment / approval）の位置から導出する。
+    return normalizeRelativePath(
+      scope.repoPath,
+      entry,
+      "Scope lock state.controlPaths[" + index + "]",
+      { allowGlobCharacters: true }
+    );
   });
   if (new Set(controlPaths).size !== controlPaths.length) {
     fail("Scope lock state.controlPaths must not contain duplicate paths.");
@@ -255,6 +280,8 @@ function begin(scopeInputPath, stateInputPath) {
       {
         action: "begin",
         at: nowIso(),
+        // 以後の verify が manifest を並び順ではなくこの記録で同定する。
+        scopeManifestPath: repoPathFromAbsolute(scope.repoPath, scopePath, "Scope manifest file"),
         scopeManifestSha256: sha256(readFileSync(scopePath)),
       },
     ],
@@ -372,9 +399,22 @@ function verify(stateInputPath) {
   // 宣言そのものを途中で書き換えたことになる。
   const beginEntry = state.raw.history.find(function (entry) { return entry.action === "begin"; });
   const expectedManifestSha256 = beginEntry ? beginEntry.scopeManifestSha256 : null;
-  const manifestRepoPath = state.controlPaths.find(function (path) {
-    return path !== repoPathFromAbsolute(state.scope.repoPath, state.statePath, "Scope lock state file");
-  });
+  // controlPaths には amendment / rebaseline approval も後から加わる。並び順で選ぶと
+  // それらを manifest と誤認する（実測 2026-08-29: 案件の why-choose-us scope で
+  // route-amendment.json を manifest と取り違え、hash不一致で誤検知した）。
+  // 内容で同定する。scope manifest だけが repoPath と allowedPaths の両方を持つ。
+  const manifestRepoPath = beginEntry && beginEntry.scopeManifestPath
+    ? beginEntry.scopeManifestPath
+    : state.controlPaths.find(function (path) {
+      const absolutePath = resolve(state.scope.repoPath, path);
+      if (!existsSync(absolutePath)) return false;
+      try {
+        const candidate = JSON.parse(readFileSync(absolutePath, "utf8"));
+        return Boolean(candidate) && typeof candidate.repoPath === "string" && Array.isArray(candidate.allowedPaths);
+      } catch {
+        return false;
+      }
+    });
   let tamperedManifest = null;
   if (expectedManifestSha256 && manifestRepoPath) {
     const actualManifestSha256 = fileHash(state.scope.repoPath, manifestRepoPath);
