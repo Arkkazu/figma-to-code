@@ -609,16 +609,49 @@ async function ensureDialogCoverage(browser, dialogs) {
   return missing;
 }
 
+// 開閉の手順は初期状態から決める。「閉じた状態から開く」を固定手順にしない。
+//
+// 旧実装は before を読んでいながら使わず、必ず「click → true を待つ → click → false を待つ」
+// を踏んでいた。そのため**初期展開済み（aria-expanded="true"）の要素を検証できない**。
+// 最初のclickで閉じるので、"true" を待つ側がタイムアウトする。
+//
+// 実測（2026-08-29、rpa-technologies-theme）: 共有検索アコーディオンの先頭グループは
+// `search-controls.php` が `aria-expanded="true"` と `is-open` を出力する**意図的な初期展開**で、
+// ページ側は正しい。それでもQ-13がここで停止し、実装側を直す理由が無いまま作業が止まった。
+// 検証器が実装の正当な設計を検証できないのは、検証器の欠陥である。
+//
+// closed / open は「何番目に測ったか」ではなく「実際にどちらの状態か」で返す。
+// 呼び出し側の合否判定（keyboardFailures）は状態の意味に依存するため、ここを入れ替えない。
 async function runStateFlow(browser, config, flow) {
   await navigateAndWait(browser, { url: config.url, width: config.viewport.width, height: config.viewport.height, scrollbars: config.viewportPolicy.scrollbars, selectors: [flow.triggerSelector] });
   const before = await browser.evaluate(`document.querySelector(${JSON.stringify(flow.triggerSelector)})?.getAttribute("aria-expanded")`);
-  const closed = await scanKeyboard(browser, `${flow.name}:closed`);
+  if (before !== "true" && before !== "false") {
+    throw new Error(
+      `stateFlow ${flow.name}: ${flow.triggerSelector} の初期 aria-expanded が "true"/"false" ではありません（実測: ${JSON.stringify(before)}）。` +
+        " 開閉状態を持つ操作要素には、初期状態を aria-expanded で明示する。"
+    );
+  }
+
+  const startsExpanded = before === "true";
+  const afterFirstClick = startsExpanded ? "false" : "true";
+  const afterSecondClick = startsExpanded ? "true" : "false";
+
+  const initialScan = await scanKeyboard(browser, `${flow.name}:${startsExpanded ? "open" : "closed"}`);
   await clickSelector(browser, flow.triggerSelector);
-  await waitForAriaExpanded(browser, flow.triggerSelector, "true");
-  const open = await scanKeyboard(browser, `${flow.name}:open`);
+  await waitForAriaExpanded(browser, flow.triggerSelector, afterFirstClick);
+  const toggledScan = await scanKeyboard(browser, `${flow.name}:${startsExpanded ? "closed" : "open"}`);
   await clickSelector(browser, flow.triggerSelector);
-  await waitForAriaExpanded(browser, flow.triggerSelector, "false");
-  return { name: flow.name, triggerSelector: flow.triggerSelector, before, closed, open };
+  // 2回目のclickで初期状態へ戻る。戻らないならトグルが片道であり、それ自体が欠陥である。
+  await waitForAriaExpanded(browser, flow.triggerSelector, afterSecondClick);
+
+  return {
+    name: flow.name,
+    triggerSelector: flow.triggerSelector,
+    before,
+    startsExpanded,
+    closed: startsExpanded ? toggledScan : initialScan,
+    open: startsExpanded ? initialScan : toggledScan,
+  };
 }
 
 async function runDialogFlow(browser, config, dialog) {
@@ -662,7 +695,13 @@ async function runKeyboard(browser, config) {
   for (const dialog of config.keyboard.dialogs) dialogs.push(await runDialogFlow(browser, config, dialog));
   const failures = [...keyboardFailures(defaultScan)];
   for (const flow of stateFlows) {
-    if (flow.before !== "false") failures.push({ type: "aria-expanded-not-false-when-closed", flow: flow.name, actual: flow.before });
+    // 初期値が "false" でないことは欠陥ではない。初期展開済みのアコーディオンは正当な設計で、
+    // 案件の共有検索アコーディオンが実際にその形である（search-controls.php）。
+    // ここで要求すべきは「初期状態が aria-expanded で明示されていること」であり、
+    // どちらの値かではない。値そのものは runStateFlow が "true"/"false" 以外を弾いている。
+    if (flow.before !== "true" && flow.before !== "false") {
+      failures.push({ type: "aria-expanded-missing-initial-state", flow: flow.name, actual: flow.before });
+    }
     failures.push(...keyboardFailures(flow.closed), ...keyboardFailures(flow.open));
   }
   for (const dialog of dialogs) {

@@ -53,6 +53,11 @@ const page = (axeMode) => `<!doctype html>
 </style></head><body data-axe-mode="${axeMode}">
   <button id="menu-toggle" aria-expanded="false">Menu</button>
   <nav id="menu" hidden><a href="#first">First</a><button id="last">Last</button></nav>
+  <!-- 初期展開済みのアコーディオン。意図的に開いた状態で描画される正当な実装で、
+       案件の共有検索アコーディオン（search-controls.php が aria-expanded="true" と is-open を出力）
+       と同じ形。旧実装はこれを検証できずタイムアウトした（2026-08-29 実測）。 -->
+  <button id="accordion-open" aria-expanded="true" aria-controls="accordion-panel">Filters</button>
+  <div id="accordion-panel"><a href="#acc-first">Acc first</a><button id="acc-last">Acc last</button></div>
   <div id="plain-case" class="contrast-case"><p id="copy">Readable copy</p></div>
   <div id="image-case" class="contrast-case"><p id="image-copy">Image background copy</p></div>
   <div id="blend-case" class="contrast-case"><p id="blend-copy">Blend copy</p></div>
@@ -75,6 +80,13 @@ const page = (axeMode) => `<!doctype html>
       const open = toggle.getAttribute('aria-expanded') !== 'true';
       toggle.setAttribute('aria-expanded', String(open));
       menu.hidden = !open;
+    });
+    const accordion = document.querySelector('#accordion-open');
+    const panel = document.querySelector('#accordion-panel');
+    accordion.addEventListener('click', () => {
+      const open = accordion.getAttribute('aria-expanded') !== 'true';
+      accordion.setAttribute('aria-expanded', String(open));
+      panel.hidden = !open;
     });
     const nativeGetComputedStyle = window.getComputedStyle.bind(window);
     window.getComputedStyle = (element, pseudoElement) => {
@@ -140,7 +152,14 @@ globalThis.axe = { run: async () => {
         { id: "hidden-copy", selector: "#hidden-copy", kind: "text" }
       ]
     },
-    keyboard: { stateFlows: [{ name: "menu", triggerSelector: "#menu-toggle" }], dialogs: [] },
+    keyboard: {
+      stateFlows: [
+        { name: "menu", triggerSelector: "#menu-toggle" },
+        // 初期展開済み。閉じた状態から始まる前提の固定手順では検証できない。
+        { name: "accordion", triggerSelector: "#accordion-open" },
+      ],
+      dialogs: [],
+    },
   };
   const pass = await runAccessibilityVerification({
     config: { ...config, url: `http://127.0.0.1:${port}/?axe=pass` },
