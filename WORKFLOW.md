@@ -25,7 +25,23 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 
 ## 着手前ゲート
 
-Figma URLや「デザインどおりに直して」という依頼を受けたら、次の5点を報告するまで**ソースを1行も編集しない**。入口（`AGENTS.md` / `CLAUDE.md`）はこの節を指すだけで、内容を複製しない。
+**Figmaをデザイン根拠とする実装・修正・再現・コーディングの依頼**を受けたら、次の5点を報告するまで**ソースを1行も編集しない**。入口（`AGENTS.md` / `CLAUDE.md`）はこの節を指すだけで、内容を複製しない。
+
+**発火条件はFigma URLの有無ではなく依頼の意図で判定する。**「Figmaデザインを実装して」「Figmaどおりにコーディングして」「このFigmaを再現して」「デザインどおりに直して」「デザインと違う」、およびFigmaで設計された画面・コンポーネントの新規実装・見た目の修正は、URLが会話に出ていなくてもすべてこの節の対象である。判断に迷う依頼は実行する側に倒す。`start` はゲートではなく編集を許可しないため、実行しても失うものはない。
+
+> [!important] 狭い発火条件が実害を出した（2026-08-29）
+> 旧文は「Figma URLや『デザインどおりに直して』という依頼」と書いており、新規実装で普通に使う
+> 「Figmaデザインを実装して」「Figmaどおりにコーディングして」が明示されていなかった。
+> 規則・spec・ゲート・検証器がすべて設置済みの案件で、依頼文の表現によってFigma作業として
+> 処理されず、取得・実測・ゲートを経ないままコード編集へ進む経路が残っていた。
+
+工程と停止条件は暗記で再生しない。着手時に出力させる。
+
+```bash
+npm run figma:gate -- start
+```
+
+報告した5点は `MyBrain/verify/start-<scope-id>.json`（着手宣言）へ記録し、gate manifestの `scope.startDeclarationPath` へ登録する。`preflight` が内容をmanifestと突き合わせて凍結する。詳細は `rules/figma-spec-pipeline.md`「着手時の工程出力と着手宣言の受領証」。
 
 1. 環境判定 `workflow-preflight` の結果（`local` / `cloud-restricted`）
 2. 対象のFigma fileKey と、PC/SP それぞれの node-id（同定は「対象nodeの同定ゲート」に従う）
@@ -39,6 +55,28 @@ npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementati
 ```
 
 いずれかが未了なら、推測で補わず、不足情報を1つだけ確認して停止する。案件側で `figma:gate` script が未導入なら、ゲート未導入として実装を開始せず、導入手順の確認だけを行う。
+
+## 検証器の配布（2026-08-26追加）
+
+`templates/verify/` から案件の `MyBrain/verify/` へ検証器を配るときは、**必ず配布ツールを使う**。
+`cp` で直接配らない。
+
+```bash
+node C:/AI/figma-to-code/tools/verifier-distribute.mjs <案件のMyBrain/verifyディレクトリ>
+node C:/AI/figma-to-code/tools/verifier-distribute.mjs <dir> --check          # 判定だけ
+node C:/AI/figma-to-code/tools/verifier-distribute.mjs <dir> <file> --allow-dirty --reason "<20文字以上>"
+```
+
+このツールは次を強制する。素の `cp` で配って案件のゲートを2回全面停止させたため
+（`rules/mistakes.md` 2026-08-26）、手順ではなく機械で塞ぐ。
+
+1. **未コミット変更を持つファイルは配布しない。** 正本リポジトリの作業ツリーは「正本の最新」ではなく、
+   他セッションの進行中作業が混ざっていることがある。配るなら `git show HEAD:<path>` を土台に、
+   配りたい変更だけを再適用したものを配る。
+2. **上書き前に退避を取る。** 案件側 `MyBrain/` はgit管理外で、上書きすると復元できない。
+3. **配布後に案件側の e2e を実行し、失敗したら自動で巻き戻す。**
+   2回の事故はどちらも e2e を回して初めて破壊に気づいた。回さなければ気づけない。
+4. 未コミットのまま配る判断をしたときは `--allow-dirty --reason` で理由を残す。
 
 ## 案件側への入口の設置
 
@@ -118,6 +156,16 @@ Figma上で同じ表示名のノード、同種CTA、同じ文言のボタンが
 - レイアウトがFigmaと異なるという指摘を受けたら、最初に案件側 `MyBrain/rules/corrections.md` へ対象URL、Figma node-id、対象DOM/CSS、期待値、実測差分、原因、再発防止を記録する。
 - 同じ指摘から案件横断の工程失敗が判明した場合だけ、プロジェクト固有値を除いた抽象ルールを `rules/corrections.md` または `rules/mistakes.md` へ昇格する。
 - `C:\AI\figma-to-code` には案件名、URL、node-id、セレクタ、数値、固有アセットを保存しない。案件固有の記録を共通ルールで代用しない。
+- **手順書の上限**：`rules/` の手順書（蓄積ログでないもの。`figma-spec-pipeline.md` など開始順4の必読）は **600行 / 80KB** を上限とする。手順は一部だけ読んでも役に立たないため、退避はしない。上限に達したら、同じ工程を扱う節を**統合**して縮める。新しい注意点は既存の該当節へ書き足し、`（YYYY-MM-DD追加）` の新節を積み増さない。2026-08-26 実測：`figma-spec-pipeline.md` 523行 / 72.9KB（上限内だが余裕は少ない）。
+- **蓄積ファイルの上限**：`rules/corrections.md` と `rules/mistakes.md` は `<!-- loop-log-schema: v1 -->` を境に、前が機械管理領域、後が legacy領域である。
+  - **機械管理領域には件数上限を置かない。**`figma-log-promote` の再発判定（`recurrenceKey` の件数）が既存記録を数えるため、退避すると3回目の再発が1回目に見える。サイズは再発検出の対価として受け入れる。この2ファイルは開始順4の必読には含まれない（記録・昇格のときに読む）。
+  - **legacy領域は10件を上限**とし、超えたら日付の古い順に `rules/corrections-archive.md` / `rules/mistakes-archive.md` へ退避する。marker より後の記録は再発判定の対象外なので、退避しても検出は劣化しない。
+  - 追記は `figma-log-promote` が行い、**機械管理領域の先頭**（最新を上に）へ入れる。手書きで末尾へ足さない。
+  - **上限は機械で確かめる。**散文の上限は守られない。`rules/` を触ったら次を実行してPASSさせる。
+
+```bash
+node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json
+```
 - 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、独立レビュー、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
 
 ## この手法自体を編集する場合
