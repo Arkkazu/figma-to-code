@@ -44,6 +44,27 @@ function readLockOwner(lockPath) {
   }
 }
 
+// lockの持ち主がまだ生きているか。生きていないlockは中断lockであり、奪ってよい。
+//
+// PIDの再利用で「死んでいるのに生きて見える」ことはあるが、その場合は奪わず拒否する側へ倒れる。
+// 逆向き（生きているのに死んで見える）は起きないため、この判定で他人の実行中lockを壊さない。
+function isLockOwnerAlive(lockPath) {
+  let pid = null;
+  try {
+    pid = JSON.parse(readFileSync(lockPath, "utf8"))?.pid;
+  } catch {
+    return false; // 読めないlockは持ち主を名乗れない。中断lockとして扱う。
+  }
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM は「存在するが権限が無い」。生きているとみなして奪わない。
+    return error?.code === "EPERM";
+  }
+}
+
 /**
  * Figma / coding のpreflightは同一の排他ロック内で、監査から受領証作成までを実行する。
  * 同時に二つの監査がPASSして一方がもう一方の受領証を上書きするraceを防ぐ。
@@ -53,6 +74,20 @@ export function withScopePreflightLock({ root = process.cwd(), gateKind, manifes
   if (!["figma", "coding"].includes(gateKind)) throw new Error(`未知のgate種別です: ${gateKind}`);
   const lockPath = preflightLockPath(root);
   mkdirSync(dirname(lockPath), { recursive: true });
+
+  // 中断lockの回収。持ち主のプロセスが居なくなったlockは、誰も解放できないまま案件全体を止める。
+  //
+  // 実測（2026-08-29、rpa-technologies-theme）: preflight が拒否されると gate は fail() から
+  // process.exit(1) を呼ぶ。下の finally は callback の return/throw でしか走らないため、
+  // **拒否のたびにlockが漏れる**。実際に PID 32980 のlockが残り、別担当者のscopeが
+  // 「lockを削除してよいか」を人に聞く以外に進めない状態になった。
+  // 拒否経路を増やすほど頻発する欠陥なので、取得側で回収する。
+  if (existsSync(lockPath) && !isLockOwnerAlive(lockPath)) {
+    const owner = readLockOwner(lockPath);
+    unlinkSync(lockPath);
+    console.warn(`SCOPE COORDINATION: 中断lockを回収しました${owner}。持ち主のプロセスは存在しません。`);
+  }
+
   let descriptor;
   try {
     descriptor = openSync(lockPath, "wx");
@@ -72,9 +107,22 @@ export function withScopePreflightLock({ root = process.cwd(), gateKind, manifes
     if (descriptor !== undefined) closeSync(descriptor);
   }
 
+  // callback が process.exit() を呼ぶと finally は走らない。gate は拒否時に fail() から
+  // process.exit(1) するため、finally だけでは解放されない。exit にも掛ける。
+  // SIGKILL では両方走らないので、上の中断lock回収が最後の受け皿になる。
+  const releaseOnExit = () => {
+    try {
+      if (existsSync(lockPath)) unlinkSync(lockPath);
+    } catch {
+      // 解放できなくても終了処理は止めない。次回の取得時に中断lockとして回収される。
+    }
+  };
+  process.once("exit", releaseOnExit);
+
   try {
     return callback();
   } finally {
+    process.removeListener("exit", releaseOnExit);
     if (existsSync(lockPath)) unlinkSync(lockPath);
   }
 }
