@@ -1616,3 +1616,62 @@ rpa-technologies-theme では `accessibility-verify-template.json`（オーナ�
 - `templates/verify/` の残りWIP（p3研究成果物の `research/p3/` への staged rename 等）は本scopeの対象外。
   `fidelity-benchmark*.mjs` 3件だけは配布台帳 `C:\AI\MyBrain\manifest.json` が required 宣言しているため
   staged rename を取り消して `templates/verify/` へ戻した（2026-08-25 の回帰の再々発防止）。
+
+## 2026-08-29 scope lock の repo-wide baseline を直した（claude / オーナー指示「根本の欠陥自体を解決しろ」）
+
+2026-08-25 のオーナー指摘 `concurrent-scope-blocked-by-repo-wide-baseline` は訂正として
+記録されていたが、**一度も実装されていなかった**（`git log -- tools/figma-scope-lock.mjs` は
+初回コミット1件のみ）。3日後の 2026-08-29 に、その未実装欠陥が案件で実害として観測された。
+
+### 欠陥
+
+`begin` の baseline が `dirtySnapshot()` でリポジトリ全体の dirty 集合を取り、`verify` は
+宣言パス以外の変更をすべて違反にしていた。別scopeが自分の宣言パスを正しく編集しただけで、
+宣言パスが1つも交差しない無関係なscopeが blocked になる。
+
+実測（案件 rpa-technologies-theme、2026-08-26T02:04:39Z）: `why-choose-us-20260826` が
+`blog-detail` scope の編集5件で停止した。`begin` は既存stateを不変として、`amend` は blocked を
+修正不可として拒否するため、**復帰不能**だった。2026-08-29 の独立検証はこの停止を
+「直前の別作業の副作用」と誤読し、既知欠陥だと気づかなかった。
+
+### 直したこと
+
+1. **`verify` の判定範囲を交差基準へ寄せた**。宣言パスと制御パスに交差する変更だけで判定し、
+   交差しない変更は baseline の更新として取り込む。件数とパスは出力し history にも残す。
+   `scope-conflict-audit` のパス交差判定と基準が一致した。
+2. **宣言そのものの改ざんを落とす検査を新設した**。判定を狭めたぶんの穴を塞ぐ。scope manifest は
+   `begin` で一度だけ書かれ `amend` でも書き換えないため、`begin` 時の hash と違えば
+   `scope-manifest-tampered` として blocked にする。「宣言せずに編集した」検出は `assert` と
+   commit時の `close-receipt-audit --require-coverage` が引き続き担う。
+3. **`rebaseline <state> <approval>` を新設した**（訂正の後半「blockedからの正規の復帰手順」）。
+   オーナー承認（`instruction` 20文字以上）を必須とし、作業ツリーで baseline を取り直して
+   active へ戻す。解除した停止は history に残す。`scope-manifest-tampered` は解除できない。
+4. blocked の案内から「既知の未実装欠陥」の記述を削除し、`rebaseline` のコマンドと承認ファイルの
+   形を出力するようにした。
+
+### 検証
+
+- 負のE2E: 交差しない変更で停止しない / baselineへ取り込まれ2回目のverifyに再出現しない /
+  manifest改ざんで停止し reason が `scope-manifest-tampered` になる / その停止は `rebaseline` で
+  解除できない / 承認の不備3種（承認なし・理由が短い・scopeId違い）を拒否する /
+  正経路で active へ戻り履歴に `clearedBlock` が残る / active な scope に `rebaseline` できない。
+- **効くことを確認した**: manifest改ざん検査を `if (false && …)` で無効化すると
+  `Expected exit 1 for verify` で落ちる。`rebaseline` の理由20文字要件を同様に無効化すると
+  `Expected exit 1 for rebaseline` で落ちる。どちらも確認後に復元し、復元差分0行。
+- `figma-scope-lock` E2E PASS、`figma-gate.e2e` PASS（454 assertions, 86s）、
+  `doc-command-audit` checked 51 / violations 0、`workflow-preflight.e2e` PASS、
+  `vendored-verifier-audit` PASS、`public-memory-scan` findings 0、
+  `rule-size-audit` PASS（`figma-scope-lock.md` 119行、Figma必読合計 127,044 bytes）。
+
+### 配布
+
+`figma-scope-lock.mjs` は `tools/` にあり案件へ配布しない（案件は正本を直接実行する）。
+したがって案件は再配布なしで修正後の判定になる。実測で案件の blocked scope の案内が
+`rebaseline` の手順を出すことを確認した。
+
+### 未了
+
+- 既に blocked の `why-choose-us-20260826` の解除は**オーナー承認が要る**。承認ファイルの
+  `approvedBy: "owner"` を実装役が自分で書くことは、ゲートが守っている当のものを偽造することになる。
+  コマンドと承認ファイルの雛形はオーナーへ提示済み。
+- 本変更も**オーナー承認はあるが独立レビューが未了**。別contextでのレビューを受けること。
