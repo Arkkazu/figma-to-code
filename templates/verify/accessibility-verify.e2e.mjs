@@ -58,6 +58,11 @@ const page = (axeMode) => `<!doctype html>
        と同じ形。旧実装はこれを検証できずタイムアウトした（2026-08-29 実測）。 -->
   <button id="accordion-open" aria-expanded="true" aria-controls="accordion-panel">Filters</button>
   <div id="accordion-panel"><a href="#acc-first">Acc first</a><button id="acc-last">Acc last</button></div>
+  <!-- ハンドラを readyState complete より後に装着する制御。navigateAndWait は complete と
+       対象の存在までしか待たないため、1回きりのクリックだと装着前に落ちて何も起きない。
+       実測（2026-08-30）で Q-13 が同じ実装に対し通ったり落ちたりした原因（間欠failure）。 -->
+  <button id="late-toggle" aria-expanded="false" aria-controls="late-panel">Late</button>
+  <div id="late-panel" hidden><button id="late-inner">Late inner</button></div>
   <div id="plain-case" class="contrast-case"><p id="copy">Readable copy</p></div>
   <div id="image-case" class="contrast-case"><p id="image-copy">Image background copy</p></div>
   <div id="blend-case" class="contrast-case"><p id="blend-copy">Blend copy</p></div>
@@ -87,6 +92,18 @@ const page = (axeMode) => `<!doctype html>
       const open = accordion.getAttribute('aria-expanded') !== 'true';
       accordion.setAttribute('aria-expanded', String(open));
       panel.hidden = !open;
+    });
+    // わざと遅らせて装着する。load 後 400ms なので、readyState complete の時点では未装着。
+    window.addEventListener('load', () => {
+      window.setTimeout(() => {
+        const late = document.querySelector('#late-toggle');
+        const latePanel = document.querySelector('#late-panel');
+        late.addEventListener('click', () => {
+          const open = late.getAttribute('aria-expanded') !== 'true';
+          late.setAttribute('aria-expanded', String(open));
+          latePanel.hidden = !open;
+        });
+      }, 400);
     });
     const nativeGetComputedStyle = window.getComputedStyle.bind(window);
     window.getComputedStyle = (element, pseudoElement) => {
@@ -157,6 +174,8 @@ globalThis.axe = { run: async () => {
         { name: "menu", triggerSelector: "#menu-toggle" },
         // 初期展開済み。閉じた状態から始まる前提の固定手順では検証できない。
         { name: "accordion", triggerSelector: "#accordion-open" },
+        // ハンドラが後から付く。1回きりのクリックでは間欠的に落ちる。
+        { name: "late", triggerSelector: "#late-toggle" },
       ],
       dialogs: [],
     },

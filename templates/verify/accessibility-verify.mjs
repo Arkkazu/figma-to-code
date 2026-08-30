@@ -96,14 +96,38 @@ async function dispatchKey(browser, key, shiftKey = false) {
   await browser.send("Input.dispatchKeyEvent", { type: "keyUp", ...params });
 }
 
+// Input.dispatchMouseEvent は「その座標に居るもの」を押す。要素を押すのではない。
+// 旧実装は矩形と可視性だけを見て中心座標へ撃っており、次の2つを確かめていなかった。
+//
+//   1. 要素が viewport 内にあるか。画面外だと座標が viewport の外になり、クリックが落ちない。
+//   2. その座標で実際に受け取るのが対象自身か。固定ヘッダーやオーバーレイが覆っていると
+//      クリックは別要素へ入り、対象の状態は変わらないまま待ちだけがタイムアウトする。
+//
+// 実測（2026-08-30、rpa-technologies-theme）: Q-13 が同じ実装に対して通ったり落ちたりし、
+// 「検証器の状態遷移が不安定」と報告された。原因はページ側ではなく、この座標クリックである。
+// 覆われている場合は何が覆っているかを名指しする。原因を推測させない。
 async function clickSelector(browser, selector) {
   const point = await browser.evaluate(`(() => {
     const element = document.querySelector(${JSON.stringify(selector)});
     if (!element) return { error: "not-found" };
+    element.scrollIntoView({ block: "center", inline: "center" });
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     if (rect.width <= 0 || rect.height <= 0 || style.display === "none" || style.visibility === "hidden") return { error: "not-visible" };
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    if (rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth) {
+      return { error: "outside-viewport" };
+    }
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    if (!hit) return { error: "no-element-at-point" };
+    if (hit !== element && !element.contains(hit) && !hit.contains(element)) {
+      const name = hit.tagName.toLowerCase()
+        + (hit.id ? "#" + hit.id : "")
+        + (typeof hit.className === "string" && hit.className.trim() ? "." + hit.className.trim().split(/\\s+/)[0] : "");
+      return { error: "covered-by:" + name };
+    }
+    return { x, y };
   })()`);
   if (!point || point.error) fail(`Cannot click ${selector}: ${point?.error ?? "unknown error"}.`);
   await browser.send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", clickCount: 1 });
@@ -545,11 +569,47 @@ async function scanKeyboard(browser, label) {
   return { label, expected, reached, orderMatches, unreachable, invisibleFocus };
 }
 
-async function waitForAriaExpanded(browser, selector, expected) {
+async function readAriaExpanded(browser, selector) {
+  return browser.evaluate(`document.querySelector(${JSON.stringify(selector)})?.getAttribute("aria-expanded")`);
+}
+
+async function waitForAriaExpanded(browser, selector, expected, timeoutMs = 3000) {
   return waitFor(
     () => browser.evaluate(`(() => document.querySelector(${JSON.stringify(selector)})?.getAttribute("aria-expanded") === ${JSON.stringify(expected)})()`),
-    { timeoutMs: 3000, label: `${selector} aria-expanded=${expected}` }
+    { timeoutMs, label: `${selector} aria-expanded=${expected}` }
   );
+}
+
+// 1回のクリックで状態が変わることを前提にしない。
+//
+// navigateAndWait は document.readyState === "complete" と対象の存在までしか待たない。
+// ページのJSがその後にハンドラを装着する作りだと、最初のクリックは装着前に落ちて何も起きない。
+// 実測（2026-08-30）: 同じ実装・同じ設定で Q-13 が通ったり落ちたりした。
+//
+// **押す前に現在値を見るので、二重トグルにはならない。**既に期待値なら押さずに戻る。
+// 規定回数押しても変わらなければ、押した回数と最終値を添えて落とす。
+// 「状態が変わらない」と「そもそも押せていない」を混同させないため、経過を残す。
+async function clickUntilAriaExpanded(browser, selector, expected, { attempts = 3, perAttemptMs = 1500 } = {}) {
+  let clicks = 0;
+  let last = await readAriaExpanded(browser, selector);
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    last = await readAriaExpanded(browser, selector);
+    if (last === expected) return { clicks, settled: true };
+    await clickSelector(browser, selector);
+    clicks += 1;
+    try {
+      await waitForAriaExpanded(browser, selector, expected, perAttemptMs);
+      return { clicks, settled: true };
+    } catch {
+      last = await readAriaExpanded(browser, selector);
+    }
+  }
+  fail(
+    `${selector} did not reach aria-expanded=${expected} after ${clicks} click(s). 最終値=${JSON.stringify(last)}。` +
+      " クリックは対象へ届いている（座標のヒットテスト済み）。状態が変わらないなら、" +
+      "ハンドラが装着されていないか、トグルが片道である。"
+  );
+  return { clicks, settled: false };
 }
 
 async function waitForVisibility(browser, selector, visible) {
@@ -637,18 +697,19 @@ async function runStateFlow(browser, config, flow) {
   const afterSecondClick = startsExpanded ? "true" : "false";
 
   const initialScan = await scanKeyboard(browser, `${flow.name}:${startsExpanded ? "open" : "closed"}`);
-  await clickSelector(browser, flow.triggerSelector);
-  await waitForAriaExpanded(browser, flow.triggerSelector, afterFirstClick);
+  const firstToggle = await clickUntilAriaExpanded(browser, flow.triggerSelector, afterFirstClick);
   const toggledScan = await scanKeyboard(browser, `${flow.name}:${startsExpanded ? "closed" : "open"}`);
-  await clickSelector(browser, flow.triggerSelector);
-  // 2回目のclickで初期状態へ戻る。戻らないならトグルが片道であり、それ自体が欠陥である。
-  await waitForAriaExpanded(browser, flow.triggerSelector, afterSecondClick);
+  // 2回目のtoggleで初期状態へ戻る。戻らないならトグルが片道であり、それ自体が欠陥である。
+  const secondToggle = await clickUntilAriaExpanded(browser, flow.triggerSelector, afterSecondClick);
 
   return {
     name: flow.name,
     triggerSelector: flow.triggerSelector,
     before,
     startsExpanded,
+    // クリック回数を証跡へ残す。1回で決まらなかった場合、ページ側のハンドラ装着が
+    // readyState complete より後だったことを意味する。後から原因を辿れるようにする。
+    clicks: { toOpposite: firstToggle.clicks, backToInitial: secondToggle.clicks },
     closed: startsExpanded ? toggledScan : initialScan,
     open: startsExpanded ? initialScan : toggledScan,
   };
