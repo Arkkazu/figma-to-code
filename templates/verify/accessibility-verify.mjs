@@ -669,6 +669,18 @@ async function clickUntilAriaExpanded(browser, selector, expected, { attempts = 
   return { clicks, settled: false };
 }
 
+// 「成立するまで待つが、成立しなくても落とさない」観測。
+// 合否は呼び出し側が boolean で判定するため、待ちの失敗を例外にしてはいけない。
+// 時間内に成立しなければ false を返し、実装の欠陥として報告される。
+async function waitForCondition(browser, expression, timeoutMs = 2000) {
+  try {
+    await waitFor(() => browser.evaluate(expression), { timeoutMs, label: "condition" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function waitForVisibility(browser, selector, visible) {
   return waitFor(
     () => browser.evaluate(`(() => {
@@ -782,10 +794,17 @@ async function runDialogFlow(browser, config, dialog) {
   const closed = await scanKeyboard(browser, `${dialog.name}:closed`);
   await clickSelector(browser, dialog.triggerSelector);
   await waitForVisibility(browser, dialog.dialogSelector, true);
-  const focusedInside = await browser.evaluate(`(() => {
-    const dialog = document.querySelector(${JSON.stringify(dialog.dialogSelector)});
-    return Boolean(dialog && dialog.contains(document.activeElement));
-  })()`);
+  // 初期フォーカスは開くのと同時とは限らない。多くの実装は開閉アニメーションの後に移す。
+  // 1回の観測で判定すると、正しい実装を「フォーカスが入らない」と誤検出する
+  // （2026-08-30 の Q-13 と同じ欠陥族。stateFlow 側は waitForDisclosureSettled で直した）。
+  // 落ちない待ちにする。時間内に入らなければ false を返し、欠陥として報告する。
+  const focusedInside = await waitForCondition(
+    browser,
+    `(() => {
+      const dialog = document.querySelector(${JSON.stringify(dialog.dialogSelector)});
+      return Boolean(dialog && dialog.contains(document.activeElement));
+    })()`
+  );
   const open = await scanKeyboard(browser, `${dialog.name}:open`);
   const lastFocused = await browser.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(dialog.lastSelector)}); el?.focus(); return document.activeElement === el; })()`);
   await dispatchKey(browser, "Tab");
@@ -795,7 +814,11 @@ async function runDialogFlow(browser, config, dialog) {
   const wrapsBackward = await browser.evaluate(`document.activeElement === document.querySelector(${JSON.stringify(dialog.lastSelector)})`);
   await dispatchKey(browser, "Escape");
   await waitForVisibility(browser, dialog.dialogSelector, false);
-  const focusRestored = await browser.evaluate(`document.activeElement === document.querySelector(${JSON.stringify(dialog.triggerSelector)})`);
+  // フォーカスの復帰も閉じるアニメーションの後に行う実装が多い。同じ理由で待つ。
+  const focusRestored = await waitForCondition(
+    browser,
+    `document.activeElement === document.querySelector(${JSON.stringify(dialog.triggerSelector)})`
+  );
   return { name: dialog.name, dialogSelector: dialog.dialogSelector, closed, open, focusedInside, lastFocused, wrapsForward, firstFocused, wrapsBackward, focusRestored };
 }
 
