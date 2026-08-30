@@ -589,6 +589,43 @@ async function scanKeyboard(browser, label) {
   return { label, expected, reached, orderMatches, unreachable, invisibleFocus };
 }
 
+// aria-expanded が切り替わっても、制御対象はまだ動いている。
+//
+// 実測（2026-08-30、rpa-technologies-theme）: 検索アコーディオンは click 時に
+// aria-expanded を同期で "false" にするが、パネルが hidden / display:none になるのは
+// 折りたたみアニメーション完了後の約300ms後である。
+//
+//   click後   0ms  aria-expanded=false  panel表示   height=102
+//   click後 100ms  aria-expanded=false  panel表示   height=34
+//   click後 300ms  aria-expanded=false  hidden      height=0   ← ここで閉じ切る
+//
+// aria-expanded だけを見て走査すると、閉じたはずのパネル内のチップがTab順に残り、
+// tab-order-mismatch / unreachable-focusable として**実装の欠陥に見える**。
+// 実際には閉じ切る。アニメーション中の一時的なフォーカス可能性は欠陥ではない。
+//
+// そこで走査の前に、制御対象の可視状態が aria-expanded と一致するまで待つ。
+// 案件固有の属性（data-animating 等）には依存しない。可視状態そのもので判定する。
+async function waitForDisclosureSettled(browser, triggerSelector, expanded, timeoutMs = 3000) {
+  return waitFor(
+    () => browser.evaluate(`(() => {
+      const trigger = document.querySelector(${JSON.stringify(triggerSelector)});
+      if (!trigger) return false;
+      const controls = trigger.getAttribute("aria-controls");
+      const panel = controls ? document.getElementById(controls) : null;
+      // aria-controls を持たない操作要素は、待つ対象が無い。走査へ進む。
+      if (!panel) return true;
+      const style = getComputedStyle(panel);
+      const rect = panel.getBoundingClientRect();
+      const visible = !panel.hidden
+        && style.display !== "none"
+        && style.visibility !== "hidden"
+        && rect.height > 0;
+      return ${expanded ? "visible" : "!visible"};
+    })()`),
+    { timeoutMs, label: `${triggerSelector} の制御対象が ${expanded ? "展開" : "折りたたみ"} で落ち着くこと` }
+  );
+}
+
 async function readAriaExpanded(browser, selector) {
   return browser.evaluate(`document.querySelector(${JSON.stringify(selector)})?.getAttribute("aria-expanded")`);
 }
@@ -716,11 +753,16 @@ async function runStateFlow(browser, config, flow) {
   const afterFirstClick = startsExpanded ? "false" : "true";
   const afterSecondClick = startsExpanded ? "true" : "false";
 
+  // 走査は「開閉が落ち着いてから」行う。aria-expanded の切り替わりだけで走査すると、
+  // アニメーション中の一時的な状態を実装の欠陥として報告してしまう。
+  await waitForDisclosureSettled(browser, flow.triggerSelector, startsExpanded);
   const initialScan = await scanKeyboard(browser, `${flow.name}:${startsExpanded ? "open" : "closed"}`);
   const firstToggle = await clickUntilAriaExpanded(browser, flow.triggerSelector, afterFirstClick);
+  await waitForDisclosureSettled(browser, flow.triggerSelector, afterFirstClick === "true");
   const toggledScan = await scanKeyboard(browser, `${flow.name}:${startsExpanded ? "closed" : "open"}`);
   // 2回目のtoggleで初期状態へ戻る。戻らないならトグルが片道であり、それ自体が欠陥である。
   const secondToggle = await clickUntilAriaExpanded(browser, flow.triggerSelector, afterSecondClick);
+  await waitForDisclosureSettled(browser, flow.triggerSelector, afterSecondClick === "true");
 
   return {
     name: flow.name,

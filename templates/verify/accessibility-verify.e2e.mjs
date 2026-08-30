@@ -88,6 +88,13 @@ const page = (axeMode) => `<!doctype html>
   <div id="far-below-spacer"></div>
   <button id="far-toggle" aria-expanded="false" aria-controls="far-panel">Far</button>
   <div id="far-panel" hidden><button id="far-inner">Far inner</button></div>
+  <!-- アニメーション付きの開閉。aria-expanded は click 時に同期で切り替わるが、
+       パネルが hidden になるのは250ms後。実測（2026-08-30）では案件の検索アコーディオンが
+       約300ms後に閉じ切っており、その間だけ中身がフォーカス可能に見える。
+       aria-expanded だけを見て走査すると、これを tab-order-mismatch として
+       実装の欠陥に見せてしまう。 -->
+  <button id="anim-toggle" aria-expanded="true" aria-controls="anim-panel">Animated</button>
+  <div id="anim-panel"><button id="anim-inner">Anim inner</button></div>
   <script>
     const toggle = document.querySelector('#menu-toggle');
     const menu = document.querySelector('#menu');
@@ -106,6 +113,17 @@ const page = (axeMode) => `<!doctype html>
     // わざと遅らせて装着する。load 後 400ms なので、readyState complete の時点では未装着。
     window.addEventListener('load', () => {
       window.setTimeout(() => {
+        const anim = document.querySelector('#anim-toggle');
+        const animPanel = document.querySelector('#anim-panel');
+        let animTimer = null;
+        anim.addEventListener('click', () => {
+          const open = anim.getAttribute('aria-expanded') !== 'true';
+          // aria-expanded は同期で切り替える。パネルの表示切替は遅らせる。
+          anim.setAttribute('aria-expanded', String(open));
+          window.clearTimeout(animTimer);
+          if (open) { animPanel.hidden = false; return; }
+          animTimer = window.setTimeout(() => { animPanel.hidden = true; }, 1500);
+        });
         const far = document.querySelector('#far-toggle');
         const farPanel = document.querySelector('#far-panel');
         far.addEventListener('click', () => {
@@ -195,6 +213,8 @@ globalThis.axe = { run: async () => {
         { name: "late", triggerSelector: "#late-toggle" },
         // 画面外 + smooth スクロール。1回の観測では outside-viewport になる。
         { name: "far", triggerSelector: "#far-toggle" },
+        // 折りたたみが250ms遅れる。aria-expanded 直後に走査すると中身がTab順に残る。
+        { name: "anim", triggerSelector: "#anim-toggle" },
       ],
       dialogs: [],
     },
