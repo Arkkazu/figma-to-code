@@ -31,6 +31,10 @@ function close(server) {
 
 const page = (axeMode) => `<!doctype html>
 <html><head><style>
+  /* 案件のCSSと同じ条件。scrollIntoView がアニメーションするため、直後に読む矩形は
+     スクロール前の位置になる（2026-08-30 実測: _first-view-common.scss が指定していた）。 */
+  html { scroll-behavior: smooth; }
+  #far-below-spacer { height: 4000px; }
   body { background: #ffffff; color: #111111; font: 16px/1.5 sans-serif; }
   button, a { color: #111111; background: #ffffff; }
   button:focus, a:focus { outline: 2px solid #005fcc; outline-offset: 2px; }
@@ -78,6 +82,12 @@ const page = (axeMode) => `<!doctype html>
   <div class="contrast-case"><p id="unresolved-opacity-copy">Unresolved opacity copy</p></div>
   <div class="contrast-case"><p id="unresolved-color-copy">Unresolved color copy</p></div>
   <div class="contrast-case"><p id="hidden-copy" hidden>Hidden copy</p></div>
+  <!-- 初期表示では画面外にある制御。smooth スクロールと組み合わさると、
+       scrollIntoView 直後の矩形はまだ画面外を指し、1回の観測では outside-viewport になる。
+       コントラスト対象を画面外へ押し出さないよう、本文の最後に置く。 -->
+  <div id="far-below-spacer"></div>
+  <button id="far-toggle" aria-expanded="false" aria-controls="far-panel">Far</button>
+  <div id="far-panel" hidden><button id="far-inner">Far inner</button></div>
   <script>
     const toggle = document.querySelector('#menu-toggle');
     const menu = document.querySelector('#menu');
@@ -96,6 +106,13 @@ const page = (axeMode) => `<!doctype html>
     // わざと遅らせて装着する。load 後 400ms なので、readyState complete の時点では未装着。
     window.addEventListener('load', () => {
       window.setTimeout(() => {
+        const far = document.querySelector('#far-toggle');
+        const farPanel = document.querySelector('#far-panel');
+        far.addEventListener('click', () => {
+          const open = far.getAttribute('aria-expanded') !== 'true';
+          far.setAttribute('aria-expanded', String(open));
+          farPanel.hidden = !open;
+        });
         const late = document.querySelector('#late-toggle');
         const latePanel = document.querySelector('#late-panel');
         late.addEventListener('click', () => {
@@ -176,6 +193,8 @@ globalThis.axe = { run: async () => {
         { name: "accordion", triggerSelector: "#accordion-open" },
         // ハンドラが後から付く。1回きりのクリックでは間欠的に落ちる。
         { name: "late", triggerSelector: "#late-toggle" },
+        // 画面外 + smooth スクロール。1回の観測では outside-viewport になる。
+        { name: "far", triggerSelector: "#far-toggle" },
       ],
       dialogs: [],
     },

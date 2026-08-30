@@ -106,11 +106,19 @@ async function dispatchKey(browser, key, shiftKey = false) {
 // 実測（2026-08-30、rpa-technologies-theme）: Q-13 が同じ実装に対して通ったり落ちたりし、
 // 「検証器の状態遷移が不安定」と報告された。原因はページ側ではなく、この座標クリックである。
 // 覆われている場合は何が覆っているかを名指しする。原因を推測させない。
+// スクロールは即時に完了しない。案件のCSSに `scroll-behavior: smooth` があると
+// scrollIntoView はアニメーションし、直後に読む矩形は**スクロール前の位置**になる。
+// 実測（2026-08-30、rpa-technologies-theme）: assets/scss/layout/_first-view-common.scss が
+// `scroll-behavior: smooth` を指定しており、Q-09後のQ-13で outside-viewport になった。
+//
+// behavior: "instant" でCSSの指定を上書きし、それでも落ち着かない場合に備えて
+// 「クリックできる状態になるまで」待ち直す。1回の観測で判定しない。
 async function clickSelector(browser, selector) {
-  const point = await browser.evaluate(`(() => {
+  const probe = `(() => {
     const element = document.querySelector(${JSON.stringify(selector)});
     if (!element) return { error: "not-found" };
-    element.scrollIntoView({ block: "center", inline: "center" });
+    // CSSの scroll-behavior: smooth を上書きする。待たずに位置を確定させる。
+    element.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     if (rect.width <= 0 || rect.height <= 0 || style.display === "none" || style.visibility === "hidden") return { error: "not-visible" };
@@ -128,8 +136,20 @@ async function clickSelector(browser, selector) {
       return { error: "covered-by:" + name };
     }
     return { x, y };
-  })()`);
-  if (!point || point.error) fail(`Cannot click ${selector}: ${point?.error ?? "unknown error"}.`);
+  })()`;
+
+  let lastError = "unknown error";
+  const point = await waitFor(
+    async () => {
+      const result = await browser.evaluate(probe);
+      if (result && !result.error) return result;
+      lastError = result?.error ?? "unknown error";
+      return false;
+    },
+    { timeoutMs: 3000, label: `${selector} to become clickable (${selector} 最終状態: ${lastError})` }
+  ).catch(() => null);
+
+  if (!point) fail(`Cannot click ${selector}: ${lastError}.`);
   await browser.send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", clickCount: 1 });
   await browser.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", clickCount: 1 });
 }
