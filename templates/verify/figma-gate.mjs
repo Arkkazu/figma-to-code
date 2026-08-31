@@ -1284,6 +1284,53 @@ function validateComponentDecisionManifest(decisionPath, components, changeTarge
     toEvidencePath(searchEvidencePath.absolutePath, `component decision searchEvidencePath (${elementId})`);
     requireString(entry.rationale, `component decision rationale (${elementId})`);
 
+    // 「既存部品ではない」と結論する決定は、探した証跡と結び付いていなければ意味がない。
+    //
+    // 従来は searchEvidencePath がファイルとして実在し非空であることしか見ていなかった。
+    // そのため、その要素について**一度も検索していなくても**別要素の検索結果が入った
+    // 同じファイルを指すだけで通った。実測（2026-09-01、static-resource-detail）:
+    // 背景ヒーローが「ページ固有・共通部品ではない」と判定されたが、証跡の queries に
+    // detail-hero を探した記録は無く、既存の共通 detail-hero を見落として新設していた。
+    //
+    // reuse / extend は codePath の実在で裏が取れる。new / not-applicable は
+    // 「無かったこと」の主張なので、何を探したかを名指しさせる。
+    if (decision === "new" || decision === "not-applicable") {
+      const searchQueries = requireArray(entry.searchQueries, `component decision searchQueries (${elementId})`)
+        .map((value, queryIndex) => requireString(value, `component decision searchQueries[${queryIndex}] (${elementId})`));
+      if (searchQueries.length === 0) {
+        fail(
+          `component decision searchQueries must not be empty for a ${decision} decision: ${elementId}. ` +
+            "「既存部品ではない」と言うには、何を探したかを名指しする。"
+        );
+      }
+      // 証跡の形式は案件によって違う（JSONの queries 配列、Markdownの記述など）。
+      // 形式を強制せず、宣言した検索語が証跡に実在するかだけを見る。
+      const evidenceText = readFileSync(searchEvidencePath.absolutePath, "utf8");
+      let recorded = null;
+      try {
+        const parsed = JSON.parse(evidenceText);
+        if (Array.isArray(parsed?.queries)) {
+          recorded = new Set(
+            parsed.queries
+              .map((row) => (typeof row === "string" ? row : row?.query))
+              .filter((value) => typeof value === "string" && value.trim() !== "")
+              .map((value) => value.trim())
+          );
+        }
+      } catch {
+        // JSONでない証跡は本文一致で見る。
+      }
+      const unrecorded = searchQueries.filter((query) => (recorded
+        ? !recorded.has(query.trim())
+        : !evidenceText.includes(query.trim())));
+      if (unrecorded.length > 0) {
+        fail(
+          `component decision searchQueries are not present in the search evidence (${elementId}): ${unrecorded.join(", ")}. ` +
+            `証跡 ${searchEvidencePath.relativePath} に、実際に実行した検索として記録する。`
+        );
+      }
+    }
+
     if (decision === "reuse" || decision === "extend") {
       if (!existsSync(codePath.absolutePath)) fail(`reuse/extend decision must point to an existing code path: ${elementId}`);
     }

@@ -271,6 +271,7 @@ function createFixture(prefix) {
     nodeMapPath: join(directory, "nodemap.json"),
     nodeEvidencePath: join(directory, "node-evidence.json"),
     componentsPath: join(directory, "components.json"),
+    componentDecisionPath: join(directory, "component-decisions.json"),
     accessibilityPath: join(directory, "accessibility.json"),
     releaseRecordRelativePath: "MyBrain/verify/fixture/release-record.json",
     releaseRecordPath: join(directory, "release-record.json"),
@@ -306,7 +307,8 @@ function createFixture(prefix) {
   });
   writeFileSync(join(root, "site", "view.txt"), "clean declared target\n", "utf8");
   writeFileSync(join(directory, "mapping.md"), "fixture mapping\n", "utf8");
-  writeFileSync(join(directory, "search.md"), "fixture search evidence\n", "utf8");
+  // 「既存部品ではない」と結論する決定は、何を探したかを証跡に残す（2026-09-01 契約追加）。
+  writeFileSync(join(directory, "search.md"), "fixture search evidence\nqueried: fixture-shared-hero\n", "utf8");
   writeFileSync(join(directory, "axe.js"), "/* fixture axe source */\n", "utf8");
   writeFileSync(join(directory, "pc.png"), "fixture pc image\n", "utf8");
   writeFileSync(join(directory, "sp.png"), "fixture sp image\n", "utf8");
@@ -364,6 +366,7 @@ function createFixture(prefix) {
       decision: "not-applicable",
       codePath: "site/view.txt",
       searchEvidencePath: "MyBrain/verify/fixture/search.md",
+      searchQueries: ["fixture-shared-hero"],
       rationale: "Disposable fixture uses an OTHER node and has no reusable component decision.",
     }],
   });
@@ -523,6 +526,23 @@ function assertPreflightDraftGuardCases() {
       label: "spec status draft",
       expected: "Spec contains status:draft",
       mutate: (fixture) => mutateJson(fixture.specPath, (value) => { value.status = "draft"; }),
+    },
+    // 2026-09-01 追加。「既存部品ではない」と結論する決定は、探した証跡と結び付いていなければ
+    // 意味がない。実測（static-resource-detail）: 背景ヒーローが「ページ固有」と判定されたが、
+    // 証跡に detail-hero を探した記録は無く、既存の共通 detail-hero を見落として新設していた。
+    {
+      label: "not-applicable なのに searchQueries が無い",
+      expected: "searchQueries (fixture-component) must be a non-empty array",
+      mutate: (fixture) => mutateJson(fixture.componentDecisionPath, (value) => {
+        delete value.decisions[0].searchQueries;
+      }),
+    },
+    {
+      label: "宣言した検索語が証跡に記録されていない",
+      expected: "searchQueries are not present in the search evidence",
+      mutate: (fixture) => mutateJson(fixture.componentDecisionPath, (value) => {
+        value.decisions[0].searchQueries = ["never-searched-token"];
+      }),
     },
     // 2026-09-01 追加。寸法だけを検査して位置を検査しない要素は、置き場所の誤りを見逃す。
     // 実測（static-resource-detail）: PCパンくずが width/height/display だけで、
