@@ -10,8 +10,8 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { checkRolePacket } from "../templates/verify/p3-role-packet.mjs";
-import { hashInputStaging } from "../templates/verify/p3-role-return.mjs";
+import { checkRolePacket } from "../research/p3/p3-role-packet.mjs";
+import { hashInputStaging } from "../research/p3/p3-role-return.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAIR_ID = "open-service-top-hero-v1-20260809";

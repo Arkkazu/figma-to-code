@@ -12,7 +12,7 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { checkRolePacket } from "../templates/verify/p3-role-packet.mjs";
+import { checkRolePacket } from "../research/p3/p3-role-packet.mjs";
 import { currentPreparationInternals as I } from "./r4-prepare-current-seq1-runtime-activation.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));

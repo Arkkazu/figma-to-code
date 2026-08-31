@@ -22,8 +22,8 @@ import {
 } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkRolePacket } from "../templates/verify/p3-role-packet.mjs";
-import { hashInputStaging, validateRoleReturn } from "../templates/verify/p3-role-return.mjs";
+import { checkRolePacket } from "../research/p3/p3-role-packet.mjs";
+import { hashInputStaging, validateRoleReturn } from "../research/p3/p3-role-return.mjs";
 
 const HERE = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const SCRIPT_PATH = fileURLToPath(import.meta.url);

@@ -653,7 +653,12 @@ function record(policyPathArg, entryPathArg, outputPathArg) {
     `- 指摘：${entry.summary}`,
     `- 今後：${entry.prevention}`,
   ].join("\n");
-  const nextText = `${sourceText.slice(0, markerIndex).replace(/\s*$/, "")}\n\n${block}\n\n${sourceText.slice(markerIndex)}`;
+  // 新しい記録は機械管理領域（marker より前）の**先頭**へ入れる。marker の直前へ入れると
+  // 領域内が古い順に並び、「最新を上に」で読む運用と食い違って、先頭だけ読んだセッションに
+  // 最新の記録が届かない。案件側で同じ2系統追記が実害を出したため揃えた（2026-08-26）。
+  const firstHeading = /^## /m.exec(sourceText.slice(0, markerIndex));
+  const insertAt = firstHeading ? firstHeading.index : markerIndex;
+  const nextText = `${sourceText.slice(0, insertAt).replace(/\s*$/, "")}\n\n${block}\n\n${sourceText.slice(insertAt)}`;
   writeFileSync(sourcePath.absolutePath, nextText, "utf8");
   try {
     scan(policyPath.relativePath, outputPath.relativePath);

@@ -26,7 +26,7 @@ const CAPTURE_PATH = fileURLToPath(new URL("./p3-p11-app-server-transport-captur
 const PROCESS_TREE_PATH = fileURLToPath(new URL("./p3-p11-process-tree.mjs", import.meta.url));
 const PROCESS_TREE_CLEANUP_TIMEOUT_MS = 10000;
 const WORKER_STDIO_LIMIT_BYTES = 65536;
-// This helper lives at <repo>/templates/verify.  Derive the protected source
+// This helper lives at <repo>/research/p3.  Derive the protected source
 // root from its own immutable module path, never from the caller's cwd.
 const TEMPLATE_REPO_ROOT = resolve(dirname(SELF_PATH), "..", "..");
 const SAFE_TURN_INPUT = "P-11 feasibility observation only. Return exactly P11_FEASIBILITY_NOOP. Do not use tools, read files, or make changes.";

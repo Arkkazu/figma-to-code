@@ -19,8 +19,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, normalize, relative, resolve } from "node:path";
-import { checkRolePacket } from "../templates/verify/p3-role-packet.mjs";
-import { hashInputStaging } from "../templates/verify/p3-role-return.mjs";
+import { checkRolePacket } from "../research/p3/p3-role-packet.mjs";
+import { hashInputStaging } from "../research/p3/p3-role-return.mjs";
 
 const PAIR_ID = "open-service-top-hero-v1-20260809";
 const ACTIVATION_ID = "f8657db3a6c739184e02a6d411efaee3965dea822508791a46eb9914c2b91a6c";
@@ -108,15 +108,15 @@ const EXPECTED_ATTACHMENTS = Object.freeze([
 ]);
 
 const EXPECTED_RELEASE = Object.freeze([
-  { id: "return-helper", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-return.mjs", sha256: "7ad82ecbb7ecf7678071ff5e857b0d0312851180911750da92f5f5d0a7fbb89d" },
-  { id: "return-helper-e2e", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-return.e2e.mjs", sha256: "5a1bc396f10523680fe3cc85e606fe57f2e3ac477184ce33786cf41a8a4ec2fc" },
-  { id: "return-plan-template", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-return-plan-template.json", sha256: "7212cd022b4b5fb5634d14c63d382ad275ee3723a849b60fa6d53576ae77f730" },
-  { id: "return-manifest-template", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-return-manifest-template.json", sha256: "6fb1e5175cb7db9a713adb4a8a5e68acf13b45d88c05885397e71ce52b118361" },
-  { id: "return-feedback-template", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-return-feedback-template.json", sha256: "f63ec9b9b6ebee92b4d17d70fb66d6b976c7c461b3f05c4f5b9d5be824e0f4c9" },
-  { id: "protocol-template", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-handoff-protocol-template.json", sha256: "12a6cb01c87b2c0239c78feb2216faf632baf66cee30ba6647e18f646aa96e5b" },
-  { id: "registry-template", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-handoff-registry-template.json", sha256: "d8bb833bb593a9045bcff4ab0dd2949c5a32ac5d151f5f90646a07b35f377918" },
-  { id: "packet-helper", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-packet.mjs", sha256: "69fc169f186dfd1c8dff69616eac8977900e5de77b8c5734468a96bf4a99af07" },
-  { id: "packet-plan-template", genericPath: "C:/AI/figma-to-code/templates/verify/p3-role-packet-plan-template.json", sha256: "8ca2441d02fd0583e4d596f2ef78123874af6d60efb180be427fb3ed1632dbea" },
+  { id: "return-helper", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-return.mjs", sha256: "7ad82ecbb7ecf7678071ff5e857b0d0312851180911750da92f5f5d0a7fbb89d" },
+  { id: "return-helper-e2e", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-return.e2e.mjs", sha256: "5a1bc396f10523680fe3cc85e606fe57f2e3ac477184ce33786cf41a8a4ec2fc" },
+  { id: "return-plan-template", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-return-plan-template.json", sha256: "7212cd022b4b5fb5634d14c63d382ad275ee3723a849b60fa6d53576ae77f730" },
+  { id: "return-manifest-template", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-return-manifest-template.json", sha256: "6fb1e5175cb7db9a713adb4a8a5e68acf13b45d88c05885397e71ce52b118361" },
+  { id: "return-feedback-template", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-return-feedback-template.json", sha256: "f63ec9b9b6ebee92b4d17d70fb66d6b976c7c461b3f05c4f5b9d5be824e0f4c9" },
+  { id: "protocol-template", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-handoff-protocol-template.json", sha256: "12a6cb01c87b2c0239c78feb2216faf632baf66cee30ba6647e18f646aa96e5b" },
+  { id: "registry-template", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-handoff-registry-template.json", sha256: "d8bb833bb593a9045bcff4ab0dd2949c5a32ac5d151f5f90646a07b35f377918" },
+  { id: "packet-helper", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-packet.mjs", sha256: "69fc169f186dfd1c8dff69616eac8977900e5de77b8c5734468a96bf4a99af07" },
+  { id: "packet-plan-template", genericPath: "C:/AI/figma-to-code/research/p3/p3-role-packet-plan-template.json", sha256: "8ca2441d02fd0583e4d596f2ef78123874af6d60efb180be427fb3ed1632dbea" },
 ]);
 
 const EXPECTED_IMMUTABLE = Object.freeze({

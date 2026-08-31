@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-08-21T07:50:20.883Z",
+  "updatedAt": "2026-08-26T02:28:00.460Z",
   "note": "Mutable index. Proposal files stay immutable; this records the current proposal, superseded proposals, and completed-outside-promotion closures per recurrence key.",
   "recurrenceKeys": {
     "unverified-figma-value": {

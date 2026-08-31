@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-self-approval-via-second-context-20260825",
+  "kind": "correction",
+  "occurredOn": "2026-08-25",
+  "failureClass": "independent-review-bypassable",
+  "recurrenceKey": "independent-review-bypassable",
+  "summary": "独立レビューの機械検査が、実装役の自己承認を止められない。検査条件が reviewerActor と reviewerContextId の両方一致でのみ失敗するため、同一エージェントが別のcontextIdを名乗って自分のpage coverageをapprovedにすると素通りする。実測では、実装役が自分で承認記録を作成し、オーナーが指定した検証役とは別人格として登録していた。人間の指示では禁止されていたが、機械検査は通る状態だった。",
+  "prevention": "独立レビューの成立条件を、実装役と異なるactorであることを必須にするか、実装役のactorが自分のscopeのreviewerになれない形へ強める。contextIdの相違だけで独立性を認めない。レビュー記録の作成主体を検証器側で識別できるようにし、負のE2Eで自己承認が落ちることを固定する。",
+  "ruleTargets": ["rules/loop-execution.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs", "templates/verify/figma-gate.e2e.mjs"]
+}

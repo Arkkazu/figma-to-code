@@ -14,16 +14,18 @@
   ],
   "recurrenceThreshold": 2,
   "allowedRuleTargets": [
-    "rules/figma-spec-pipeline.md",
-    "rules/figma-mcp-implementation.md",
+    "rules/correction-log-promotion.md",
     "rules/figma-image-export.md",
+    "rules/figma-mcp-implementation.md",
+    "rules/figma-scope-lock.md",
+    "rules/figma-spec-pipeline.md",
     "rules/loop-execution.md",
-    "rules/self-improvement.md",
-    "rules/correction-log-promotion.md"
+    "rules/self-improvement.md"
   ],
   "allowedVerifierTargets": [
     "templates/verify/figma-gate.mjs",
     "templates/verify/figma-gate.e2e.mjs",
+    "templates/verify/figma-page-coverage.mjs",
     "templates/verify/loop-learn.mjs",
     "templates/verify/loop-learn.e2e.mjs",
     "tools/figma-log-promote.mjs",
@@ -31,7 +33,9 @@
     "tools/figma-scope-lock.mjs",
     "tools/figma-scope-lock.e2e.mjs",
     "templates/verify/scope-coordination.mjs",
-    "templates/verify/scope-conflict-audit.mjs"
+    "templates/verify/scope-conflict-audit.mjs",
+    "tools/doc-command-audit.mjs",
+    "tools/doc-command-audit.e2e.mjs"
   ],
   "review": {
     "loopEngineeringSpec": "C:\\AI\\loop-engineering\\spec\\06-self-improvement.md",

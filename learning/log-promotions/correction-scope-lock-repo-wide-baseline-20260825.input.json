@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-scope-lock-repo-wide-baseline-20260825",
+  "kind": "correction",
+  "occurredOn": "2026-08-25",
+  "failureClass": "concurrent-scope-blocked-by-repo-wide-baseline",
+  "recurrenceKey": "concurrent-scope-blocked-by-repo-wide-baseline",
+  "summary": "scope lockが、宣言パスと交差しない他scopeの正当な作業でblockedになる。lockのbaselineはリポジトリ全体のdirty集合で、verifyは全体を突き合わせるため、別scopeが自分の宣言パスを正しく編集しただけで、無関係なscopeが停止する。実測では、オーナーが別セッションで進める正規のscopeがSCSSとCSSを更新したところ、宣言パスが1件も交差しない別scopeがblockedになり、再開にはstateの退避と再beginが必要になった。beginは既存stateがあると拒否するため、blockedからの復帰手順が用意されていない。同じ衝突判定でも、scope-conflict-auditは宣言パスの交差だけを見て交差しなければ並行を許すため、2つの機構で判定基準が食い違っている。",
+  "prevention": "scope lockのverifyを、宣言パスと制御パスに関係する変更だけで判定する形へ寄せ、無関係な変更はbaselineの更新として扱う。judgement基準をscope-conflict-auditの交差判定と一致させる。あわせてblockedからの正規の復帰手順（stateの退避と再baseline）を規則とツールに用意し、blockedのたびに新しいscopeを発行する運用に流れないようにする。",
+  "ruleTargets": ["rules/figma-scope-lock.md"],
+  "verifierTargets": ["tools/figma-scope-lock.mjs", "tools/figma-scope-lock.e2e.mjs"]
+}

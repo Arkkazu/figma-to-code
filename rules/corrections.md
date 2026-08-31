@@ -1,3 +1,21 @@
+## 2026-08-30: symptom-by-symptom-serial-fixing
+<!-- loop-log: {"id":"correction-serial-symptom-fixing-20260830","kind":"correction","failureClass":"symptom-by-symptom-serial-fixing","recurrenceKey":"symptom-by-symptom-serial-fixing","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":[]} -->
+- 指摘：オーナー指摘「いまのチェックに時間がかかりすぎ。きみのミスで時間がかかっているのか」。
+  2026-08-29〜30 に実装役が6回停止し、そのたびに検証器を1件ずつ直して配布した。停止の内訳は
+  既存欠陥4件（sass:watch の style 不整合 / Q-13 の初期展開前提 / 座標クリックのヒットテスト欠落 /
+  開閉の落ち着き待ち欠落）と、**自分が作った2件**（検証実行が残した preflight lock、
+  座標クリック修正で入れた viewport 判定が smooth スクロールで誤発火）である。
+- 原因：**症状ごとに直列で直した。**Q-13で停止した4件はすべて `runStateFlow` /
+  `clickSelector` / `scanKeyboard` という同じ経路の**時間仮定の誤り**という単一の欠陥族だった。
+  最初の停止時にこの経路の時間仮定を全部洗っていれば1回で終わった。実際には報告された症状だけを
+  直して配布し、次の停止を待つことを4回繰り返した。配布のたびに `figma-gate.e2e`（実測30〜367秒）
+  が回るため、往復そのものが高い。
+- 今後：**検証器が停止したら、その症状だけを直さない。**同じ経路の同種の仮定を先に洗い出し、
+  まとめて直してから配布する。特に次の3つは一度に点検する。(1) 非同期完了を待たずに観測している箇所
+  （アニメーション、遅延ハンドラ、スクロール）、(2) 1回の観測で判定している箇所（リトライが無い）、
+  (3) 実装の正当な設計を「閉じた状態から始まる」等と決め打ちしている箇所。
+  修正を1件配布するたびに実装役を再開させ、次の停止を待つ進め方をしない。
+
 ## 2026-08-29: verifier-output-not-self-explaining
 <!-- loop-log: {"id":"correction-verifier-output-not-self-explaining-20260829","kind":"correction","failureClass":"verifier-output-not-self-explaining","recurrenceKey":"verifier-output-not-self-explaining","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/correction-receipt.mjs","tools/figma-scope-lock.mjs","templates/verify/figma-gate.e2e.mjs"]} -->
 - 指摘：オーナー指示「codexが誤認しないようなルールにしないとだめだろ」。検証器の出力が、読み手に

@@ -12,7 +12,7 @@
 node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions
 ```
 
-`record` はID一意性、許可済みルール・検証器、案件固有URL・パス・node-id・アセット参照の不在を検査し、`<!-- loop-log-schema: v1 -->` より前へメタデータ付きで追記する。
+`record` はID一意性、許可済みルール・検証器、案件固有URL・パス・node-id・アセット参照の不在を検査し、`<!-- loop-log-schema: v1 -->` より前の**機械管理領域の先頭**へメタデータ付きで追記する（2026-08-26 更新：それ以前は marker の直前＝領域の末尾へ入れていたため、領域内が古い順に並び、先頭から読むセッションに最新の記録が届かなかった）。marker より後は legacy領域で、メタデータを持たず再発判定の対象にならない。
 
 ## 2. 再発の検知
 

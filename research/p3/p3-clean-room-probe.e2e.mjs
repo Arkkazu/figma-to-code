@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const probePath = resolve("templates/verify/p3-clean-room-probe.mjs");
+const probePath = resolve("research/p3/p3-clean-room-probe.mjs");
 const { executeProbe, executePeerSentinelMatrix, validateProbeEvidence, requireP11Authorization } = await import(pathToFileURL(probePath).href);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 

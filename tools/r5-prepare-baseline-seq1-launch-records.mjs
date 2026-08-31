@@ -153,8 +153,8 @@ function readPinnedReturnHelperE2EReceipt() {
   const receipt = readJson(RETURN_E2E_RECEIPT_PATH, "durable pinned p3-role-return E2E receipt");
   assert(receipt.schema === "p3-r5-return-helper-e2e-evidence/v1" && receipt.recordState === "observed" && receipt.scope === "isolated fixture verification only", "durable pinned p3-role-return E2E receipt state changed.");
   assert(receipt.test?.command === "node C:\\AI\\figma-to-code\\templates\\verify\\p3-role-return.e2e.mjs" && receipt.test?.exitCode === 0 && receipt.test?.stdout === "p3-role-return E2E PASS" && receipt.test?.wallClockSeconds === 360.7 && receipt.test?.processCompletionTimestamp === "not-captured", "durable pinned p3-role-return E2E test result changed.");
-  exact(receipt.postRunReleaseHashObservation?.helper, { path: "templates/verify/p3-role-return.mjs", sha256: helper.sha256 }, "durable pinned p3-role-return E2E receipt helper");
-  exact(receipt.postRunReleaseHashObservation?.e2e, { path: "templates/verify/p3-role-return.e2e.mjs", sha256: e2e.sha256 }, "durable pinned p3-role-return E2E receipt harness");
+  exact(receipt.postRunReleaseHashObservation?.helper, { path: "research/p3/p3-role-return.mjs", sha256: helper.sha256 }, "durable pinned p3-role-return E2E receipt helper");
+  exact(receipt.postRunReleaseHashObservation?.e2e, { path: "research/p3/p3-role-return.e2e.mjs", sha256: e2e.sha256 }, "durable pinned p3-role-return E2E receipt harness");
   assert(typeof receipt.postRunReleaseHashObservation?.observedAt === "string" && !Number.isNaN(Date.parse(receipt.postRunReleaseHashObservation.observedAt)), "durable pinned p3-role-return E2E receipt observation time is invalid.");
   exact(receipt.fixtureBoundary, { temporaryFixtureRoot: "%TEMP%/p3-role-return-e2e-*", liveActivationMutation: false, roleHomeMutation: false, siteMutation: false, lifecycleMutation: false, p11Mutation: false }, "durable pinned p3-role-return E2E receipt fixture boundary");
   return {

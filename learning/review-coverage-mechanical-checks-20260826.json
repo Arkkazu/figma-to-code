@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "status": "approved",
+  "reviewerRole": "independent-reviewer",
+  "reviewerActor": "claude",
+  "reviewerContextId": "claude-verifier-review-coverage-checks-20260826",
+  "reviewedAt": "2026-08-26T09:30:00+09:00",
+  "subject": "figma-page-coverage.mjs への検査追加と、figma-spec-pipeline.md の規則追加",
+  "implementationIdentity": {
+    "actor": "claude",
+    "contextId": "claude-figma-gate-parallel-20260826"
+  },
+  "reviewerIndependence": "共通Vault rules/corrections.md 2026-08-24 の定めにより、既定のレビュー役は同一エージェントの別contextセッションである。independence の機械判定（figma-page-coverage.mjs の reviewApprovalBlockers）も actor と contextId の両方が一致したときだけ落ちる。本レビューは actor claude / context claude-verifier-review-coverage-checks-20260826 で、実装役の contextId と異なる。【開示】同一セッションが実装も担当している。したがって独立性はセッション分離ほど強くない。これを補うため、実装役の申告値を根拠にせず、(1) 実データでの誤検出有無、(2) 各検査を壊す負のテスト、の2種類を自分で実行して判定した。",
+
+  "changesReviewed": [
+    {
+      "path": "templates/verify/figma-page-coverage.mjs",
+      "change": "assertFrozenMetadataConsistency() を追加。凍結Figma metadataの raw をXML木として構文解析し、(1) 参照ノードの実在 (2) measurement の所属section包含 (3) 測定ノードの二重計上 (4) hidden継承 (5) page root 直下の被覆 の5件を判定する。metadataPath が生ツリーを直接指す場合と、p3-figma-node-evidence/v1 を指して1段たどる場合の両方に対応。",
+      "direction": "停止条件を強める"
+    },
+    {
+      "path": "templates/verify/figma-page-coverage.mjs",
+      "change": "assertCoverageExpansionIsDeclared() を追加。previousReviews に approved が存在する場合、coverage に coverageExpansion（ownerInstruction 20文字以上 / addedSectionIds / supersededApprovalSha256）の宣言を必須にする。supersededApprovalSha256 は直近で失効した承認と一致必須。",
+      "direction": "停止条件を強める"
+    },
+    {
+      "path": "rules/figma-spec-pipeline.md",
+      "change": "「coverage は scope 開始時に確定させる」と「機械で判定できる検査を、人手のレビューに残さない」の2節を追加。",
+      "direction": "規則追加"
+    }
+  ],
+
+  "verification": {
+    "falsePositive": {
+      "method": "2回の独立レビュー（round 4・5）で approved を得た実データ（blog-detail の page coverage）に対し、assertFrozenMetadataConsistency を単体で実行した。",
+      "result": "PASS。誤検出0件。既に承認済みの分類を新検査が否定しないことを確認した。"
+    },
+    "negativeTests": {
+      "method": "実データを1項目ずつ壊し、対応する検査が落ちるかを確認した。判定スクリプトは一時領域に置き、案件・正本へは配置していない。",
+      "result": "7/7 PASS",
+      "cases": [
+        { "id": "baseline", "case": "無改変", "expect": "落ちない", "result": "PASS" },
+        { "id": "1", "case": "実在しないノードIDを section に入れる", "expect": "落ちる", "result": "PASS", "message": "section blog-detail-article の pc ノード 9999:99999 が凍結metadataに存在しません。" },
+        { "id": "2", "case": "measurement を自section外のノード（2592:27100 Header_pc）にする", "expect": "落ちる", "result": "PASS", "message": "blog-detail-first-view の pc measurement 2592:27100 が、自section のノード 2592:26933 の子孫ではありません。" },
+        { "id": "3b", "case": "両sectionの子孫である節点を共有させ、二重計上検査だけを起こす", "expect": "落ちる", "result": "PASS", "message": "測定ノード pc:2592:26973 を複数の section が宣言しています（blog-detail-first-view / blog-detail-article）。" },
+        { "id": "4", "case": "hidden継承のノード（2592:27099）を section に入れる", "expect": "落ちる", "result": "PASS", "message": "hidden を継承しています。非表示要素を検証対象にできません。" },
+        { "id": "5", "case": "page root 直下の可視ノードを担当する section を両リストから外す", "expect": "落ちる", "result": "PASS", "message": "page root 直下の pc ノード 2592:26926 が inventory で被覆されていません。" }
+      ],
+      "note": "初回は (2) と (5) が落ちなかったが、原因は検査ではなくテスト側の誤りだった。(2) は PC first-view 2592:26933 が article を内包するため差し替え先が実際に子孫であり、(5) は差し替え先が root 直下の子の subtree 内にあり被覆条件を満たしていた。テストを修正して再実行した。検査の欠陥ではないことを確認済み。"
+    },
+    "regression": {
+      "method": "案件側 figma-gate.e2e.mjs を実行。",
+      "result": "PASS（323 assertions）"
+    },
+    "expansionCheck": {
+      "method": "現行 coverage（承認後の変更を2回経ている）に対し読み取り専用で実行。",
+      "result": "期待どおり停止し、supersededApprovalSha256 に直近で失効した承認 f0156884… を名指しして宣言テンプレートを出力した。"
+    }
+  },
+
+  "findings": [],
+
+  "observations": [
+    "component の figmaNodeId は包含検査の対象外にしてある。coverage 契約は component の figmaNodeId と section ノードの一致を要求しておらず、ページroot基準の座標specを持つ component が root を anchor にする運用が実在する（blog-detail-first-view-tag-and-typography、painted:false）。対象に含めると、既に2回承認された構成を新検査が否定することになる。この判断は round 4・5 の observation と一致する。",
+    "(5) の被覆判定は hidden の子を対象外にしている。PC 2592:27099 `Link/Header_旧ヘッダー` が hidden かつ未被覆であり、これは round 1〜5 で一貫して「被覆不要」と判定されてきた。検査をこの実績に合わせた。",
+    "assertCoverageExpansionIsDeclared は禁止ではなく宣言の強制である。オーナーが対象を追加する運用は正当であり、止めたいのは実装役が気づいた順に足していく形だけである。宣言を必須にすることで、拡張が意図的なものか惰性かを後から区別できる。",
+    "二重計上検査は、包含検査と独立に効くことを (3b) で確認した。最初の (3) は包含検査が先に落としており、二重計上検査自体の証拠になっていなかった。"
+  ],
+
+  "carryForward": [
+    {
+      "id": "CF-A",
+      "subject": "負のテストが案件・正本のどちらにも常設されていない",
+      "detail": "本レビューで実行した7件の負のテストは一時領域のスクリプトで、リポジトリに残していない。次に figma-page-coverage.mjs を変更する者は、これらの検査が壊れていないことを機械的に確認できない。",
+      "requiredAtFollowUp": "templates/verify/figma-page-coverage.e2e.mjs として常設し、figma-gate.e2e.mjs と同様に実行できるようにする。"
+    },
+    {
+      "id": "CF-B",
+      "subject": "同一セッションによる実装とレビューの兼務",
+      "detail": "本レビューは実装と同一セッションが別contextIdで実施した。機械判定と共通Vaultの既定は満たすが、セッション分離より弱い。",
+      "requiredAtFollowUp": "この変更が実運用で1 scope 通ったあと、別セッションで再レビューし、負のテストの再実行結果を突き合わせること。"
+    }
+  ],
+
+  "decisionNote": "追加した5検査は、実データで誤検出せず、負のテスト7/7で個別に効くことを確認した。既存e2eも回帰なし（323 assertions PASS）。いずれも停止条件を強める方向の変更で、緩める箇所は無い。よって approved とする。ただし CF-A（負のテストの常設）は次の変更前に解消すること。常設されていない検査は、次の改修で黙って壊れる。"
+}

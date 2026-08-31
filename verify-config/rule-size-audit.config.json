@@ -1,0 +1,44 @@
+{
+  "note": "C:/AI/figma-to-code 自身の蓄積ファイル・手順書の上限。根拠は WORKFLOW.md「手順書の上限」「蓄積ファイルの上限」。値をここだけで変えない（両方を直す）。実行: node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json",
+  "note_machineRegion": "corrections.md / mistakes.md は <!-- loop-log-schema: v1 --> より前が機械管理領域で、figma-log-promote の再発判定が既存記録を数えるため件数上限を置かない。marker より後の legacy領域だけを 10件で抑える。件数と並び順は countAfterMarker でその領域だけを見る。",
+  "version": 1,
+  "files": [
+    {
+      "path": "rules/corrections.md",
+      "countAfterMarker": "<!-- loop-log-schema: v1 -->",
+      "maxEntries": 10,
+      "archivePath": "rules/corrections-archive.md",
+      "requireDescending": true
+    },
+    {
+      "path": "rules/mistakes.md",
+      "countAfterMarker": "<!-- loop-log-schema: v1 -->",
+      "maxEntries": 10,
+      "archivePath": "rules/mistakes-archive.md",
+      "requireDescending": true
+    },
+    { "path": "rules/figma-spec-pipeline.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "rules/figma-mcp-implementation.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "rules/figma-image-export.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "rules/figma-scope-lock.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "rules/self-improvement.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "rules/loop-execution.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "rules/correction-log-promotion.md", "maxLines": 600, "maxBytes": 81920 },
+    { "path": "WORKFLOW.md", "maxLines": 250, "maxBytes": 25600 }
+  ],
+  "totals": {
+    "label": "Figma実装の必読合計",
+    "maxBytes": 143360,
+    "paths": [
+      "WORKFLOW.md",
+      "README.md",
+      "rules/figma-spec-pipeline.md",
+      "rules/figma-scope-lock.md",
+      "rules/figma-mcp-implementation.md",
+      "rules/figma-image-export.md",
+      "rules/loop-execution.md",
+      "rules/self-improvement.md",
+      "rules/correction-log-promotion.md"
+    ]
+  }
+}

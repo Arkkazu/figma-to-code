@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { navigateAndWait, startCdpBrowser } from "./cdp-browser.mjs";
+import { navigateAndWait, startCdpBrowser } from "../../templates/verify/cdp-browser.mjs";
 
 const providerModule = await import(pathToFileURL(resolve("templates/verify/p3-page-provider.mjs")).href);
 const { assertStaticBundle, collectStaticBundle, startHermeticStaticProvider } = providerModule;

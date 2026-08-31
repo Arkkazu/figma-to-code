@@ -23,13 +23,15 @@ assert.ok(
   "fixture must clear the minimum size",
 );
 
-// 明示シグナル：エージェント別の環境変数はいずれも cloud-restricted に落とす
+// 明示シグナルは診断に残すが、上位層を読めるローカル環境を cloud-restricted にしない
 for (const signal of CLOUD_ENV_SIGNALS) {
+  const result = evaluateWorkflowEnvironment({ env: { [signal.key]: signal.value }, readPath: readableAll });
   assert.equal(
-    evaluateWorkflowEnvironment({ env: { [signal.key]: signal.value }, readPath: readableAll }).mode,
-    "cloud-restricted",
-    `${signal.key} must be restricted`,
+    result.mode,
+    "local",
+    `${signal.key} must not override readable parent workflows`,
   );
+  assert.deepEqual(result.signals, [`${signal.key}=${signal.value}`], `${signal.key} is retained for diagnosis`);
 }
 
 // 正本はファイルの実読：シグナルが無くても上位層を読めなければ cloud-restricted
@@ -108,7 +110,10 @@ assert.equal(runCli(["--nope"], { env: {}, readPath: readableAll }).exitCode, 64
 
 // 実プロセス：エントリポイント（main判定と終了コード）を実行して固定する
 const fixtureDir = mkdtempSync(path.join(tmpdir(), "workflow-preflight-"));
-const fixtureEnv = { PATH: process.env.PATH ?? "" };
+const fixtureEnv = {
+  PATH: process.env.PATH ?? "",
+  ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+};
 for (const source of LOCAL_WORKFLOW_SOURCES) {
   const fixturePath = path.join(fixtureDir, `${source.id}-WORKFLOW.md`);
   writeFileSync(fixturePath, VALID_WORKFLOW);
@@ -116,14 +121,18 @@ for (const source of LOCAL_WORKFLOW_SOURCES) {
 }
 
 const localRun = spawnSync(process.execPath, [TOOL_PATH, "--assert-local"], { env: fixtureEnv, encoding: "utf8" });
-assert.equal(localRun.status, 0, "the CLI exits 0 for a local environment");
+assert.equal(
+  localRun.status,
+  0,
+  `the CLI exits 0 for a local environment (${localRun.error?.message ?? localRun.stderr ?? "no child-process detail"})`,
+);
 assert.equal(JSON.parse(localRun.stdout).mode, "local", "the CLI prints the local verdict as JSON");
 
-const cloudRun = spawnSync(process.execPath, [TOOL_PATH, "--assert-local"], {
+const signalRun = spawnSync(process.execPath, [TOOL_PATH, "--assert-local"], {
   env: { ...fixtureEnv, CLAUDE_CODE_REMOTE: "true" },
   encoding: "utf8",
 });
-assert.equal(cloudRun.status, 2, "the CLI exits 2 for a cloud session even when parent workflows are readable");
-assert.equal(JSON.parse(cloudRun.stdout).mode, "cloud-restricted", "the CLI prints the cloud verdict as JSON");
+assert.equal(signalRun.status, 0, "the CLI does not reject readable local workflows because of a cloud signal");
+assert.equal(JSON.parse(signalRun.stdout).mode, "local", "the CLI prints the file-based local verdict as JSON");
 
 process.stdout.write("workflow-preflight.e2e: PASS\n");

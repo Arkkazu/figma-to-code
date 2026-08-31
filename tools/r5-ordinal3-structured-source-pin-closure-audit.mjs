@@ -104,8 +104,8 @@ const EXECUTION_ROOT_PATHS = Object.freeze([
 const CANDIDATE_DRY_RUN_GENERATOR_SHA256 = "18287ba29f74dee61963cbd9eace696b64bf9d3d6c0725ea9a5fb331a821c87d";
 
 const EXECUTION_DEPENDENCY_PATHS = Object.freeze([
-  "templates/verify/p3-role-return.mjs",
-  "templates/verify/p3-role-return.e2e.mjs",
+  "research/p3/p3-role-return.mjs",
+  "research/p3/p3-role-return.e2e.mjs",
   "tools/r5-return-helper-e2e-evidence-d9723895.json",
   "tools/r5-ordinal3-os-isolation-proof-schema.json",
   "tools/r5-ordinal3-readonly-capability-probe-plan.md",
@@ -256,8 +256,8 @@ const READ_BOUNDARY_RELEASE_SOURCE_FILE_NAMES = Object.freeze([
 ]);
 
 const CANDIDATE_HELPER_PATHS = Object.freeze([
-  "templates/verify/p3-role-return.mjs",
-  "templates/verify/p3-role-return.e2e.mjs",
+  "research/p3/p3-role-return.mjs",
+  "research/p3/p3-role-return.e2e.mjs",
   "tools/r5-return-helper-e2e-evidence-d9723895.json"
 ]);
 

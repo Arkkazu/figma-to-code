@@ -14,6 +14,52 @@ Figmaデザインの取得・実装・実測照合で起きた失敗と再発防
 
 ---
 
+## 2026-08-26 正本リポジトリの「作業ツリー」を配布源にして、案件のゲートを2回停止させた
+
+**同じ失敗の2回目。**1回目は 2026-08-25、2回目は 2026-08-26 で、どちらも同じ日のうちに再発した。
+
+- やらかし：`C:\AI\figma-to-code\templates\verify\figma-gate.mjs` を案件へコピーしたところ、
+  案件のゲートが `manifest.scope.startDeclarationPath is required` で全面停止した。
+  正本リポジトリの**作業ツリーが未コミットの新契約WIP**（3220行）で、案件は upstream HEAD 相当（2925行）で
+  動いていた。案件側 `MyBrain/` はgit管理外のため、上書き前の状態を復元できない。
+- 原因：`templates/verify/` にあるファイルを「正本の最新」と見なし、**そのファイルが未コミットの
+  変更を持っていないかを確認しなかった。**1回目の後に再発防止を STATE.md へ書いたが、
+  規則ファイルへ昇格させず、2回目は同じ手順をそのまま繰り返した。
+- 再発防止（手順で塞ぐ。注意ではなく）：
+  1. 正本から案件へファイルを配布する前に、**必ず** `git -C C:/AI/figma-to-code status --porcelain <path>` を実行する。
+     出力が空でなければ配布しない。作業ツリーの内容は「正本の最新」ではない。
+  2. 未コミットの変更を含むファイルを配布する必要がある場合は、
+     `git show HEAD:<path>` を土台に、配布したい変更だけを再適用したものを配る。
+  3. 案件側 `MyBrain/verify/` はgit管理外で復元できない。**上書き前に退避を取る。**
+  4. 配布後は必ず案件側の e2e（`figma-gate.e2e.mjs` 等）を実行し、PASS を確認してから次へ進む。
+     2回とも、e2e を回した時点で初めて破壊に気づいた。回さなければ気づけない。
+
+## 2026-08-24: verification
+<!-- loop-log: {"id":"declared-value-read-as-measured-value-20260824","kind":"mistake","failureClass":"verification","recurrenceKey":"declared-value-read-as-measured-value","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs"]} -->
+- 指摘：絶対配置要素のCSS宣言値がデザインのルート基準座標と同じ数字であることを確認しただけで「デザインどおり」と報告した。包含ブロックがヘッダー直下から始まるため、実描画はヘッダー高さぶん下にずれていた。片方のブレークポイントでは高さの指定自体も別物だった。
+- 今後：位置と寸法をデザインと突き合わせるときは、CSSの宣言値ではなく実測層（getBoundingClientRect）の値を根拠にする。宣言値の一致は座標の一致を意味しない。宣言値だけを読んだ段階では「一致」「デザインどおり」と書かず未検証として扱う。
+
+## 2026-08-24: verification
+<!-- loop-log: {"id":"verification-definitions-omit-the-deliverable-20260824","kind":"mistake","failureClass":"verification","recurrenceKey":"verification-definitions-omit-the-deliverable","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs"]} -->
+- 指摘：specとpage-coverageが、そのscopeが実装した当のもの（背景と補助ナビ）を1件も測っていないまま多数の測定がPASSし、close直前まで気づかなかった。page-coverageのinventoryはデザインのルート直下ノードを6件取りこぼしていたが、既存の検査はinventoryの網羅性をデザイン側と突き合わせないため素通りした。specの測定先URLがgateの検証URLと別物だった点も検出されなかった。
+- 今後：checkpointを回す前に、そのscopeが実装した要素のセレクタがspecに存在することと、page-coverageのinventoryが凍結済みデザインmetadataのルート直下ノードをノードIDで全件含むことを機械的に突き合わせる。specのURLとmanifestの検証URLの一致も検査する。合格件数の多さは、実装した当のものを測った証拠にならない。
+
+## 2026-08-23: frozen-manifest-edited-after-preflight
+<!-- loop-log: {"id":"mistake-frozen-manifest-edited-after-preflight-20260823","kind":"mistake","failureClass":"frozen-manifest-edited-after-preflight","recurrenceKey":"frozen-manifest-edited-after-preflight","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs"]} -->
+- 指摘：preflight後にgate manifestのcorrectionReceiptPathとchangeTargetsを書き換え、scopeが回復不能になった。凍結値はgate stateとpage-coverage-runtimeの2箇所に残るため、closeのassertFrozenInputsが必ず落ちる。preflight時点のmanifest内容は保存されないため復元できず、受領証を打ち切って再preflightするしか道が無くなった。訂正受領証の再記録では解決しない(受領証ファイル自体のハッシュも凍結されているため、再記録すると別の凍結検査が壊れる相互排他になる)。
+- 今後：preflight後にmanifestを編集しない。対象や訂正受領証を差し替える必要が生じたら、編集ではなく打ち切って再preflightする。編集してしまった場合は、受領証の辻褄合わせを試みる前にassertFrozenInputsの全項目を実測し、回復可能かを先に判定する。figmaとcodingの両方を使うscopeは、figmaを完了させてからcodingを通す。逆順で始めると、Figmaをやり直す必要が生じた時点でcoding受領証を外すしかなくなる。
+
+## 2026-08-22: mcp-access-context-confusion
+<!-- loop-log: {"id":"mistake-mcp-access-context-confusion-20260822","kind":"mistake","failureClass":"mcp-access-context-confusion","recurrenceKey":"mcp-access-context-confusion","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-mcp-implementation.md"],"verifierTargets":["templates/verify/figma-gate.mjs"]} -->
+- 指摘：Figma MCPのアクセスエラーを、アカウント自体の編集権限なしと誤って断定した。
+- 今後：MCPのアクセスエラーはその接続での取得不能として報告し、実アカウントの編集可否とは分けて扱う。
+
+## 2026-08-05 PowerShellが未引用セレクタの`>`をリダイレクトとして解釈し、scope外ファイルを作成した
+<!-- loop-log: {"id":"mistake-powershell-selector-quoting-20260805","kind":"mistake","failureClass":"powershell-selector-quoting","recurrenceKey":"powershell-selector-quoting","action":"strengthen","promotability":"non-promotable","nonPromotableReason":"許可済み検証器にはPowerShellの引用解釈を再現する負のE2Eが存在しないため。"} -->
+- やらかし：Figma訂正scopeの証跡生成で、DOMセレクタを含む長い `node -e` コマンドをPowerShellへ直接渡した。`> article` が出力リダイレクトとして解釈され、テーマルートに0バイトの未追跡 `article` が作成された。scope lockが対象外変更として正しくblockedになり、preflight前に作業が停止した。
+- 原因：データとして扱うべきCSSセレクタの`>`・`<`・`|`・バッククォートを、シェルの構文として解釈されない形に分離せず、長いインラインスクリプトへ混在させた。コマンド失敗直後に作業ツリーを確認しなかった。
+- 再発防止：Figma証跡・spec・manifestを生成する際、CSSセレクタ、HTML、Markdownを含む処理を `node -e` へ直書きしない。編集は `apply_patch` を優先し、外部ワークスペースで使えない場合は内容をファイルとして明示的に管理した短いスクリプトへ分離して実行する。PowerShellへ渡すデータに`>`・`<`・`|`・バッククォートが含まれる場合は、実行前にインライン文字列を使わない構成へ置き換える。コマンドが失敗したら、次の書込み前に必ず `git status --short` とscope-lock verifyを実行する。
+
 ## 2026-08-03: 証跡ファイルの複製で、前scopeの記述をそのまま提出した
 <!-- loop-log: {"id":"mistake-copied-evidence-semantic-drift-20260803","kind":"mistake","failureClass":"copied-evidence-semantic-drift","recurrenceKey":"copied-evidence-semantic-drift","action":"strengthen","promotability":"non-promotable","nonPromotableReason":"許可済み検証器には文章の意味的な証跡ずれを再現する負のE2Eが存在しないため。"} -->
 
@@ -39,19 +85,13 @@ Figmaデザインの取得・実装・実測照合で起きた失敗と再発防
 
 <!-- ここから下に追記していく。最新を上に。 -->
 
-## 2026-08-05 PowerShellが未引用セレクタの`>`をリダイレクトとして解釈し、scope外ファイルを作成した
-<!-- loop-log: {"id":"mistake-powershell-selector-quoting-20260805","kind":"mistake","failureClass":"powershell-selector-quoting","recurrenceKey":"powershell-selector-quoting","action":"strengthen","promotability":"non-promotable","nonPromotableReason":"許可済み検証器にはPowerShellの引用解釈を再現する負のE2Eが存在しないため。"} -->
-- やらかし：Figma訂正scopeの証跡生成で、DOMセレクタを含む長い `node -e` コマンドをPowerShellへ直接渡した。`> article` が出力リダイレクトとして解釈され、テーマルートに0バイトの未追跡 `article` が作成された。scope lockが対象外変更として正しくblockedになり、preflight前に作業が停止した。
-- 原因：データとして扱うべきCSSセレクタの`>`・`<`・`|`・バッククォートを、シェルの構文として解釈されない形に分離せず、長いインラインスクリプトへ混在させた。コマンド失敗直後に作業ツリーを確認しなかった。
-- 再発防止：Figma証跡・spec・manifestを生成する際、CSSセレクタ、HTML、Markdownを含む処理を `node -e` へ直書きしない。編集は `apply_patch` を優先し、外部ワークスペースで使えない場合は内容をファイルとして明示的に管理した短いスクリプトへ分離して実行する。PowerShellへ渡すデータに`>`・`<`・`|`・バッククォートが含まれる場合は、実行前にインライン文字列を使わない構成へ置き換える。コマンドが失敗したら、次の書込み前に必ず `git status --short` とscope-lock verifyを実行する。
-
-
 <!-- loop-log-schema: v1 -->
 
 ## 2026-08-03
 - やらかし：Figma MCPの公式レート表を列ずれのまま読み、Starterの`Full` seatでも読取MCPが200回/日使えると誤答した。実際はStarterではseat種別にかかわらず読取系MCPが6回/月であり、現行のFigma-to-code工程を継続できない。
 - 原因：`whoami` が返すseat名だけで判断し、plan×seatの公式上限表・Starter plan overview・現行作業の実際のMCP呼出量を突き合わせなかった。
 - 再発防止：Figmaのプラン／seat／MCP上限を答えるときは、(1) `whoami` で現行planとseatを取得、(2) 公式のrate limitsでplan列とseat行を対応付け、(3) Starter plan overviewでDev Mode可否を確認、(4) 対象案件の読取MCP呼出実績と比較する。無料化の可否を`Full`という名称だけで判断しない。
+
 ## 2026-08-02 全面書き換えの際、付随する記録・証跡の更新を取りこぼした
 - やらかし：誤ったfileKeyを訂正するため node map と spec を全面書き換えした際、(1) 直前に追加していたH3-01 leafの登録を落とした、(2) 訂正記録の中で旧ファイル前提の「事実」行だけが残り、同じ記録内の新しい行と矛盾した、(3) component manifest の参照画像メモが旧ノードIDのまま残った、(4) layers証跡のleafがPC分だけでSP分が無いのに、specはSP leafを `metadata` 由来と宣言した。独立レビューで4件すべて指摘された。
 - 原因：ファイル単位で「作り直す」ことに意識が向き、**その成果物を参照している側・説明している側の記録を更新対象として数えなかった**。specとnode mapは書き直したが、それらの根拠となる証跡ファイルと、それらを説明する訂正記録は別物として扱ってしまった。
@@ -62,13 +102,10 @@ Figmaデザインの取得・実装・実測照合で起きた失敗と再発防
 - 原因：fileKeyを「案件に1つしかない固定値」と暗黙に扱った。作業途中で既存evidenceのノード対応が実物とずれている事実（あるノードが記録と別セクションだった）に気づいていたのに、ノードIDの誤りとしてのみ処理し、**ファイル自体が違う可能性へ疑いを広げなかった**。
 - 再発防止：scopeを立てるとき、fileKeyは既存manifestから流用せず、**オーナーが提示した最新のFigma URLから抽出する**。URLが無い場合はオーナーに現行ファイルのURLを求める。流用する場合は、対象ノードを引いてレイヤー名・寸法・可視状態が現行デザインと一致することを確認してから使う。既存evidenceと実物のズレを1件でも見つけたら、ノードIDだけでなくfileKeyの妥当性も同時に検査する。
 
-
-
 ## 2026-07-27（2）
 - やらかし：`spec/` に定義された検証機能が案件側の検証スクリプトに無いことを見つけ、その機能を必要とする事例が案件に実在するか確認しないまま「埋めるべき穴」「投資対効果が最も高い」と断定して実装を追加した。後に案件の成果物を調べたところ、その機能を宣言したゲートは0件、画像差分対象のコンポーネントは全件がその機能なしで合格済み、対象ページには機能が前提とする動的要素自体が存在しなかった。オーナーの指示で追加分を全て削除し原状復帰した。
 - 原因：`spec/` は案件非依存の共通仕様であり「いずれかの案件で必要になり得る」を意味するに過ぎないのに、「この案件で必要」と同一視した。加えて他エージェントの提案の一方を根拠付きで却下した後、もう一方は受け入れてから裏付けを探しており、仕様と実装の乖離を必要性の証拠と取り違えた。
 - 再発防止：検証機能の追加を提案・実装する前に、案件の成果物（`gate-*.json` / `spec-*.json` / component manifest）をgrepし、その機能が過去に宣言・要求された件数を数える。0件なら「仕様上は可能だが本案件に実需要なし」と明記し、追加しない。追加する場合は、その機能が無いと検証が成立しない対象を1件特定してから着手する。対象ページに動的要素があるかは、テンプレートのデータ源（CMSクエリやフィールド取得の有無）を確認すれば着手前に判定できる。
-
 
 ## 2026-07-27
 - やらかし：`templates/verify/` の検証スクリプトについて、案件側 `MyBrain/verify/` のコピーだけをgrepして機能が無いことを確認し、「仕様書にはあるのに実装されていない」と実装欠落として断定・報告した。実際はテンプレート正本に完全実装が存在し、案件側コピーが追従していないだけだった（同期漏れ）。欠落と同期漏れでは必要な作業も工数もまったく違う。
@@ -76,82 +113,29 @@ Figmaデザインの取得・実装・実測照合で起きた失敗と再発防
 - 再発防止：`templates/verify/` 由来のスクリプトについて「未実装」「仕様と乖離」と判断する前に、必ず正本・案件側コピーの両方をgrepし、`diff` で世代差を確認する。片方だけを見た結論は「案件側コピーでは未確認」と限定して書き、実装欠落と断定しない。仕様→実装の乖離を報告するときは、確認した3点（`spec/` の記述、`templates/verify/` の正本、案件側コピー）をすべて明示する。
 - 補足：同期は上書きと決めつけない。案件側コピーは独自拡張が入って正本から分岐していることがあるため、`diff` で案件側にのみ存在する行を確認し、独自拡張があれば全体コピーではなく該当機能だけを移植する。上書き前にバックアップを取る（案件側 `MyBrain/` はgit管理外でgitの保険が効かない）。
 
+## 2026-07-27: PC/SP本文の二重HTMLを温存した修正
+
+- やらかし：既存の `*-pc` / `*-sp` 本文をCSSで表示切替する構造を、Figma修正時に確認せず温存し、SP側だけへ`<br>`を追加して見た目を合わせた。
+- 原因：視覚差分を優先し、編集前の同一DOM検査を実行しなかった。
+- 再発防止：`figma-gate preflight` は `scope.responsiveHtml.sourceFiles` の同一本文を検出して失敗する。本文は単一DOMを正とし、改行の視覚調整をPC/SP二重HTMLの例外理由にしない。
 
 ## 2026-07-09
 - やらかし：FigmaヘッダーPCナビの位置検証で、最初にFigma metadata の実値ではなく推定した期待値をspecに入れ、そのspecで確認したため、ズレを正しく検出できなかった。
 - 原因：Figma取得値と推定値を区別せず、推定値を検証基準として扱った。
 - 再発防止：Figma URL付きの位置・サイズ・余白・フォント検証では、specの各期待値に必ず取得元（metadata/design_context/screenshot実測/asset実測）を持たせる。取得元がない値は検証基準に入れない。推定値で作ったspecは無効とし、Figma再取得後に作り直すまで実装・完了報告しない。
 
-
-
 ## 2026-07-09
 - やらかし：共通Vaultの figma-spec-pipeline.md / corrections.md に、特定案件の名前・案件レポートのパス・案件固有の基準幅を書いた。共通と案件固有の分離ルール（CLAUDE.md 2層構造）に違反し、他案件では誤った前提になる記述を全案件共通ルールへ混入させた。
 - 原因：案件での実例をそのまま共通ルール本文に転記し、「案件側ファイルへの参照形に書き換える」汎用化の工程を挟まなかった。
 - 再発防止：共通Vaultを編集したら、commit前に `git diff` を確認し、案件名・案件リポジトリのパス・特定案件の数値/ノードID/URLが含まれていたら、案件側 `MyBrain/` へ移すか参照形（「案件側 `MyBrain/rules/...` を参照」）に書き換えてからcommitする。実例を書きたい場合は `XXXX:YYYY` のようなプレースホルダーにする。
-
 
 ## 2026-07-07
 - やらかし：OPEN案件のSPメニュー修正で、共通MyBrainのFigmaスペック駆動パイプラインを守らず、実ブラウザの375px実測照合をしないまま「Figma基準で修正した」と報告した。結果、PC用flex指定（justify-content:flex-end / align-items:center / gap）がSPメニューに残り、Figmaと大きくズレた。
 - 原因：Figma MCPの値とコードの静的確認だけで十分だと誤認し、`C:\AI\figma-to-code\rules\figma-spec-pipeline.md` のフェーズ3（CDP実ブラウザ実測）と、`corrections.md` の診断表（DOM/CSS/実測/原因確定）を実行しなかった。
 - 再発防止：Figmaデザイン修正では、コード変更後に必ず375px/PC幅の実測照合を行い、主要値がPASSするまで完了報告しない。特にメニュー・モーダル・アコーディオンは「開いた状態」を強制して測り、親flex/gridの継承（justify-content / align-items / gap / flex-direction）を最初に確認する。
 
-
 ## 2026-07-06
 - やらかし：OPENトップSPのFV実績サマリーで、design_contextが先頭項目だけ text-[40px]/[28px]（他項目は27.3/19.11px）を返したのを「Figma実値」としてそのままCSSに転写した。実際はFigmaのスケール操作の残骸データで、ノードのレンダリング上は3項目とも同サイズ。結果、1271px以下で先頭の「500+」が巨大化し、line-height 24.57px固定との組み合わせでラベルに11.9px重なり、background-clip:text のグラデーションも欠けた。
 - 原因：取得値の中に明らかな外れ値（1項目だけ約1.47倍）があったのに、「Figmaが返した値＝正」としてレンダリング実物との突き合わせをしなかった。同ノードの兄弟要素と比率が揃わない値を疑うチェックが手順に無かった。
 - 再発防止：design_contextの数値に「兄弟要素間で比率が不揃いな外れ値」（スケール残骸の典型：一部だけ元コンポーネントの値）を見つけたら、転写する前に必ず対象ノードの get_screenshot を撮り、グリフ実寸で外れ値が実在するか確認する。確認結果はspecのnoteに残す。またspecには「同種要素のfont-size一致」を検証項目として入れる。
 - 補足：崩れの検出自体はCDP実測（グリフink範囲 vs 要素box、ラベルとの重なり量）で機械的にできた。診断スクリプトは案件側 MyBrain/verify/ 方式を使う。
-
-
-## 2026-07-05（2026-06-25の再発）
-- やらかし：OPENトップ独自実装で、bannerセクションの背景色を縮小全体スクショの印象から #000 と推測して実装した。実際はFigmaノード個別スクショのピクセル実測で #EDEDEC（n150_bg）だった。
-- 原因：bannerノード自体に塗りが無く design_context に背景が出てこなかったとき、「未取得」として止まらず、周辺（FVの黒）から推測で補完した。2026-06-25に記録済みの「背景色は縮小全体スクショで判断しない」ルールを読んでいたのに、確定手順（get_variable_defs / 個別スクショ）を踏まなかった。
-- 再発防止：design_context に背景指定（bg-*）が出てこないノードは「背景未取得」として扱い、実装前に必ず①親フレームの get_variable_defs ②対象ノードの get_screenshot（個別）＋ピクセル実測 のどちらかで確定させる。背景が透明・親依存のノードは特に「塗りが無い＝白/黒」と決めつけない。セクション一覧を作る際は「各セクションの背景色の根拠（node/実測値）」を1列設けて、根拠なしの背景色を機械的に検出する。
-
-
-## 2026-07-01
-- やらかし：SPのFV実績サマリーで「少しズレている」と指摘された際、ズレ方向を確認せず、最初は先頭項目のfont-size、次に各itemのwidth固定を推測で変更した。実際の正解は `padding-top: 4rem` で、縦方向の内部位置ズレだった。
-- 原因：Figma数値とCSS差分を見て、実表示で「縦ズレか横ズレか」「親配置か子余白か」を切り分ける前に原因プロパティを決めつけた。
-- 再発防止：レイアウトの「ズレ」修正では、コード変更前に必ずズレ方向（縦/横）、対象（親/子/疑似要素/テキスト）、差分量、触る1プロパティを明文化する（診断表は `corrections.md` 2026-07-01）。これらを確認できない場合は、Figma値が取れていてもコードを変更せず、未確認として止める。
-
-
-## 2026-07-01
-- やらかし：SPトップチェックで、セクションの開始位置・高さがFigmaに近いことを確認しただけで、FVリード文の改行がFigmaの指定と違うことを見落とした。
-- 原因：外枠レイアウトの数値照合を「デザインどおり」の判定にしてしまい、主要パーツ単位の文言・改行・行数チェックを省略した。
-- 再発防止：Figmaレイアウトチェック時は、セクション外枠の後に主要パーツ表を作り、各パーツの文言・改行・行数・サイズ・位置を照合する。特にFV、section heading、lead、CTA、カード本文はget_design_contextのテキスト実値を必ず読む。
-
-
-## 2026-06-30
-- やらかし：FVイラストPCの解像度不足を直す際、Figmaノードを2倍書き出しした画像を採用し、透過がデザイン仕様であることをα値で確認しなかった。結果として画像の背景が白くなった。
-- 原因：寸法不足の解消だけを優先し、PNGのアルファチャンネルが実際に透明ピクセルを保持しているか検査しなかった。Figmaのnode exportとraw assetで透過保持状態が異なる可能性を見落とした。
-- 再発防止：透過PNGをFigmaから差し替えるときは、寸法・MIMEだけでなくα値の透明/半透明ピクセル数を確認する。node exportで白背景が混入する場合はraw assetを優先し、解像度不足は「Figma側で高解像度透過元が必要」として報告する。
-
-
-## 2026-06-30
-- やらかし：カード画像の `alt` だけを直し、Figma画像出力ルールのPC用ラスター画像1.5倍基準に対する実寸確認を漏らした。
-- 原因：W3C/alt観点だけで修正完了と判断し、画像ルールの解像度・書き出し倍率まで同時に照合しなかった。
-- 再発防止：Figma由来画像を修正するときは、`alt`、実フォーマット/拡張子、表示CSSサイズ、PC/SP別の標準書き出し倍率、ファイルサイズをセットで確認してから完了報告する。
-
-
-## 2026-06-25（3）CodexでFigma MCP確認を早々に諦めた
-- やらかし：Codexのツール一覧にFigma MCPが出ないだけで「Figmaを直接確認できない」と判断し、`.claude/settings.json` に残っていたClaude Figma MCPのasset URLを確認しないまま推測で修正した。結果としてFigmaスクショと逆の変更を入れた。
-- 原因：Codexで利用可能なMCPツールと、過去にClaude MCPが取得したFigma asset URLを切り分けなかった。ローカル設定ファイルの確認が不足した。
-- 再発防止：Figma照合を求められたら、まずMCPツール可否を確認し、無い場合も `.claude/settings.json` / 案件側 `MyBrain/reports` / ローカルFigma画像 / `https://www.figma.com/api/mcp/asset/...` の取得可否を確認してから実装する。Figma実物または取得済みスクショを見ずにレイアウト順・背景色を変更しない。
-
-
-## 2026-06-25
-<!-- loop-log: {"id":"mistake-provenance-spec-20260625","kind":"mistake","failureClass":"unverified-figma-value","recurrenceKey":"unverified-figma-value","action":"strengthen","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs","templates/verify/figma-gate.e2e.mjs"]} -->
-- やらかし：Figmaを基にコーディングした際、font-size・letter-spacing・line-height・余白を実値で確認せず目分量で実装した。さらに「全体スクショが暗い」だけで全セクションをダークテーマ化したが、実際は暗いのは一部セクションのみだった。オーナーに「フォントサイズも違うし全然figma通りでない」と強く叱責された。
-- 原因：design_context で各要素の実値（font-size/tracking/line-height/color）が取れるのに使わず推測した。背景は縮小スクショの印象だけで判断し、反証を見落とした。
-- 再発防止：Figma→実装では「目分量禁止」。①各要素の font-size / letter-spacing / line-height / color / padding / gap は必ず design_context の実値を転記する（letter-spacing は px→em換算）。②背景色は縮小全体スクショで判断せず、get_variable_defs か個別スクショで確定する。③1セクション実装ごとに該当ノードの design_context を開いて値を突き合わせる。推測値を1つでも入れない。
-
-
-## 2026-06-24
-- やらかし：Figmaレビューでカードの本文を「3枚とも同一ダミー」と判定したが、実際は3枚それぞれ別の確定文面だった（オーナー指摘「本文はそれぞれ違うぞ」）。
-- 原因：3枚分のテキストを design_context で全部読まず、見出しだけ／一部だけ見て「同一ダミー」と推測で断定した。
-- 再発防止：レビューで「全部同じ」「ダミー」等と断定する前に、必ず対象インスタンス全件を design_context で取得し、各テキストの実値を並べて比較してから判定する。1件でも未取得なら「未確認」と書く。
-## 2026-07-27: PC/SP本文の二重HTMLを温存した修正
-
-- やらかし：既存の `*-pc` / `*-sp` 本文をCSSで表示切替する構造を、Figma修正時に確認せず温存し、SP側だけへ`<br>`を追加して見た目を合わせた。
-- 原因：視覚差分を優先し、編集前の同一DOM検査を実行しなかった。
-- 再発防止：`figma-gate preflight` は `scope.responsiveHtml.sourceFiles` の同一本文を検出して失敗する。本文は単一DOMを正とし、改行の視覚調整をPC/SP二重HTMLの例外理由にしない。

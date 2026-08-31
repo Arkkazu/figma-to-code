@@ -30,11 +30,11 @@
     "allFilesAreWorkspaceRelativeRegularNonLinkFiles": true,
     "files": [
       {
-        "workspacePath": "templates/verify/p3-role-return.mjs",
+        "workspacePath": "research/p3/p3-role-return.mjs",
         "sha256": "d9723895c308b3f87f27f7f8cd1e06409a4104ac4b2b5ba1e910d7630b36d2cc"
       },
       {
-        "workspacePath": "templates/verify/p3-role-return.e2e.mjs",
+        "workspacePath": "research/p3/p3-role-return.e2e.mjs",
         "sha256": "216cfdafb7221e2e5539c3581ebf82aeb7bc25ec3f7a2e1cec8d3fafaec8b74a"
       },
       {

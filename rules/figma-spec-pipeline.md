@@ -78,6 +78,37 @@ npm run figma:gate -- close MyBrain/verify/gate-<対象>.json
 
 あわせて `preflight` は、そのscopeに**実際に効く規則だけ**を一覧出力する（変更ファイルの拡張子とpainted有無から判定）。必読は全層で約2,000行あり、全文の任意読みに依存すると守られないため、読む量を変更内容に比例させる。
 
+### 着手時の工程出力と着手宣言の受領証（2026-08-25追加）
+
+規則を「参照情報」として置くだけでは工程が守られないことは 2026-07-09 に実証済みだが、**工程を教える唯一のコマンドが `preflight` であり、それは取得・spec・page coverage が終わった後にしか動かない**という穴が残っていた。着手宣言、取得、換算、構造一致ゲートはすべてそれより前にあり、機械の助けが一切ない区間だった。実測（2026-08-25）：この区間の工程を要約させると、工程名は概ね正しく出るのに**停止条件が1件も出てこない**。
+
+`start` は着手時点の入口である。manifestもspecも無い段階で引数なしで呼ぶ。
+
+```bash
+npm run figma:gate -- start
+```
+
+出力は「着手前ゲートの5点」「フェーズ0の固定チェックリスト」「停止・未確認として報告する条件」「次に実行するコマンド」で、内容は本ファイルと `WORKFLOW.md` から抽出する。gateが自前の表を持つとそこが古くなるため、正本のMarkdownを読む。節が改名・欠落した場合は工程を出さないまま通さず **SPEC FAIL** とする。**`start` はゲートではなく、編集の許可を与えない。**
+
+`preflight` は適用規則に加えて停止条件も出力し、受領証の `stopConditions` に残す。
+
+**着手宣言は受領証にする。**この体系は訂正・close・scope lock・凍結入力のすべてが受領証で担保されているのに、着手宣言だけがチャット上の発言のままで、「宣言せずに着手した」ことを検出できなかった。ソースを1行も編集する前に `MyBrain/verify/start-<scope-id>.json` を作成し、`scope.startDeclarationPath` へ登録する。書式は `templates/verify/start-declaration-template.json`。
+
+`preflight` は中身をmanifestと突き合わせる。非空文字列が並んでいるだけでは通らない。
+
+- `scopeId` が manifest `id` と一致すること（**先行scopeの宣言を複製したまま提出できない**。page coverage の `scopeId` 検査と同じ理由）
+- `figma.fileKey` が manifest と一致し、`figma.nodeIds.pc` / `.sp` が `manifest.figma.viewportNodes` に実在するnodeだけであること
+- `specPath` が `manifest.scope.specPath` と一致すること
+- `scopeLockStatePath` が実在すること（scope lockを開始してからでないと宣言できない）
+- `outOfScopePaths` が `changeTargets` と重複しないこと
+- `ownerInstruction` が20文字以上、`environmentPreflight.mode` が `local`、`declaredAt` がISO 8601であること
+
+宣言のSHA-256は他の凍結入力と同じく固定し、preflight後の書き換えは後続phaseで落とす。
+
+**この検査が担保するのは「5点が凍結された成果物として存在し、manifestと整合していること」までである。**宣言の内容が真実かどうかは検査できない。担保が効くのは、closeがpreflightを要求し、preflightが宣言を要求する鎖による。
+
+既存manifestはこの項目を持たないため旧契約となる。`gate-contract-audit.mjs` が `startDeclarationPath` の欠落を一覧するので、`legacy-scopes.json` で宣言するか移行する。
+
 ### 測定幅の宣言（2026-08-01追加）
 
 specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言する。未宣言は SPEC FAIL。`hidden` は `--hide-scrollbars` でスクロールバーの無い理想幅、`visible` は実ブラウザと同じスクロールバー幅を含めて測る。`margin: 0 auto` の中央寄せはこの差でx座標がずれるため、どちらで測ったかを証跡に残す。撮影（`checkpoint-capture`）もCDP実測と同じ値を使う。
@@ -94,9 +125,12 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 - **固定チェックリスト**（全項目を満たすまで「完了」「Figmaどおり」と報告しない）：
 
 ```text
+[ ] `figma:gate start` で工程と停止条件を出力し、着手前ゲートの5点を報告した
+[ ] 着手宣言 `MyBrain/verify/start-<scope-id>.json` を編集前に作成し、`scope.startDeclarationPath` へ登録した
 [ ] scope manifestにこのscopeで編集可能な正確な相対パスだけを列挙し、scope-lock beginをPASSした
 [ ] 各編集直前にscope-lock assertをPASSした
-[ ] checkpoint前・close前にscope-lock verifyをPASSした（対象外変更0件）[ ] URLから fileKey / nodeId を抽出した（推測なし）
+[ ] checkpoint前・close前にscope-lock verifyをPASSした（対象外変更0件）
+[ ] URLから fileKey / nodeId を抽出した（推測なし）
 [ ] get_metadata / get_design_context を取得した
 [ ] 背景色・色は get_variable_defs または個別 get_screenshot＋ピクセル実測で根拠を確定した（figma-mcp-implementation.md「背景色の確定手順」）
 [ ] 親・兄弟・PC/SP対応node・hover/open等のvariantを確認した
@@ -397,6 +431,68 @@ page coverageは2層に分ける。単一セクションのscopeでも「ペー�
 - ページトップの共有ヘッダー・フッターも、対象範囲なら `target` として登録する。
 - component manifestの各 `elementId` は1つのtargetセクションだけに属し、`component.sectionId` と一致させる。
 - L2開始前に、独立レビューでpage coverage・対応表・Figma PC/SPメタデータ・セクション順序を確認し、現在のcoverageハッシュに対する `approved` を記録する。承認またはハッシュ一致がなければ `preflight` とソース編集を開始しない。
+
+### 機械で判定できる検査を、人手のレビューに残さない（2026-08-26追加）
+
+- 指摘（オーナー、2026-08-26）：「毎回レビューさせないと先に進めない。作業効率が悪すぎる」。
+- 実測：独立レビューで実行していた検査のうち、**判断を要したのはごく一部**だった。
+  round 1〜3 で挙がった指摘 F-1（page root 直下の被覆漏れ）・F-2（PC/SP対の非等価）・
+  F-3（測定ノードの二重計上）は、**すべて凍結metadataを構文解析すれば機械的に判定できる**ものだった。
+  一方 `figma-page-coverage.mjs` は凍結metadataを**ハッシュ照合するだけで中身を一度も読んでいない**。
+  結果として、機械で出せる不合格を人手のレビュー往復で発見しており、往復回数がそのまま待ち時間になっていた。
+- 今後：**独立レビューは「機械で判定できないもの」だけを対象にする。**
+  レビューで同じ検査を2回以上手作業したら、それはゲートへ移す対象である。次を満たすまで
+  「レビュー役が毎回確認する」で運用しない。
+  1. coverage・nodemap が参照する Figma ノードが凍結metadataに実在すること
+  2. component / measurement ノードが所属 section ノードの子孫であること
+  3. 複数 section が同じ測定ノードを宣言していないこと（二重計上）
+  4. hidden 継承を受けたノードを測定対象にしていないこと
+  5. page root 直下の子が inventory で被覆されていること
+  これらはすべて凍結metadataの構文解析で判定でき、レビュー役の判断を要しない。
+- レビュー役に残すのは、機械で判定できないものだけとする。例：`deferred` の理由が実態と合っているか、
+  target の選び方がオーナーの指示と一致しているか、`viewportPairingNote` の説明が事実か。
+
+### coverage は scope 開始時に確定させる（2026-08-26追加）
+
+**scope の途中で coverage を小刻みに広げてはならない。** 広げるたびに独立レビュー承認が失効し、
+そのたびに人間を経由した再承認が1往復発生する。
+
+実測（2026-08-26）：1つの scope で承認往復が **6回** 発生した。内訳は round 1・2 が changes-requested、
+round 3・4・5 は approved を得た直後に実装役が coverage を広げて失効、というものだった。
+毎回「対象を1つ追加 → 承認失効 → 実装役は編集できないと報告して停止」という同じ形で止まっている。
+オーナーからは「コードの修正を行わない」という問題として観測された。
+
+原因はゲートではなく coverage の使い方である。page coverage は
+**ページ全体を最初に登録して対象外を暗黙にしない**ための仕組みであり、
+一部だけ登録して実装しながら継ぎ足す運用は、その設計と正面から衝突する。
+
+したがって次を必須とする。
+
+1. scope 開始時に、**そのページの全セクションを inventory へ登録し、role を確定させる**。
+   今回の scope で触らないセクションは `deferred` として理由と後続scopeを書く。空欄にしない。
+2. 承認は**その確定した coverage に対して1回**取る。実装中に「次はここも直したい」と気づいた場合、
+   原則は**別scopeとして起票する**。同一scope内で coverage を広げるのは、
+   オーナーが明示的に対象を追加したときだけに限る。
+3. やむを得ず広げる場合は、**広げる範囲をまとめて1回で確定させる**。1セクションずつ足して
+   そのつど承認を取りに行かない。
+4. scope の粒度は「独立レビューが一度に妥当性を判断できる範囲」で決める（上の粒度の節を正とする）。
+   粒度を誤ると、この往復として現れる。
+
+### coverage を変更したときの再承認導線（2026-08-25追加）
+
+承認は**現在のcoverageハッシュにだけ有効**である。オーナーが対象を1つ足しただけでも coverage の SHA-256 は変わり、前回の承認は失効する。そして**実装役は自分では承認を作れない**（reviewerのactorまたはcontextの少なくとも一方が実装役と異なることが必須）。この2つが重なると、実装役は自力で越えられない壁に当たる。
+
+実測（2026-08-25）：この状態で実装役は「現SHAの独立レビュー承認とpreflightのPASSが編集の必須条件です」とだけ報告して停止した。オーナーからは**指示を拒否している**ように見えた。実際には規則側に「では誰に何を頼むのか」が書かれておらず、次の一手が定義されていなかった。工程の欠落であって、実装役の判断ミスではない。
+
+したがって次を必須とする。
+
+1. **実装役は、承認失効を理由に待機状態へ入ってはならない。**同じターンのうちに独立レビュー依頼書を出力し、オーナーまたはレビュー役へ渡すところまでを自分の工程とする。「承認がないので編集できません」だけで応答を終えることを禁止する。
+2. 依頼書は暗記で書かず、`preflight` の失敗出力をそのまま使う。`figma-page-coverage.mjs` は承認が現在のcoverageに対して無効なとき、**不足条件の内訳とコピー可能な依頼書**（scopeId / coverageパス / 現在のSHA-256 / 直前に承認済みだったSHA-256 / 承認ファイルのパスと必須フィールド / 実装役のidentityとレビュー役のidentity制約）を出力する。
+3. レビュー役の既定は**同一エージェントの別contextセッション**とする（共通Vault `rules/corrections.md` 2026-08-24）。特定のエージェント名を既定の批評役として前提にしない。担当はオーナーがタスク開始時に指定する。
+4. レビュー役は実装役の申告値を採用せず、凍結metadataとファイル実体から再計算して照合する。承認後、`preflight` を実行するのは実装役であり、レビュー役は実行しない（別contextで独立性検査を素通りさせる自己承認になるため）。
+5. レビュー役と実装役を同一セッションが兼ねることは**禁止**する。やむを得ずオーナーの明示指示で兼任した場合は、承認受領証の `reviewerIndependence` に兼任した事実・機械契約は満たすが独立性が弱いこと・closeまでに独立性を回復する条件を明記する。
+
+`loadRuntime` の凍結入力チェックも同様に、**どの入力が動いたか**（manifest / components / page coverage / review）を名指しで報告する。4件まとめて「変わった」とだけ言うと、実装役は毎回4ファイルを突き合わせ直すことになる。
 - L2は `section-start` → 対象componentの `checkpoint` → `section-close` の順で進める。checkpointがFAILならQ-10の診断→最小修正→同一componentの再実行をPASSまで行う。`section-close` は当該セクションの証跡整合性と完了だけを記録し、最終closeが全componentを最終状態で再照合する。
 - 最終 `close` は全targetセクションが `verified` の場合だけ許可する。`next` または `current` が残る状態で、ページ全体を完成・Figmaどおりとして報告しない。
 

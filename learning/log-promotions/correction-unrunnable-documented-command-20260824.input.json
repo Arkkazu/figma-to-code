@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "correction-unrunnable-documented-command-20260824",
+  "kind": "correction",
+  "occurredOn": "2026-08-24",
+  "failureClass": "documented-command-not-executable",
+  "recurrenceKey": "documented-command-not-executable",
+  "summary": "規範文書が、実装の無いゲートサブコマンドと、必須の第2引数を欠いた呼び出しを判定手段として指定していた。書いてあるとおり実行すると失敗するため、写した側は工程を通せず、ゲートを飛ばす経路が開く。既存の検査は引数フラグの契約とパス表記だけを見ており、サブコマンドの実在と必須オペランドを検査していなかった。走査範囲も正本リポジトリ内に限られ、規則を写した下位層の文書は検査対象外だった。",
+  "prevention": "文書中のゲート呼び出しについて、サブコマンドの実在と必須第2引数の有無を、ゲート実装から導出した集合に対して機械検査する。検査の走査範囲を引数で拡張し、正本リポジトリの外にある下位層の文書も同じ検査にかける。",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["tools/doc-command-audit.mjs", "tools/doc-command-audit.e2e.mjs"]
+}

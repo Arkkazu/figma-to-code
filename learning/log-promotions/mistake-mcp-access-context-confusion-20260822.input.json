@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "mistake-mcp-access-context-confusion-20260822",
+  "kind": "mistake",
+  "occurredOn": "2026-08-22",
+  "failureClass": "mcp-access-context-confusion",
+  "recurrenceKey": "mcp-access-context-confusion",
+  "ruleTargets": ["rules/figma-mcp-implementation.md"],
+  "verifierTargets": ["templates/verify/figma-gate.mjs"],
+  "summary": "Figma MCPのアクセスエラーを、アカウント自体の編集権限なしと誤って断定した。",
+  "prevention": "MCPのアクセスエラーはその接続での取得不能として報告し、実アカウントの編集可否とは分けて扱う。"
+}

@@ -11,7 +11,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { checkRolePacket } from "../templates/verify/p3-role-packet.mjs";
+import { checkRolePacket } from "../research/p3/p3-role-packet.mjs";
 import { currentPreparationInternals as I } from "./r4-prepare-current-seq1-runtime-activation.mjs";
 
 const ACTIVATION_ID = "f06ba96a83153efac0d2b0e8f7e00a5548d747a36fccabf75787a05273d66375";

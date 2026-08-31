@@ -10,9 +10,9 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const spikePath = resolve("templates/verify/p3-p11-app-server-spike.mjs");
-const probePath = resolve("templates/verify/p3-clean-room-probe.mjs");
-const capturePath = resolve("templates/verify/p3-p11-app-server-transport-capture.mjs");
+const spikePath = resolve("research/p3/p3-p11-app-server-spike.mjs");
+const probePath = resolve("research/p3/p3-clean-room-probe.mjs");
+const capturePath = resolve("research/p3/p3-p11-app-server-transport-capture.mjs");
 const corePaths = [
   resolve("templates/verify/fidelity-benchmark.mjs"),
   resolve("templates/verify/figma-gate.mjs"),

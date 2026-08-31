@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "mistake-frozen-manifest-edited-after-preflight-20260823",
+  "kind": "mistake",
+  "occurredOn": "2026-08-23",
+  "failureClass": "frozen-manifest-edited-after-preflight",
+  "recurrenceKey": "frozen-manifest-edited-after-preflight",
+  "ruleTargets": [
+    "rules/figma-spec-pipeline.md"
+  ],
+  "verifierTargets": [
+    "templates/verify/figma-gate.mjs"
+  ],
+  "summary": "preflight後にgate manifestのcorrectionReceiptPathとchangeTargetsを書き換え、scopeが回復不能になった。凍結値はgate stateとpage-coverage-runtimeの2箇所に残るため、closeのassertFrozenInputsが必ず落ちる。preflight時点のmanifest内容は保存されないため復元できず、受領証を打ち切って再preflightするしか道が無くなった。訂正受領証の再記録では解決しない(受領証ファイル自体のハッシュも凍結されているため、再記録すると別の凍結検査が壊れる相互排他になる)。",
+  "prevention": "preflight後にmanifestを編集しない。対象や訂正受領証を差し替える必要が生じたら、編集ではなく打ち切って再preflightする。編集してしまった場合は、受領証の辻褄合わせを試みる前にassertFrozenInputsの全項目を実測し、回復可能かを先に判定する。figmaとcodingの両方を使うscopeは、figmaを完了させてからcodingを通す。逆順で始めると、Figmaをやり直す必要が生じた時点でcoding受領証を外すしかなくなる。"
+}

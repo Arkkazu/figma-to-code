@@ -21,7 +21,7 @@ export const LOCAL_WORKFLOW_SOURCES = [
 // 空ファイル・プレースホルダを `local` と誤認しないための下限。世代差の検出はできない。
 export const MIN_WORKFLOW_BYTES = 200;
 
-// 明示シグナルは補助であり、判定の正本は上位層ファイルの実読である。
+// 明示シグナルは診断情報であり、判定の正本は上位層ファイルの実読である。
 export const CLOUD_ENV_SIGNALS = [
   { key: "CLAUDE_CODE_REMOTE", value: "true", measured: "2026-08-21 Claude Codeクラウドで実測" },
   { key: "CODEX_CI", value: "1", measured: null },
@@ -54,7 +54,7 @@ export function evaluateWorkflowEnvironment({ env = process.env, readPath = read
   const localWorkflows = LOCAL_WORKFLOW_SOURCES.map((source) => inspectWorkflow(source, env, readPath));
   const unusableLocalWorkflows = localWorkflows.filter((workflow) => workflow.status !== "ok");
 
-  const mode = signals.length > 0 || unusableLocalWorkflows.length > 0 ? "cloud-restricted" : "local";
+  const mode = unusableLocalWorkflows.length > 0 ? "cloud-restricted" : "local";
   return { mode, signals, localWorkflows, unusableLocalWorkflows };
 }
 
