@@ -127,6 +127,25 @@ async function runWithBrowser(browser) {
             // mask対象の画像・本文はカード内部の相対位置も照合し、データ差で隠した配置崩れを防ぐ。
             offsetLeft: element.offsetLeft,
             offsetTop: element.offsetTop,
+            // 描画しているかを実測する。component manifest の painted は自己申告で、
+            // false と書くだけで比較キャプチャが0件になり checkpoint がPASSする
+            // （2026-09-01 実測: static-resource-detail の6件すべてが painted:false で
+            // 比較0件のままPASSしていた。背景画像を持つヒーローも含む）。
+            // 申告を実測で突き合わせるための材料をここで採る。
+            paintSignals: (() => {
+              const signals = [];
+              if (style.backgroundImage && style.backgroundImage !== "none") signals.push("background-image");
+              // このコードはテンプレートリテラル内でブラウザへ渡すため、正規表現の
+              // バックスラッシュがエスケープで壊れる。透明値は直接比較で判定する。
+              const bg = (style.backgroundColor || "").replace(/ /g, "");
+              if (bg && bg !== "transparent" && bg !== "rgba(0,0,0,0)") signals.push("background-color");
+              if (style.borderTopWidth !== "0px" || style.borderRightWidth !== "0px"
+                || style.borderBottomWidth !== "0px" || style.borderLeftWidth !== "0px") signals.push("border");
+              if (style.boxShadow && style.boxShadow !== "none") signals.push("box-shadow");
+              if (element.matches("img, svg, video, canvas, picture")) signals.push("replaced-element");
+              if (element.querySelector("img, svg, video, canvas, picture")) signals.push("descendant-image");
+              return signals;
+            })(),
             fontSize: style.fontSize,
             lineHeight: style.lineHeight,
             // 非表示指定もレイアウト仕様の一部。SP専用で隠すページ番号などを、

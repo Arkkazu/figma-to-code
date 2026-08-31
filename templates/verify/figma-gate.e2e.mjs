@@ -524,6 +524,26 @@ function assertPreflightDraftGuardCases() {
       expected: "Spec contains status:draft",
       mutate: (fixture) => mutateJson(fixture.specPath, (value) => { value.status = "draft"; }),
     },
+    // 2026-09-01 追加。寸法だけを検査して位置を検査しない要素は、置き場所の誤りを見逃す。
+    // 実測（static-resource-detail）: PCパンくずが width/height/display だけで、
+    // margin-top と top の二重適用により y=64 が y=128 になってもPASSした。
+    {
+      label: "Figma nodeを引くのに位置を検査していない要素",
+      expected: "寸法だけを検査して位置を検査していません",
+      mutate: (fixture) => mutateJson(fixture.specPath, (value) => {
+        value.viewports[0].elements[0].note = "Figma 2585:30280 Breadcrumbs_pc";
+      }),
+    },
+    // 位置を1つでも検査していれば通る。過剰な要求にしない。
+    {
+      label: "位置を検査していれば通る（negativeの対称確認）",
+      expected: null,
+      mutate: (fixture) => mutateJson(fixture.specPath, (value) => {
+        value.viewports[0].elements[0].note = "Figma 2585:30280 Breadcrumbs_pc";
+        value.viewports[0].elements[0].topInSection = 64;
+        value.viewports[0].elements[0].provenance.topInSection = "design_context";
+      }),
+    },
     {
       label: "component manifest draft-only marker",
       expected: "Component manifest contains the draft-only marker draftOnly",
@@ -554,8 +574,14 @@ function assertPreflightDraftGuardCases() {
     const fixture = createFixture("p3-figma-gate-draft-preflight-");
     try {
       testCase.mutate(fixture);
-      reject(preflightArgs(fixture), testCase.expected, fixture.root);
-      assertNoGateArtifacts(fixture, testCase.label);
+      // expected: null は「この変異では落ちない」ことを固定する対称ケース。
+      // 落とす検査を足したとき、正しい書き方まで巻き込んでいないかを同じ場所で確かめる。
+      if (testCase.expected === null) {
+        accept(preflightArgs(fixture), fixture.root);
+      } else {
+        reject(preflightArgs(fixture), testCase.expected, fixture.root);
+        assertNoGateArtifacts(fixture, testCase.label);
+      }
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }

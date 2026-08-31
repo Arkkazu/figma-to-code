@@ -1408,6 +1408,15 @@ function assertSpecProvenance(spec) {
   // 15要素すべてが sel と note だけの状態で合格していた）。
   // viewport / elements が空の場合は requireArray が非空を要求して先に落とす。
   const assertionless = [];
+  // 寸法だけを検査して位置を検査しない要素は、置き場所の誤りを丸ごと見逃す。
+  // 実測（2026-09-01、static-resource-detail）: PCパンくずの spec が width/height/display のみで、
+  // margin-top: 64rem と top: 64rem の二重適用により Figma の y=64 に対し y=128 へ置かれても
+  // PASSした。位置は verify-layout が既に left/top/offsetTop として計測しており、
+  // **spec に書かないから検査されないだけ**である。
+  // Figma node を根拠として引く可視要素（note に node-id がある）には位置を必須にする。
+  const POSITION_KEYS = ["top", "left", "offsetTop", "offsetLeft", "topInSection", "centerX"];
+  const FIGMA_NODE_PATTERN = /\b\d+:\d+\b/;
+  const positionless = [];
   for (const viewport of requireArray(spec.viewports, "spec.viewports")) {
     requireObject(viewport, "spec.viewports[]");
     const viewportLabel = Number.isFinite(viewport.width) ? `${viewport.width}px` : "viewport";
@@ -1418,6 +1427,13 @@ function assertSpecProvenance(spec) {
       if (measuredKeys.length === 0) {
         assertionless.push(`${viewportLabel} ${selector}`);
         continue;
+      }
+      // 「表示しない」ことだけを言う要素は、位置を持たないので対象外。
+      const hidesOnly = measuredKeys.every((key) => key === "display" || key === "visibility")
+        && (element.display === "none" || element.visibility === "hidden");
+      const citesFigmaNode = typeof element.note === "string" && FIGMA_NODE_PATTERN.test(element.note);
+      if (citesFigmaNode && !hidesOnly && !measuredKeys.some((key) => POSITION_KEYS.includes(key))) {
+        positionless.push(`${viewportLabel} ${selector}（note: ${element.note.trim().slice(0, 40)}）`);
       }
       const provenance = element.provenance;
       if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
@@ -1445,6 +1461,13 @@ function assertSpecProvenance(spec) {
     fail(
       `SPEC FAIL: these spec elements declare no expectation, so they verify nothing while still counting as coverage. ` +
         `Give each one at least one measured value (width / height / topInSection / computed style etc.), or remove it: ${assertionless.join(" / ")}`
+    );
+  }
+  if (positionless.length > 0) {
+    fail(
+      "SPEC FAIL: これらの要素は Figma node を根拠に引きながら、寸法だけを検査して位置を検査していません。" +
+        "置き場所の誤りを丸ごと見逃します（実測: margin-top と top の二重適用で y=64 が y=128 になってもPASSした）。" +
+        ` top / left / offsetTop / topInSection / centerX のいずれかを Figma の座標から追加してください: ${positionless.join(" / ")}`
     );
   }
   if (missing.length > 0) {

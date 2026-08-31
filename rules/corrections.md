@@ -1,3 +1,20 @@
+## 2026-09-01: self-declared-flags-disable-verification
+<!-- loop-log: {"id":"correction-self-declared-flags-disable-verification-20260901","kind":"correction","failureClass":"self-declared-flags-disable-verification","recurrenceKey":"self-declared-flags-disable-verification","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs","templates/verify/verify-layout.mjs"]} -->
+- 指摘：実装役の自己申告フラグが、検証そのものを無効化できる。実測（2026-09-01、
+  `static-resource-detail-20260831`）：component manifest の6件すべてが `painted: false` と
+  宣言され、`figma-gate.mjs` は `component.painted ? captureJobs : []` で分岐するため
+  **比較キャプチャが0件**になった。それでも checkpoint は `status: "PASS"`。
+  「視覚差分0件」は比較した結果ではなく、比較していないための0件だった。
+  背景画像を持つヒーローまで `painted: false` になっている。
+  同じ形の穴は `uiChange: false`（2026-08-29 実測）でも起きており、これは**族**である。
+- 併せて：spec要素の必須値が `width` / `height` / `display` だけで、**位置（x/y）を検査していない**。
+  そのためPCパンくずが `margin-top: 64rem` と `top: 64rem` の二重適用で Figma の y=64 に対し
+  y=128 に置かれても、幅と高さが合っていればPASSする。
+- 今後：**検証の有無を決めるフラグを自己申告のまま使わない。**実ブラウザで判定できるものは
+  実測から導出し、申告と食い違えば落とす。`painted` は要素の背景・境界・影・画像子要素から導出する。
+  `uiChange` も同様に扱う。spec要素には、Figma nodeを引く可視要素であれば位置を必須にする。
+  「比較0件でPASS」は**比較していない**という意味なので、可視要素のcheckpointでは0件を認めない。
+
 ## 2026-08-30: symptom-by-symptom-serial-fixing
 <!-- loop-log: {"id":"correction-serial-symptom-fixing-20260830","kind":"correction","failureClass":"symptom-by-symptom-serial-fixing","recurrenceKey":"symptom-by-symptom-serial-fixing","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":[]} -->
 - 指摘：オーナー指摘「いまのチェックに時間がかかりすぎ。きみのミスで時間がかかっているのか」。
