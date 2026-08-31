@@ -10,6 +10,10 @@ let activeUrl = null;
 let tolerance = 1.5;
 let failCount = 0;
 let passCount = 0;
+// 走査した要素ごとの描画実測。component manifest の painted 申告を突き合わせるため、
+// ゲートへ返す（2026-09-01: painted:false と書くだけで比較キャプチャが0件になり、
+// それでも checkpoint がPASSしていた）。
+let paintObservations = {};
 
 function check(label, actual, expected) {
   let ok;
@@ -212,6 +216,13 @@ async function runWithBrowser(browser) {
         return output;
       })()`);
 
+      // 描画実測をセレクタごとに集める。viewport をまたいで観測されたものは合算する。
+      for (const [selector, measured] of Object.entries(data.els ?? {})) {
+        if (!measured || !Array.isArray(measured.paintSignals)) continue;
+        const previous = paintObservations[selector] ?? [];
+        paintObservations[selector] = [...new Set([...previous, ...measured.paintSignals])];
+      }
+
       if (viewport.page) {
         for (const [key, expected] of Object.entries(viewport.page)) {
           if (key === "maxScrollWidth") {
@@ -272,7 +283,14 @@ async function runWithBrowser(browser) {
     }
 
   console.log(`\n===== 結果: PASS ${passCount} / FAIL ${failCount} =====`);
-  return { passCount, failCount, status: failCount === 0 ? "PASS" : "FAIL", browserSessionId: browser.sessionId, browserPid: browser.browserPid };
+  return {
+    passCount,
+    failCount,
+    status: failCount === 0 ? "PASS" : "FAIL",
+    browserSessionId: browser.sessionId,
+    browserPid: browser.browserPid,
+    paintObservations,
+  };
 }
 
 // figma-gate のPC/SP batchから渡されたbrowserを所有しない。別Chromeを起動しない。

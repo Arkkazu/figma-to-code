@@ -208,6 +208,30 @@ export async function runGateBrowserBatch(rawJob) {
     }
     if (summary.layout.failCount > 0) fail(`LAYOUT FAIL: Q-09 has ${summary.layout.failCount} layout mismatch(es).`);
 
+    // painted の申告を実測で突き合わせる。
+    //
+    // capture jobs は component.painted が true のときだけ作られる。false と書けば比較が
+    // 0件になり、それでも checkpoint は「視覚差分0件」でPASSする。実測（2026-09-01、
+    // static-resource-detail）: component manifest 6件すべてが painted:false、
+    // capture-jobs はすべて jobs:[]、summary はすべて PASS。背景画像を持つヒーローも含む。
+    //
+    // 描画しているのに painted:false なら、比較を消す宣言なので落とす。
+    // 逆（painted:true なのに描画signalが無い）は落とさない。比較を余分に行うだけで、
+    // 検証を弱めないため。
+    if (job.capture.jobs.length === 0) {
+      const painting = Object.entries(summary.layout.paintObservations ?? {})
+        .filter(([, signals]) => Array.isArray(signals) && signals.length > 0);
+      if (painting.length > 0) {
+        fail(
+          "SPEC FAIL: 比較キャプチャが0件ですが、対象要素は実際に描画しています。" +
+            " component manifest の painted:false が比較を消しています。描画している要素は painted:true にし、" +
+            " Figma参照画像を登録してください（painted:false は「比較しない」という宣言であり、" +
+            "「視覚差分0件」の根拠にはなりません）。\n" +
+            painting.map(([selector, signals]) => `  ${selector}: ${signals.join(", ")}`).join("\n")
+        );
+      }
+    }
+
     const capture = await runP3Phase(p3NetworkTrace, "q09-capture", async () => (job.capture.jobs.length === 0
       ? (p3NetworkTrace
         ? (await navigateAndWait(browser, { url: job.url, width: 1440 }), { version: 1, url: job.url, browserSessionId: browser.sessionId, browserPid: browser.browserPid, chromeMode: browser.chromeMode, captures: [], p3NetworkProbe: true })
