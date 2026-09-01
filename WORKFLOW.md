@@ -110,6 +110,8 @@ Claude Code / Codex のクラウドセッションは、このリポジトリの
 
 クラウド判定の正本は `tools/workflow-preflight.mjs` が**上位層の `WORKFLOW.md` を実際に読めるか**とする。読めない、下限バイト未満、Markdown見出しが無い（空・プレースホルダ）の場合は `cloud-restricted` とする。`CLAUDE_CODE_REMOTE=true` と `CODEX_CI=1` は補助シグナルであり、特定エージェントだけの環境変数を唯一の判定条件にしてはならない。
 
+2026-08-22 実測（オーナー環境、Git Bash）：`local` を返し、`C:\AI\vault\WORKFLOW.md` と `C:\AI\web-development\WORKFLOW.md` はどちらも `status: ok`。ローカルの上位層は既定パスのまま読める。
+
 2026-08-21 実測：Claude Codeのクラウドセッションは `CLAUDE_CODE_REMOTE=true` を持ち、上位層2ファイルはどちらも存在しない。`CODEX_CI=1` はCodexクラウドの申告値であり、本リポジトリでは未実測である。判定はファイルの実読を正本とするため、この値の当否に結果が依存しない構成にしてある。
 
 上位層のルート位置が既定と異なるローカル環境では、`FIGMA_TO_CODE_VAULT_WORKFLOW` と `FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW` でパスを上書きする。ファイル検査は空・プレースホルダを弾くが、**旧世代のコピーは検出できない**。世代差の検査はこの環境判定の責務ではない。
@@ -174,32 +176,32 @@ node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-au
 ```
 - 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、独立レビュー、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
 
-## 正本リポジトリのCI（2026-09-01 追加）
+## 検査と反映
 
-`.github/workflows/audit.yml` が push と pull request で検査を走らせる。
-**ローカルのGit hookはcloneに残らない**（案件テーマの hook は `.git/hooks/` にだけ在り、
-`core.hooksPath` は未設定、追跡下にも無い）。クラウドセッションはhookもCIも無い状態で
-clone するため、CIが無いと「検査を通らない変更が正本へ入る」経路が開いたままになる。
+このリポジトリへの変更は `node tools/run-checks.mjs` を通してから push する。**検査集合の正本は `tools/run-checks.mjs` の `CHECKS` だけ**とし、CIのYAMLへ検査を直接並べない（2箇所に書くと必ず乖離する）。
 
-runnerには上位層（`C:\AI\vault` / `C:\AI\web-development`）が存在せず、
-「クラウドセッションでの実行範囲」と同じ `cloud-restricted` 条件で動く。
-そのため次の2点は**CIでは検査されない**。ローカルで実行すること。
+GitHub Actions は2つある。
+
+- `.github/workflows/verify-and-merge.yml`：`claude/**` と `codex/**` への push で `run-checks.mjs` を実行し、緑なら `master` へ自動マージする。赤ならマージしない。
+- `.github/workflows/audit.yml`：**すべてのブランチ**への push と pull request で同じ `run-checks.mjs` を実行する。自動マージはしない。`fix/**` など上記2つに当たらないブランチが未検査のまま残る穴を塞ぐ。
+
+実ブラウザや案件側の成果物を要するE2Eは `run-checks.mjs` の `KNOWN_FAILING` に理由つきで外してある。緑と赤を混ぜた集合は「いつも赤いので誰も見ない」状態を作り、検査そのものを無効化する。解消したら `CHECKS` へ移す。
+
+自動マージは検査に通ることだけを保証する。**設計判断の妥当性は保証しない**ので、規則本文（`WORKFLOW.md`・`rules/`）の意味を変える変更は、オーナーの指示があったものに限る。
+
+**ローカルのGit hookはcloneに残らない。**案件テーマの pre-commit は `.git/hooks/` にだけ在り、`core.hooksPath` は未設定で追跡下にも無い。クラウドセッションはhookもCIも無い状態で clone するため、CIが無いと検査を通らない変更が正本へ入る。
+
+CI runner には上位層（`C:\AIault` / `C:\AI\web-development`）が無く、「クラウドセッションでの実行範囲」と同じ `cloud-restricted` 条件で動く。そのため次の2点は**CIでは検査されない**。CIが緑でも未検査なので、ローカルで通してから push する。
 
 - `rule-size-audit`（上位層に在るため実行不能）
-- 入口の発火条件のうち、`C:\AI\web-development\WORKFLOW.md` の1文書
-  （CIは `--skip-missing-upstream` でリポジトリ内4文書だけを検査する。
-  上位層を読めるのに skip して通す取り違えは `entry-trigger-audit.e2e` が落とす）
-
-CIが緑でも、この2点は未検査である。ローカルで次を通してから push する。
+- 入口の発火条件のうち `C:\AI\web-development\WORKFLOW.md` の1文書（`entry-trigger-audit.e2e` は上位層を読めない環境では4文書だけを検査する。読めるのに skip して通す取り違えは、同じE2Eが落とす）
 
 ```bash
 node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json
 node C:/AI/figma-to-code/tools/entry-trigger-audit.mjs
 ```
 
-branch protection と required check は**まだ有効化していない**。有効化するまでCIは
-「落ちたことが見える」だけで、mergeを止めない。有効化はリポジトリ設定の変更であり、
-オーナーの判断事項である。
+branch protection と required check は**まだ有効化していない**。有効化するまでCIは「落ちたことが見える」だけで、mergeを止めない。有効化はリポジトリ設定の変更であり、オーナーの判断事項である。
 
 ## この手法自体を編集する場合
 

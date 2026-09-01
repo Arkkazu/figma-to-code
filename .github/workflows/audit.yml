@@ -1,21 +1,36 @@
 name: audit
 
-# 規則と検証器の正本を、誰の環境にも依存せずに検査する。
+# すべてのブランチと pull request で `tools/run-checks.mjs` を実行する。
 #
-# 2026-09-01 実測: このリポジトリにはCIもGit hookも無かった。
-# ローカルのpre-commit hookは案件テーマの `.git/hooks/` にだけ在り、
-# **cloneには残らない**（core.hooksPath 未設定、追跡下にも無い）。
-# つまりクラウドセッションが clone すると、hookもCIも無い状態で
-# 規則・検証器を変更して commit できた。ここが merge 境界の穴である。
+# verify-and-merge.yml は `claude/**` と `codex/**` と master でしか動かない。
+# `fix/**` などそれ以外のブランチは、push しても何も検査されないまま残る。
+# ここはその穴だけを塞ぐ。自動マージはしない。
 #
-# このworkflowが閉じるのは「正本リポジトリへの変更が、検査を通らずに入る」経路だけである。
-# 案件リポジトリのソース変更に対する受領証照合は、portable receipt の設計が要るため
-# ここには含まれない（別工程）。branch protection / required check の有効化は
-# リポジトリ設定の変更であり、オーナーの判断事項なのでこのファイルでは行わない。
+# 検査集合の正本は `tools/run-checks.mjs` の CHECKS だけとする。
+# このYAMLへ検査を直接並べない（2箇所に書くと必ず乖離する）。
+#
+# 背景（2026-09-01 実測）: 案件テーマの pre-commit hook は `.git/hooks/` にだけ在り、
+# core.hooksPath 未設定・追跡下にも無いため **clone には残らない**。
+# クラウドセッションは hook も CI も無い状態で clone するため、
+# CI が無いと検査を通らない変更が正本へ入る。
+#
+# runner には上位層（C:\AI\vault / C:\AI\web-development）が無く、
+# WORKFLOW.md「クラウドセッションでの実行範囲」と同じ cloud-restricted 条件で動く。
+# そのため rule-size-audit（上位層に在る）と、入口5文書のうち
+# web-development/WORKFLOW.md の1件は **ここでは検査されない**。
+# CI が緑でも未検査なので、ローカルで通してから push すること（WORKFLOW.md「検査と反映」）。
+#
+# branch protection / required check の有効化はリポジトリ設定の変更であり、
+# オーナーの判断事項なのでこのファイルでは行わない。有効化するまで、
+# このworkflowは「落ちたことが見える」だけで merge を止めない。
 
 on:
   push:
   pull_request:
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   audit:
@@ -23,63 +38,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # figma-gate.e2e は git worktree を作る。浅いcloneだと落ちる。
+          # figma-gate.e2e は git worktree を作る。浅い clone だと落ちる。
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # E2E が commit / worktree を作るため、identity が要る。
+      # E2E が commit / worktree を作るため identity が要る。
       - name: configure git identity
         run: |
           git config --global user.email "audit@ci.invalid"
           git config --global user.name "figma-to-code audit"
           git config --global init.defaultBranch main
 
-      # このrunnerには上位層（C:\AI\vault / C:\AI\web-development）が存在しない。
-      # WORKFLOW.md「クラウドセッションでの実行範囲」が定める cloud-restricted と同じ条件である。
-      # 判定がその条件になっていることを、暗黙にせず先に出力しておく。
+      # 判定が cloud-restricted であることを、暗黙にせず先に出力しておく。
       - name: environment verdict
         run: node tools/workflow-preflight.mjs
 
-      # 入口の発火条件。上位層のWeb正本はこのrunnerに無いので、
-      # リポジトリ内4文書だけを検査する。読めるのに skip する取り違えは
-      # entry-trigger-audit.e2e が別途落とす。
-      - name: entry trigger audit
-        run: node tools/entry-trigger-audit.mjs --skip-missing-upstream
-
-      - name: doc command audit
-        run: node tools/doc-command-audit.mjs
-
-      - name: public memory scan
-        run: node tools/public-memory-scan.mjs
-
-      # rule-size-audit は C:/AI/web-development に在り、このrunnerには無い。
-      # 「CIで動かないから検査しない」ではなく「ここでは動かせない」ことを明示する。
-      - name: rule size audit (not runnable here)
-        run: |
-          echo "rule-size-audit は上位層 (C:/AI/web-development/verify/rule-size-audit.mjs) に在るため"
-          echo "このrunnerでは実行できない。ローカルで実行すること:"
-          echo "  node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json"
-
-      - name: tool e2e
-        run: |
-          set -e
-          for suite in \
-            entry-trigger-audit \
-            workflow-preflight \
-            doc-command-audit \
-            public-memory-scan \
-            project-entry-install \
-            figma-scope-lock \
-            figma-log-promote
-          do
-            echo "--- tools/$suite.e2e.mjs"
-            node "tools/$suite.e2e.mjs"
-          done
-
-      # 最長。2026-09-01 実測でローカル 40〜54秒 / 576 アサーション。
-      # 途中経過を出すので、無反応に見える時間を作らない。
-      - name: figma gate e2e
-        run: node templates/verify/figma-gate.e2e.mjs
+      - name: run repository checks
+        run: node tools/run-checks.mjs
