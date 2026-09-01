@@ -36,6 +36,7 @@
     "tools/figma-scope-lock.e2e.mjs",
     "templates/verify/scope-coordination.mjs",
     "templates/verify/scope-conflict-audit.mjs",
+    "templates/verify/scope-conflict-audit.e2e.mjs",
     "tools/doc-command-audit.mjs",
     "tools/doc-command-audit.e2e.mjs"
   ],

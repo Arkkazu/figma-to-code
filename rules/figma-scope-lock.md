@@ -107,6 +107,41 @@ node C:/AI/figma-to-code/tools/figma-scope-lock.mjs rebaseline MyBrain/verify/sc
 node C:/AI/figma-to-code/tools/figma-scope-lock.mjs amend MyBrain/verify/scope-<id>.state.json MyBrain/verify/scope-<id>.amendment.json
 ~~~
 
+## 共有パスの排他所有はscopeに束ねる（2026-09-01 追加）
+
+共有部品の排他所有台帳（案件側 `MyBrain/verify/shared-component-ownership.json`）の各行は、
+**どのscopeの求めで割り当てたかを `grantedForScope` に持つ。** そのscopeが `closed` または
+`aborted` になるか台帳から消えた時点で、所有は失効し、以後どの宣言も止めない。
+
+`grantedForScope` を持たない行は恒久所有として従来どおり効くが、`scope-conflict-audit` が
+件数を報告する。移行のための互換であって、恒久所有を増やしてよいという意味ではない。
+
+**所有者が居ないパスは、停止事由にしない。** 並行scope同士の排他は受領証のclaim交差判定が
+担っており、所有台帳はその上に重なる二枚目の関門にすぎない。未登録を停止事由にすると、
+共有アセットを新規に作るたび台帳を手で更新するまでどのscopeも宣言できず、実装が終わった
+あとの commit 直前で詰まる。
+
+根拠は実測（2026-09-01）。所有がエージェント名へ常設で紐づき、close しても解放されないため、
+所有者側に稼働中のscopeが0件でも別の担当は対象を宣言できず、close受領証を作れず、
+pre-commit が commit を拒否した。**6日前に close した scope 由来の所有が、無関係な実装
+19ファイルをせき止めていた。**同じ形は 2026-08-26 にも起きており（waiting のまま2日間
+握られた共有enqueueを避けるため、テンプレート内 `wp_enqueue_style()` の回避実装が入った）、
+そのときは台帳を手で解除しただけで機構を直していない。過去には、未登録による停止を避ける
+ために**ディレクトリ全体を1担当へ与えるglob**が足され、それが次の停止の原因になった。
+
+所有を理由に止めるときは、次を必ず出力する。「所有者が違う」とだけ言われた実装役は、
+台帳のどの行をどう直せばよいか分からず、オーナーへの問い合わせに化ける。
+
+- 該当した台帳の行（`pattern`）
+- 所有者に `active` / `waiting` のscopeが台帳にあるか。無いなら「稼働していない所有が
+  止めている」と明示する
+- そのまま貼れる台帳差分（`pattern` / `owner` / `grantedForScope`）。解決は先頭一致なので、
+  挿入位置が既存globより前であることも書く
+
+契約の回帰試験は `templates/verify/scope-conflict-audit.e2e.mjs`（6件）。失効の読み飛ばし、
+稼働中の所有による停止、休眠所有の明示と解除差分、未登録を止めないこと、交差する並行scopeが
+止まること、不正な `grantedForScope` の拒否を固定する。
+
 ## 作業単位の分離
 
 「カードの余白を直す」「特定セクションをFigmaに合わせる」などの実装scopeでは、共通ルール、LOOP仕様、Figma検証ツール、ログ昇格機構の変更は対象外である。ownerがその改善を明示して別scopeを許可した場合だけ、別のscope manifestで扱う。

@@ -147,8 +147,33 @@ function validateOwnershipRules(ownership, violations, actors) {
     if (!rule || typeof rule.pattern !== "string" || rule.pattern.trim() === "") violations.push(`共有所有者台帳の ${index} 行目に pattern がありません。`);
     if (!actors.has(rule?.owner)) violations.push(`共有所有者台帳の ${index} 行目の owner が不正です。`);
     if (rule?.except !== undefined && !Array.isArray(rule.except)) violations.push(`共有所有者台帳の ${index} 行目の except は配列である必要があります。`);
+    if (rule?.grantedForScope !== undefined && (typeof rule.grantedForScope !== "string" || rule.grantedForScope.trim() === "")) {
+      violations.push(`共有所有者台帳の ${index} 行目の grantedForScope は空でない文字列である必要があります。`);
+    }
   }
   return rules;
+}
+
+// 所有をscopeへ束ねる。grantedForScope を持つ行は、その scope が closed / aborted になるか
+// 台帳から消えた時点で失効し、以後は所有として読まない。持たない行は従来どおり恒久として
+// 扱う（既存台帳との互換。移行状況は notes で報告する）。
+//
+// 2026-09-01 の実測が根拠。所有がエージェント名へ常設で紐づき、close しても解放されない
+// ため、所有者側に稼働中のscopeが0件でも別エージェントは対象を宣言できず、close受領証を
+// 作れず、pre-commit が commit を拒否した。6日前に close した scope 由来の所有が、
+// 無関係な実装19ファイルをせき止めていた。
+function expiredOwnership(rule, scopeStatusById) {
+  const grantedFor = rule?.grantedForScope;
+  if (typeof grantedFor !== "string" || grantedFor.trim() === "") return null;
+  const status = scopeStatusById.get(grantedFor) ?? "台帳に無い";
+  if (status === "active" || status === "waiting") return null;
+  return { grantedFor, status };
+}
+
+// 停止させるときは、貼れば直る差分まで出す。「所有者が違う」とだけ言われても、
+// 実装役は台帳のどの行をどう直せばよいか分からず、オーナーへの問い合わせに化ける。
+function ownershipPatchLine(target, actor, scopeId) {
+  return `{ "pattern": "${target}", "owner": "${actor}", "grantedForScope": "${scopeId}" }`;
 }
 
 function hashFile(path) {
@@ -409,14 +434,55 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
   }
   const permittedDirty = permittedDirtyTargets(root, manifest, gateKind, targets, violations);
 
+  const scopeStatusById = new Map(
+    entries
+      .filter((entry) => typeof entry?.id === "string" && entry.id.trim() !== "")
+      .map((entry) => [entry.id, typeof entry.status === "string" ? entry.status : "status不明"]),
+  );
+  const busyOwners = new Set(activeEntries.map((entry) => entry?.actor).filter((value) => typeof value === "string"));
+  const expiredNotes = new Set();
+  const unboundOwnership = ownershipRules.filter(
+    (rule) => typeof rule?.grantedForScope !== "string" || rule.grantedForScope.trim() === "",
+  ).length;
+
   for (const target of targets) {
-    const ownershipRule = ownershipRules.find((rule) =>
+    const matchingRules = ownershipRules.filter((rule) =>
       typeof rule?.pattern === "string"
       && globMatches(rule.pattern, target)
       && !(Array.isArray(rule.except) && rule.except.some((exception) => globMatches(exception, target))),
     );
-    if (!ownershipRule) violations.push(`${target} の排他的所有者が共有所有者台帳にありません。`);
-    else if (ownershipRule.owner !== actor) violations.push(`${target} の所有者は ${ownershipRule.owner} です。${actor} のscopeには宣言できません。`);
+    let ownershipRule = null;
+    for (const rule of matchingRules) {
+      const expired = expiredOwnership(rule, scopeStatusById);
+      if (expired) {
+        expiredNotes.add(`${rule.pattern}（owner=${rule.owner} / grantedForScope=${expired.grantedFor} が ${expired.status}）`);
+        continue;
+      }
+      ownershipRule = rule;
+      break;
+    }
+    if (!ownershipRule) {
+      // 所有者が居ないことを停止事由にしない。並行scope同士の排他は下の claim 交差判定が
+      // 担っており、所有台帳はその上に重なる二枚目の関門にすぎない。ここで止めると、
+      // 共有アセットを新規に作るたび台帳を手で更新するまでどのscopeも宣言できず、
+      // 実装が終わったあとの commit 直前で詰まる。過去には、この停止を避けるために
+      // ディレクトリ全体を1エージェントへ与えるglobが足され、それが次の停止の原因になった。
+      notes.push(
+        `${target} に有効な排他所有はありません。並行scopeとの交差判定だけで進めます。`
+        + ` 専有する場合の台帳追記: ${ownershipPatchLine(target, actor, scopeId)}`,
+      );
+    } else if (ownershipRule.owner !== actor) {
+      const ownerIsIdle = !busyOwners.has(ownershipRule.owner);
+      violations.push(
+        `${target} の所有者は ${ownershipRule.owner} です。${actor} のscopeには宣言できません（該当行: ${ownershipRule.pattern}）。`
+        + (ownerIsIdle
+          ? `\n      所有者 ${ownershipRule.owner} に active / waiting のscopeは台帳に1件もありません。稼働していない所有が宣言を止めています。`
+            + "\n      解除は次のいずれかで行います。(1) 該当行に \"grantedForScope\" を付け、その scope が既に closed なら失効させる。"
+            + " (2) 次の行を該当行より前へ挿入する（解決は先頭一致）。"
+            + `\n      ${ownershipPatchLine(target, actor, scopeId)}`
+          : `\n      所有者 ${ownershipRule.owner} は稼働中のscopeを持っています。解除ではなく、そのscopeの完了を待つか担当を調整します。`),
+      );
+    }
 
     for (const claim of claims.filter((claim) => claim.id !== scopeId && claim.targets.includes(target))) {
       violations.push(`${target} は ${claim.id}（${claim.source}）と競合します。`);
@@ -428,6 +494,16 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
           : `${target} はdirtyです。Coding scopeは編集前にpreflightが必要です。新規preflightを開始できません。`
       );
     }
+  }
+
+  if (expiredNotes.size > 0) {
+    notes.push(`失効した排他所有 ${expiredNotes.size} 件を読み飛ばしました: ${[...expiredNotes].join(" / ")}`);
+  }
+  if (unboundOwnership > 0) {
+    notes.push(
+      `grantedForScope を持たない恒久所有が ${unboundOwnership} 件あります。`
+      + " scopeへ束ねると close 時に自動で失効し、稼働していない所有が他の担当を止めなくなります。",
+    );
   }
 
   if (violations.length > 0) throw new AuditError(violations);
