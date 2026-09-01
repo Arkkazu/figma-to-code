@@ -214,6 +214,21 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 
 ## フェーズ3: 実測照合 — 検証漏れを塞ぐ
 
+> [!important] 応答が遅いことを「検証できない」と読み替えない（2026-09-01 追加）
+> ページ読み込みの待機上限は**撮影条件ではなく待機上限**であり、延ばしても合否基準は変わらない。
+> `FIGMA_VERIFY_NAV_TIMEOUT_MS=<ミリ秒>` で上書きでき、上限に達した場合は検証器が3倍
+> （最大300秒）へ延長して1回だけ自動で再試行する。**待機上限を理由に検証工程を止めてはならない。**
+> 「検証を省略するpushはできない」という報告は、省略と停止以外の選択肢を消している。
+>
+> 遅延を理由に工程を止める前に、必ず応答時間を実測して記録する。最低限、次の4点を分けて測る。
+> 静的ファイルと動的ページ、ホスト経由とコンテナ内部である。動的ページだけが遅いならアプリ側、
+> 存在しないURLでも同じだけ遅いなら全リクエスト共通の処理か環境側である。
+>
+> 実測（2026-09-01）：静的CSS 0.12秒に対し、存在しないURLの404が16.8秒だった。原因は
+> ホストのファイル共有経由のマウントで、1操作あたり2.5〜7.5ms（同一コンテナ内のボリュームは
+> 0.003ms）。opcacheが保持する765スクリプトの再検証だけで約1.9秒/リクエストを消費していた。
+> 実装でもゲートでもなく環境が原因であり、測れば工程を止めずに切り分けられる。
+
 - 実装後、CDP（headless Chrome + DevTools Protocol）で実ブラウザ実測を行い、specと自動照合する。
   - スクリプト：案件側 `MyBrain/verify/verify-layout.mjs`（無い案件は共通Vault `C:\AI\figma-to-code\templates\verify\verify-layout.mjs` をコピー。specの書式見本は `C:\AI\figma-to-code\templates\verify\spec-example.json`）
   - 実行例：`node MyBrain/verify/verify-layout.mjs MyBrain/verify/spec-top.json [URL上書き]`

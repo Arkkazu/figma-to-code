@@ -24,9 +24,17 @@ const DEFAULT_TIMEOUT_MS = 20000;
 // プロトコル用の20秒では足りずに Page.navigate だけが落ちる。
 // 環境差が大きいので上書きできるようにする。値は evidence に残る撮影条件ではなく待機上限なので、
 // 大きくしても合否基準は変わらない（遅いページを待てるようになるだけ）。
-const NAVIGATION_TIMEOUT_MS = Number.parseInt(process.env.FIGMA_VERIFY_NAV_TIMEOUT_MS ?? "", 10) > 0
-  ? Number.parseInt(process.env.FIGMA_VERIFY_NAV_TIMEOUT_MS, 10)
-  : 60000;
+const NAVIGATION_TIMEOUT_ENV = "FIGMA_VERIFY_NAV_TIMEOUT_MS";
+const DEFAULT_NAVIGATION_TIMEOUT_MS = 60000;
+const NAVIGATION_TIMEOUT_MS = Number.parseInt(process.env[NAVIGATION_TIMEOUT_ENV] ?? "", 10) > 0
+  ? Number.parseInt(process.env[NAVIGATION_TIMEOUT_ENV], 10)
+  : DEFAULT_NAVIGATION_TIMEOUT_MS;
+// 上限に達したら、黙って落ちる前に一度だけ延長して再試行する。待機上限は撮影条件では
+// ないため、延長しても合否基準は変わらない。人間やエージェントの気づきに依存させると、
+// 環境が遅いだけの状態が「検証できない」という報告に化ける。
+const NAVIGATION_RETRY_MULTIPLIER = 3;
+const NAVIGATION_RETRY_CAP_MS = 300000;
+const SLOW_NAVIGATION_NOTICE_MS = 5000;
 const POLL_INTERVAL_MS = 50;
 // P-3だけが設定する非公開のbrowser拡張。symbolにすることでページ側や通常gateの
 // 設定JSONから観測・差し替えできない。navigateAndWaitは同一CDP targetの測定結果だけを
@@ -35,6 +43,32 @@ const P3_NAVIGATION_OBSERVER = Symbol("figma-p3-navigation-observer");
 const P3_WEBRTC_SNAPSHOT = Symbol("figma-p3-webrtc-snapshot");
 
 const delay = (ms) => new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
+
+// 待機上限に達したときの出力は、そのまま「次の一手」になっていなければならない。
+// 2026-09-01 実測：待機上限に達した実装役が、上書き手段が存在するのに気づかず
+// 「検証を省略するpushはできない」とだけ報告して停止した。上書き手段は README にしか
+// 書かれておらず、失敗の瞬間には見えなかった。過去にも別セッションが同じ壁に当たり、
+// evidence 配下の使い捨てスクリプトへ環境変数を直接書き込む場当たり対応で回避している。
+// 上限は撮影条件ではなく待機上限なので、延ばしても合否基準は変わらない。
+export function navigationTimeoutHint(timeoutMs) {
+  return [
+    "",
+    `  この上限は待機上限であり、撮影条件ではありません。延ばしても合否基準は変わりません（遅いページを待てるようになるだけです）。`,
+    `  現在値: ${timeoutMs}ms（既定 ${DEFAULT_NAVIGATION_TIMEOUT_MS}ms）。上書き: ${NAVIGATION_TIMEOUT_ENV}=<ミリ秒>`,
+    `  例: ${NAVIGATION_TIMEOUT_ENV}=180000 npm run figma:gate -- checkpoint <manifest> <element>`,
+    "  検証を省略する必要はありません。上限に達したことを理由に工程を止める前に、対象の応答時間を実測してください。",
+  ].join("\n");
+}
+
+// 遅さは、タイムアウトしてから気づくのでは遅い。閾値を超えた時点で実測値を出し、
+// 環境の問題として先に見えるようにする。
+function reportSlowNavigation(url, elapsedMs, timeoutMs) {
+  if (elapsedMs < SLOW_NAVIGATION_NOTICE_MS) return;
+  console.error(
+    `NOTE: ${url} の読み込みに ${Math.round(elapsedMs)}ms かかりました（待機上限 ${timeoutMs}ms）。`
+    + " 環境側の応答が遅い可能性があります。静的ファイルと動的ページ、ホスト経由とコンテナ内部を分けて実測してください。",
+  );
+}
 
 export async function waitFor(condition, { timeoutMs = DEFAULT_TIMEOUT_MS, intervalMs = POLL_INTERVAL_MS, label = "condition" } = {}) {
   const deadline = Date.now() + timeoutMs;
@@ -924,7 +958,38 @@ async function navigateMainFrameAndWait(browser, { url, timeoutMs, requireLoader
   }
 }
 
-export async function navigateAndWait(browser, { url, width, height = 2000, selectors = [], timeoutMs = NAVIGATION_TIMEOUT_MS }) {
+export async function navigateAndWait(browser, options) {
+  const { url, timeoutMs = NAVIGATION_TIMEOUT_MS } = options ?? {};
+  const startedAt = Date.now();
+  try {
+    const result = await navigateAndWaitOnce(browser, { ...options, timeoutMs });
+    reportSlowNavigation(url, Date.now() - startedAt, timeoutMs);
+    return result;
+  } catch (error) {
+    if (!/^Timed out waiting for /.test(error?.message ?? "")) throw error;
+    const retryTimeoutMs = Math.min(timeoutMs * NAVIGATION_RETRY_MULTIPLIER, NAVIGATION_RETRY_CAP_MS);
+    if (retryTimeoutMs <= timeoutMs) {
+      error.message = `${error.message}${navigationTimeoutHint(timeoutMs)}`;
+      throw error;
+    }
+    console.error(
+      `NOTE: ${url} が待機上限 ${timeoutMs}ms に達したため、${retryTimeoutMs}ms へ延長して1回だけ再試行します。`
+      + " 待機上限は撮影条件ではないため、合否基準は変わりません。",
+    );
+    try {
+      const result = await navigateAndWaitOnce(browser, { ...options, timeoutMs: retryTimeoutMs });
+      reportSlowNavigation(url, Date.now() - startedAt, retryTimeoutMs);
+      return result;
+    } catch (retryError) {
+      if (/^Timed out waiting for /.test(retryError?.message ?? "")) {
+        retryError.message = `${retryError.message}${navigationTimeoutHint(retryTimeoutMs)}`;
+      }
+      throw retryError;
+    }
+  }
+}
+
+async function navigateAndWaitOnce(browser, { url, width, height = 2000, selectors = [], timeoutMs = NAVIGATION_TIMEOUT_MS }) {
   const uniqueSelectors = [...new Set(selectors.filter((selector) => typeof selector === "string" && selector.trim() !== ""))];
   await browser.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
   const p3Navigation = typeof browser[P3_NAVIGATION_OBSERVER] === "function";
