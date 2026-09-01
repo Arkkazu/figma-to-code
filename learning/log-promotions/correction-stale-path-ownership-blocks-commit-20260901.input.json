@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "correction-stale-path-ownership-blocks-commit-20260901",
+  "kind": "correction",
+  "occurredOn": "2026-09-01",
+  "failureClass": "stale-path-ownership-blocks-other-actor",
+  "recurrenceKey": "stale-path-ownership-blocks-other-actor",
+  "promotability": "promotable",
+  "ruleTargets": ["rules/figma-scope-lock.md"],
+  "verifierTargets": ["templates/verify/scope-conflict-audit.mjs"],
+  "summary": "共有部品の排他所有台帳が、パスをscopeではなくエージェント名へ常設で割り当てており、scopeがcloseしても所有が解放されない。そのため、所有者側にactive scopeが1件も無いのに、別エージェントは対象パスを宣言できず、close受領証を作れず、pre-commitがcommitを拒否してpushまで到達できなくなった。実測では、6日前にcloseしたscope由来の所有が、無関係な実装を19ファイル分せき止めていた。所有者が未登録のパスも同じ理由で停止し、新規に作った共有アセットは台帳を手で更新するまでどのscopeからも宣言できない。並行scope同士の排他は受領証のclaim交差判定が既に担っているため、エージェント名による常設所有はその上に重なる二重の関門になっている。",
+  "prevention": "所有の割り当てをscopeに紐づけ、close時に解放する。台帳の各行へ、どのscopeの求めで割り当てたかを持たせ、そのscopeがclosedまたはabortedなら所有は失効した扱いにする。監査は、失効した所有と、実在するのに所有者が未登録のパスを一覧で出し、解除に必要な台帳差分をそのまま貼れる形で提示する。宣言時点で落ちるべき検査が、commit直前まで表面化しない状態を作らない。"
+}
