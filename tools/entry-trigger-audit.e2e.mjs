@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -203,13 +204,33 @@ assert.match(failCli.stderr, /経路情報/, "なぜ入口が発火条件を持�
 
 assert.equal(runCli(["--nope"], deps()).exitCode, 64, "不明な引数はexit 64");
 
-// 実プロセスで現物を検査する（実ファイルが契約を満たしていることの固定）
-const realRun = spawnSync(process.execPath, [TOOL_PATH], { encoding: "utf8" });
+// 実プロセスで現物を検査する。
+// クラウドセッションには上位層（C:\AI\web-development）が存在しない
+// （WORKFLOW.md「クラウドセッションでの実行範囲」）。CIもこの条件で動く。
+// 上位層を読めるかどうかで期待値を変え、どちらの環境でも意味のある検査にする。
+const upstreamPath = process.env[UPSTREAM_DOCUMENT.envKey] || UPSTREAM_DOCUMENT.defaultPath;
+const upstreamReadable = existsSync(upstreamPath);
+const realRun = spawnSync(
+  process.execPath,
+  upstreamReadable ? [TOOL_PATH] : [TOOL_PATH, "--skip-missing-upstream"],
+  { encoding: "utf8" },
+);
 assert.equal(
   realRun.status,
   0,
   `現物の入口が契約を満たす (${realRun.stdout ?? ""}${realRun.stderr ?? ""})`,
 );
 assert.match(realRun.stdout, /ENTRY TRIGGER AUDIT: PASS 5 document\(s\)/, "現物5文書がPASSする");
+
+if (upstreamReadable) {
+  // 上位層を読める環境で skip してはならない。読めるのに skip して通す取り違えを塞ぐ。
+  assert.ok(!realRun.stdout.includes("(skipped)"), "上位層を読める環境で skip してはならない");
+} else {
+  assert.match(realRun.stdout, /web-development-workflow.*\(skipped\)/, "上位層不在時は skipped と明示する");
+  // 上位層不在でフラグを付けなければ落ちること（fail-open にしていないこと）を固定する。
+  const withoutFlag = spawnSync(process.execPath, [TOOL_PATH], { encoding: "utf8" });
+  assert.equal(withoutFlag.status, 1, "上位層不在でフラグ無しなら落ちる");
+  assert.match(withoutFlag.stdout, /upstream-unreadable/, "落ちた理由を名乗る");
+}
 
 process.stdout.write("entry-trigger-audit.e2e: PASS\n");

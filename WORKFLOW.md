@@ -174,6 +174,33 @@ node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-au
 ```
 - 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、独立レビュー、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
 
+## 正本リポジトリのCI（2026-09-01 追加）
+
+`.github/workflows/audit.yml` が push と pull request で検査を走らせる。
+**ローカルのGit hookはcloneに残らない**（案件テーマの hook は `.git/hooks/` にだけ在り、
+`core.hooksPath` は未設定、追跡下にも無い）。クラウドセッションはhookもCIも無い状態で
+clone するため、CIが無いと「検査を通らない変更が正本へ入る」経路が開いたままになる。
+
+runnerには上位層（`C:\AI\vault` / `C:\AI\web-development`）が存在せず、
+「クラウドセッションでの実行範囲」と同じ `cloud-restricted` 条件で動く。
+そのため次の2点は**CIでは検査されない**。ローカルで実行すること。
+
+- `rule-size-audit`（上位層に在るため実行不能）
+- 入口の発火条件のうち、`C:\AI\web-development\WORKFLOW.md` の1文書
+  （CIは `--skip-missing-upstream` でリポジトリ内4文書だけを検査する。
+  上位層を読めるのに skip して通す取り違えは `entry-trigger-audit.e2e` が落とす）
+
+CIが緑でも、この2点は未検査である。ローカルで次を通してから push する。
+
+```bash
+node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json
+node C:/AI/figma-to-code/tools/entry-trigger-audit.mjs
+```
+
+branch protection と required check は**まだ有効化していない**。有効化するまでCIは
+「落ちたことが見える」だけで、mergeを止めない。有効化はリポジトリ設定の変更であり、
+オーナーの判断事項である。
+
 ## この手法自体を編集する場合
 
 1. `LOOP.md` と `STATE.md` を読む。

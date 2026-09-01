@@ -1,0 +1,85 @@
+name: audit
+
+# 規則と検証器の正本を、誰の環境にも依存せずに検査する。
+#
+# 2026-09-01 実測: このリポジトリにはCIもGit hookも無かった。
+# ローカルのpre-commit hookは案件テーマの `.git/hooks/` にだけ在り、
+# **cloneには残らない**（core.hooksPath 未設定、追跡下にも無い）。
+# つまりクラウドセッションが clone すると、hookもCIも無い状態で
+# 規則・検証器を変更して commit できた。ここが merge 境界の穴である。
+#
+# このworkflowが閉じるのは「正本リポジトリへの変更が、検査を通らずに入る」経路だけである。
+# 案件リポジトリのソース変更に対する受領証照合は、portable receipt の設計が要るため
+# ここには含まれない（別工程）。branch protection / required check の有効化は
+# リポジトリ設定の変更であり、オーナーの判断事項なのでこのファイルでは行わない。
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # figma-gate.e2e は git worktree を作る。浅いcloneだと落ちる。
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # E2E が commit / worktree を作るため、identity が要る。
+      - name: configure git identity
+        run: |
+          git config --global user.email "audit@ci.invalid"
+          git config --global user.name "figma-to-code audit"
+          git config --global init.defaultBranch main
+
+      # このrunnerには上位層（C:\AI\vault / C:\AI\web-development）が存在しない。
+      # WORKFLOW.md「クラウドセッションでの実行範囲」が定める cloud-restricted と同じ条件である。
+      # 判定がその条件になっていることを、暗黙にせず先に出力しておく。
+      - name: environment verdict
+        run: node tools/workflow-preflight.mjs
+
+      # 入口の発火条件。上位層のWeb正本はこのrunnerに無いので、
+      # リポジトリ内4文書だけを検査する。読めるのに skip する取り違えは
+      # entry-trigger-audit.e2e が別途落とす。
+      - name: entry trigger audit
+        run: node tools/entry-trigger-audit.mjs --skip-missing-upstream
+
+      - name: doc command audit
+        run: node tools/doc-command-audit.mjs
+
+      - name: public memory scan
+        run: node tools/public-memory-scan.mjs
+
+      # rule-size-audit は C:/AI/web-development に在り、このrunnerには無い。
+      # 「CIで動かないから検査しない」ではなく「ここでは動かせない」ことを明示する。
+      - name: rule size audit (not runnable here)
+        run: |
+          echo "rule-size-audit は上位層 (C:/AI/web-development/verify/rule-size-audit.mjs) に在るため"
+          echo "このrunnerでは実行できない。ローカルで実行すること:"
+          echo "  node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json"
+
+      - name: tool e2e
+        run: |
+          set -e
+          for suite in \
+            entry-trigger-audit \
+            workflow-preflight \
+            doc-command-audit \
+            public-memory-scan \
+            project-entry-install \
+            figma-scope-lock \
+            figma-log-promote
+          do
+            echo "--- tools/$suite.e2e.mjs"
+            node "tools/$suite.e2e.mjs"
+          done
+
+      # 最長。2026-09-01 実測でローカル 40〜54秒 / 576 アサーション。
+      # 途中経過を出すので、無反応に見える時間を作らない。
+      - name: figma gate e2e
+        run: node templates/verify/figma-gate.e2e.mjs
