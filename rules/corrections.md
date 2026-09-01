@@ -1,3 +1,10 @@
+
+
+## 2026-09-01: gate-dead-end-without-handoff
+<!-- loop-log: {"id":"correction-owner-asked-for-independent-review-20260901","kind":"correction","failureClass":"gate-dead-end-without-handoff","recurrenceKey":"page-coverage-review-invalidated-implementer-stops","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-page-coverage.mjs"]} -->
+- 指摘：実装役が、page coverage の独立レビュー承認をレビュー役セッションではなくオーナーへ要求し、承認待ちで応答を終えた。ゲートが求めているのは実装役と actor または contextId が異なるレビュー役の承認であり、オーナーの承認ではない。オーナーからは、修正のたびに承認を求められる非効率として観測された。承認が失効した原因は scope 途中での coverage 分類の拡張であり、開始時に分類を確定させていればこの往復自体が発生しなかった。
+- 今後：承認失効時の依頼書出力に、オーナーは既定の承認者ではないこと、および承認を書くのは実装役と actor か contextId が異なるレビュー役セッションであることを明示する。規則側では、実装役がオーナーへ独立レビュー承認を求めて応答を終えることを禁止し、レビュー役セッションへ依頼書を渡すところまでを実装役の工程とする。あわせて、scope 開始後に coverage 分類が変わった場合は、拡張した対象と、開始時に確定できなかった理由の記録を必須にし、記録のない分類変更を検出できるようにする。
+
 ## 2026-09-01: self-declared-flags-disable-verification
 <!-- loop-log: {"id":"correction-self-declared-flags-disable-verification-20260901","kind":"correction","failureClass":"self-declared-flags-disable-verification","recurrenceKey":"self-declared-flags-disable-verification","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.mjs","templates/verify/verify-layout.mjs"]} -->
 - 指摘：実装役の自己申告フラグが、検証そのものを無効化できる。実測（2026-09-01、
@@ -16,7 +23,7 @@
   「比較0件でPASS」は**比較していない**という意味なので、可視要素のcheckpointでは0件を認めない。
 
 ## 2026-08-30: symptom-by-symptom-serial-fixing
-<!-- loop-log: {"id":"correction-serial-symptom-fixing-20260830","kind":"correction","failureClass":"symptom-by-symptom-serial-fixing","recurrenceKey":"symptom-by-symptom-serial-fixing","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":[]} -->
+<!-- loop-log: {"id":"correction-serial-symptom-fixing-20260830","kind":"correction","failureClass":"symptom-by-symptom-serial-fixing","recurrenceKey":"symptom-by-symptom-serial-fixing","action":"strengthen","promotability":"non-promotable","nonPromotableReason":"規則本文の変更だけで完結する指摘であり、許可済み検証器では逐次修正という進め方そのものを負のE2Eで再現できないため。"} -->
 - 指摘：オーナー指摘「いまのチェックに時間がかかりすぎ。きみのミスで時間がかかっているのか」。
   2026-08-29〜30 に実装役が6回停止し、そのたびに検証器を1件ずつ直して配布した。停止の内訳は
   既存欠陥4件（sass:watch の style 不整合 / Q-13 の初期展開前提 / 座標クリックのヒットテスト欠落 /
@@ -53,7 +60,7 @@
     合否を断定しない。断定するなら完走させる。
 
 ## 2026-08-29: git-hook-scope-ambiguous
-<!-- loop-log: {"id":"correction-git-hook-figma-vs-receipt-20260829","kind":"correction","failureClass":"git-hook-scope-ambiguous","recurrenceKey":"git-hook-scope-ambiguous","action":"clarify","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md","rules/loop-execution.md"],"verifierTargets":[]} -->
+<!-- loop-log: {"id":"correction-git-hook-figma-vs-receipt-20260829","kind":"correction","failureClass":"git-hook-scope-ambiguous","recurrenceKey":"git-hook-scope-ambiguous","action":"strengthen","promotability":"non-promotable","nonPromotableReason":"Git hookで禁止する対象と許可する対象の書き分けは規則本文の明確化であり、許可済み検証器では負のE2Eで再現できないため。"} -->
 - 指摘：「Git hookでは実行しない」の対象が、規則本文と実装で食い違っていた。2026-07-18 の訂正は
   「未検証scopeは……Git操作を止める条件にはしない」と書いている。一方で案件には 2026-08-26 に
   `close-coverage-hook/v1`（pre-commit → `close-receipt-audit.mjs --require-coverage`）が設置され、

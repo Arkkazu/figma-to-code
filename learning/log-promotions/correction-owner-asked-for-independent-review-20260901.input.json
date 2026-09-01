@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "correction-owner-asked-for-independent-review-20260901",
+  "kind": "correction",
+  "occurredOn": "2026-09-01",
+  "failureClass": "gate-dead-end-without-handoff",
+  "recurrenceKey": "page-coverage-review-invalidated-implementer-stops",
+  "promotability": "promotable",
+  "ruleTargets": ["rules/figma-spec-pipeline.md"],
+  "verifierTargets": ["templates/verify/figma-page-coverage.mjs"],
+  "summary": "実装役が、page coverage の独立レビュー承認をレビュー役セッションではなくオーナーへ要求し、承認待ちで応答を終えた。ゲートが求めているのは実装役と actor または contextId が異なるレビュー役の承認であり、オーナーの承認ではない。オーナーからは、修正のたびに承認を求められる非効率として観測された。承認が失効した原因は scope 途中での coverage 分類の拡張であり、開始時に分類を確定させていればこの往復自体が発生しなかった。",
+  "prevention": "承認失効時の依頼書出力に、オーナーは既定の承認者ではないこと、および承認を書くのは実装役と actor か contextId が異なるレビュー役セッションであることを明示する。規則側では、実装役がオーナーへ独立レビュー承認を求めて応答を終えることを禁止し、レビュー役セッションへ依頼書を渡すところまでを実装役の工程とする。あわせて、scope 開始後に coverage 分類が変わった場合は、拡張した対象と、開始時に確定できなかった理由の記録を必須にし、記録のない分類変更を検出できるようにする。"
+}
