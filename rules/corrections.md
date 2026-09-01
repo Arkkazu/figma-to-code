@@ -1,5 +1,10 @@
 
 
+## 2026-09-01: environment-latency-reported-as-false-dilemma
+<!-- loop-log: {"id":"correction-env-latency-reported-as-skip-or-stop-20260901","kind":"correction","failureClass":"environment-latency-reported-as-false-dilemma","recurrenceKey":"environment-latency-reported-as-false-dilemma","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/cdp-browser.mjs"]} -->
+- 指摘：検証対象ページの応答が遅く、ブラウザ検証の待機上限に達したとき、実装役は「検証を省略するpushはできない」とだけ報告して停止した。待機上限は環境変数で上書きでき、上限を延ばしても合否基準は変わらない（遅いページを待てるようになるだけ）ことが、検証器のコメントに明記されている。用意された手段を使わず、省略か停止かの二択として報告している。さらに、遅延そのものの原因を測定していない。実測では、ホストのファイル共有経由のマウントが1操作あたり数ミリ秒かかり、同じコンテナ内のボリュームより3桁遅く、opcacheが保持する数百スクリプトの再検証だけで秒単位を消費していた。原因が環境にあることは、検証工程を止める前に測れば分かる。
+- 今後：待機上限に達したときの失敗出力へ、上書き用の環境変数名と現在値、および上限を延ばしても合否基準が変わらないことを明記する。規則側では、応答遅延を理由に検証工程を止める前に、対象の応答時間を実測し、静的ファイルと動的ページ、ホスト経由とコンテナ内部を分けて記録することを必須にする。測定していない状態で「検証できない」「省略できない」と報告することを禁止する。
+
 ## 2026-09-01: stale-path-ownership-blocks-other-actor
 <!-- loop-log: {"id":"correction-stale-path-ownership-blocks-commit-20260901","kind":"correction","failureClass":"stale-path-ownership-blocks-other-actor","recurrenceKey":"stale-path-ownership-blocks-other-actor","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-scope-lock.md"],"verifierTargets":["templates/verify/scope-conflict-audit.mjs"]} -->
 - 指摘：共有部品の排他所有台帳が、パスをscopeではなくエージェント名へ常設で割り当てており、scopeがcloseしても所有が解放されない。そのため、所有者側にactive scopeが1件も無いのに、別エージェントは対象パスを宣言できず、close受領証を作れず、pre-commitがcommitを拒否してpushまで到達できなくなった。実測では、6日前にcloseしたscope由来の所有が、無関係な実装を19ファイル分せき止めていた。所有者が未登録のパスも同じ理由で停止し、新規に作った共有アセットは台帳を手で更新するまでどのscopeからも宣言できない。並行scope同士の排他は受領証のclaim交差判定が既に担っているため、エージェント名による常設所有はその上に重なる二重の関門になっている。
