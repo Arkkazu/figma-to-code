@@ -3,6 +3,7 @@ import { FIGMA_GATE_CONTRACT_VERSION, assertCheckpointIsCurrent, assertPageCover
 import { validateCorrectionReceipt } from "./correction-receipt.mjs";
 import { assertResponsiveHtmlSingleDom } from "./responsive-html-guard.mjs";
 import { markCoordinationGateActive, markCoordinationGateClosed, withScopePreflightLock } from "./scope-coordination.mjs";
+import { collectScopeLockStateFindings } from "./scope-lock-state.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -644,9 +645,25 @@ function validateStartDeclaration(scope, context) {
   }
 
   // 4点目: scope lockの開始と、今回のscope外パス。
+  //
+  // 2026-09-01 まで、ここは `existsSync` だけだった。正規の validator は
+  // `tools/figma-scope-lock.mjs` にあったが gate から一度も呼ばれておらず、
+  // `{ status: "active", allowedPaths: [...] }` だけの最小の偽 state も、
+  // `status: "blocked"` の state も preflight を通った（案件実測: state 102件中 blocked 31件）。
+  // 存在確認は「scope lockを開始したこと」を何も担保しない。構造契約を実際に検査する。
   const scopeLockStatePath = inputRepoPath(document.scopeLockStatePath, `${label}.scopeLockStatePath`);
   if (!existsSync(scopeLockStatePath.absolutePath)) {
     fail(`${label}.scopeLockStatePath does not exist: ${scopeLockStatePath.relativePath}. scope lockを開始してから宣言する。`);
+  }
+  const scopeLockFindings = collectScopeLockStateFindings(
+    readJson(scopeLockStatePath.absolutePath, `${label}.scopeLockStatePath`),
+    { repoRoot, expectedScopeId: scopeId, requireEditable: true },
+  );
+  if (scopeLockFindings.length > 0) {
+    fail(
+      `${label}.scopeLockStatePath の scope lock state が契約を満たさない: ${scopeLockStatePath.relativePath}\n` +
+        scopeLockFindings.map((finding) => `    - ${finding}`).join("\n"),
+    );
   }
   if (!Array.isArray(document.outOfScopePaths)) {
     fail(`${label}.outOfScopePaths must be an array (今回のscope外パス。無い場合は空配列)。`);

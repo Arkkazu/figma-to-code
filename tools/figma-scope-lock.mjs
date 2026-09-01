@@ -3,6 +3,9 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+// 構造契約は Figma gate と共有する。2実装に分けると必ず乖離するため、
+// 検査の正本は templates/verify/scope-lock-state.mjs の1箇所だけにする。
+import { collectScopeLockStateFindings } from "../templates/verify/scope-lock-state.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -183,8 +186,17 @@ function validateScope(raw, configPath) {
 
 function validateState(raw, statePath) {
   requireObject(raw, "Scope lock state");
-  if (raw.version !== 1 || raw.kind !== "figma-scope-lock-state") {
-    fail("Scope lock state has an unsupported version or kind.");
+
+  // 共有の構造契約。gate と同じ検査をここでも通す。
+  // requireEditable は false にする。`verify` / `status` / `rebaseline` は
+  // blocked の state を読めなければならない（rebaseline が block を解く手段である）。
+  const sharedFindings = collectScopeLockStateFindings(raw, {
+    repoPath: undefined,
+    repoRoot: typeof raw?.scope?.repoPath === "string" ? raw.scope.repoPath : undefined,
+    requireEditable: false,
+  });
+  if (sharedFindings.length > 0) {
+    fail("Scope lock state does not satisfy the shared contract:\n" + sharedFindings.map((f) => "  - " + f).join("\n"));
   }
 
   const scope = validateScope(raw.scope, statePath);

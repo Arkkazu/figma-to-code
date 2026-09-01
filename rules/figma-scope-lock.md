@@ -30,6 +30,35 @@ node C:/AI/figma-to-code/tools/figma-scope-lock.mjs verify MyBrain/verify/scope-
 
 assert は各ファイルを書き換える直前、verify は checkpoint前とclose前に必ず実行する。
 
+### Figma gate が state の構造を検査する（2026-09-01 追加・新しいFAIL条件）
+
+着手宣言の `scopeLockStatePath` は、**gateがファイルの中身を検査する**。2026-09-01 まで
+gateは `existsSync` しか見ておらず、`{ "status": "active", "allowedPaths": [...] }` だけの
+最小の偽 state も、`status: "blocked"` の state も preflight を通っていた
+（案件実測：state 102件のうち blocked 31件がすべて通過可能だった）。正規の validator は
+CLI 側に在ったが、gateから一度も呼ばれていなかった。
+
+契約の正本は `templates/verify/scope-lock-state.mjs` の1箇所とし、CLIとgateの両方が使う。
+preflight / section-start / checkpoint / close / release-check の全phaseで検査する。
+
+次はFAILになる。
+
+- `version` が 1 でない、`kind` が `figma-scope-lock-state` でない
+  （**state ではなく scope manifest を指している**場合はここで落ちる）
+- `status` が `active` / `blocked` 以外
+- `status` が `blocked`（編集工程へ進ませない。復帰は「blocked からの復帰」に従う）
+- `scope.scopeId` が gate manifest の `id` と一致しない（別scopeのstateの流用）
+- `scope.allowedPaths` が空、`baseline` が配列でない、`baseline` のパス重複
+- `controlPaths` が2要素未満、または重複
+
+**`allowedPaths` が `changeTargets` を覆うことは、まだ検査していない。**2026-09-01 実測で
+突合できた12件のうち2件が覆っておらず、その2件は共有パスの所有移管（下記「共有パスの排他所有」）
+を経ている。移管の扱いが確定するまで、この検査は入れない。推測で入れると進行中scopeが止まる。
+
+`figma-gate.mjs` は `scope-lock-state.mjs` を import する。**案件へ配るときは2ファイルを
+必ず一緒に配る。**`verifier-distribute` は引数省略時、配布先に既に在るファイルだけを対象に
+するため、新規ファイルは名指ししないと配られない。
+
 ## 判定範囲（2026-08-29 変更）
 
 **verify は宣言パスと制御パスに交差する変更だけで判定する。** 宣言パスと1つも交差しない変更は

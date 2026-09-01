@@ -259,6 +259,30 @@ function validStartDeclaration() {
   };
 }
 
+// 正規の scope lock state。`figma-scope-lock.mjs` の validateState と
+// `scope-lock-state.mjs` の共有契約の両方を満たす最小形。
+function validScopeLockState(root) {
+  return {
+    version: 1,
+    kind: "figma-scope-lock-state",
+    status: "active",
+    scope: {
+      version: 1,
+      scopeId: "fixture-gate",
+      task: "fixture: 着手前ゲートの検査用 scope",
+      ownerInstruction: "fixture: ファーストビューをFigmaどおりに実装する（scope lockの検査用）",
+      repoPath: root,
+      allowedPaths: ["site/view.txt"],
+    },
+    baseline: [{ path: "site/view.txt", sha256: null }],
+    history: [{ action: "begin", at: fixtureDeclaredAt }],
+    controlPaths: [
+      "MyBrain/verify/fixture/scope-lock.json",
+      "MyBrain/verify/fixture/scope-lock.state.json",
+    ],
+  };
+}
+
 function createFixture(prefix) {
   const root = mkdtempSync(join(tmpdir(), prefix));
   const directory = join(root, "MyBrain", "verify", "fixture");
@@ -456,7 +480,14 @@ function createFixture(prefix) {
   });
   writeJson(join(directory, "motion.json"), { viewportPolicy: { scrollbars: "hidden" } });
   // scope lock の state は着手宣言が「lockを開始してから書かれた」ことの根拠になる。
-  writeJson(join(directory, "scope-lock.state.json"), { status: "active", allowedPaths: ["site/view.txt"] });
+  //
+  // 2026-09-01 まで、この fixture は `{ status, allowedPaths }` だけだった。
+  // 正規の validator（figma-scope-lock.mjs の validateState）ならこの形は
+  // version 検査で即落ちるが、gate が validator を呼んでいなかったため
+  // 488 アサーションのどれにも掛からなかった。E2E が「gate の現在の実装」を
+  // 固定していて「契約」を固定していなかった、という一例である。
+  // 契約を満たす形へ直し、簡易形は負のケース（scope-lock-minimal-fake）へ回す。
+  writeJson(join(directory, "scope-lock.state.json"), validScopeLockState(root));
   writeJson(join(directory, "start-declaration.json"), validStartDeclaration());
   writeJson(fixture.manifestPath, {
     id: "fixture-gate",
@@ -1203,6 +1234,68 @@ function assertStartDeclarationGuards() {
       label: "scope lockを開始していない",
       expected: "scopeLockStatePath does not exist",
       mutate: (fixture) => rmSync(join(fixture.directory, "scope-lock.state.json")),
+    },
+    // ここから scope lock state の構造契約（2026-09-01 追加）。
+    // それまで gate は存在確認しかしておらず、下記はすべて preflight を通っていた。
+    {
+      label: "scope lock state が最小の偽物（旧fixtureの形）",
+      expected: 'state.kind は "figma-scope-lock-state"',
+      mutate: (fixture) =>
+        writeJson(join(fixture.directory, "scope-lock.state.json"), {
+          status: "active",
+          allowedPaths: ["site/view.txt"],
+        }),
+    },
+    {
+      label: "scope lock state が blocked",
+      expected: "この状態で編集工程を進めてはならない",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => { value.status = "blocked"; }),
+    },
+    {
+      label: "scope lock state が別scopeのもの",
+      expected: "scopeId が対象scopeと一致しない",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => { value.scope.scopeId = "other-scope"; }),
+    },
+    {
+      label: "scope lock state ではなく scope manifest を指している",
+      expected: 'state.kind は "figma-scope-lock-state"',
+      mutate: (fixture) =>
+        writeJson(join(fixture.directory, "scope-lock.state.json"), {
+          version: 1,
+          scopeId: "fixture-gate",
+          task: "fixture",
+          ownerInstruction: "fixture: manifestをstateとして宣言した場合",
+          repoPath: fixture.root,
+          allowedPaths: ["site/view.txt"],
+        }),
+    },
+    {
+      label: "scope lock state の status が未知の値",
+      expected: "state.status は active か blocked",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => { value.status = "verified"; }),
+    },
+    {
+      label: "scope lock state の controlPaths が1件しかない",
+      expected: "controlPaths は manifest と state を含む2要素以上",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => { value.controlPaths = value.controlPaths.slice(0, 1); }),
+    },
+    {
+      label: "scope lock state の baseline が配列でない",
+      expected: "state.baseline は配列",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => { value.baseline = {}; }),
+    },
+    {
+      label: "scope lock state の baseline に重複パスがある",
+      expected: "baseline に重複したパスがある",
+      mutate: (fixture) =>
+        mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => {
+          value.baseline = [{ path: "site/view.txt", sha256: null }, { path: "site/view.txt", sha256: null }];
+        }),
+    },
+    {
+      label: "scope lock state の allowedPaths が空",
+      expected: "allowedPaths は非空配列",
+      mutate: (fixture) => mutateJson(join(fixture.directory, "scope-lock.state.json"), (value) => { value.scope.allowedPaths = []; }),
     },
     {
       label: "scope外パスがchangeTargetでもある",
