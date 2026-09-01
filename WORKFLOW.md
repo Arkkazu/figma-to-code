@@ -35,6 +35,12 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 > 規則・spec・ゲート・検証器がすべて設置済みの案件で、依頼文の表現によってFigma作業として
 > 処理されず、取得・実測・ゲートを経ないままコード編集へ進む経路が残っていた。
 
+発火条件は入口（`AGENTS.md` / `CLAUDE.md`）、`templates/project-entry.md`、本ファイル、`C:\AI\web-development\WORKFLOW.md` の5箇所にある。入口は規則本文を複製しないが、**発火条件は「どの規則へ入るか」の経路情報であり入口の責務**なので削除しない。複製が危険なのは乖離が黙って起きるときだけなので、削除する代わりに乖離を機械で落とす。`rules/` か入口を触ったら実行してPASSさせる。
+
+```bash
+node C:/AI/figma-to-code/tools/entry-trigger-audit.mjs
+```
+
 工程と停止条件は暗記で再生しない。着手時に出力させる。
 
 ```bash
@@ -135,7 +141,7 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local
 
 差し戻すときは、「クラウドでは判断できない項目」を列挙し、ローカルで再開すべき手順を書いて終える。**上位層を読めないまま推測で埋めてはならない。**読めなかった層を読んだことにして完了報告することは、この規則の最も重大な違反とする。
 
-Figma URL付きの実装・修正では、Figma実物・spec・DOM対応表・実ブラウザ実測が揃うまで推測で編集しない。Figma照合はコーディング反復内で行い、Git hook、commit、push、deployでは実行しない。
+Figmaをデザイン根拠とする実装・修正では、Figma実物・spec・DOM対応表・実ブラウザ実測が揃うまで推測で編集しない。Figma照合はコーディング反復内で行い、Git hook、commit、push、deployでは実行しない。
 
 Figmaの実装・修正scopeでは、編集前に D-012スコープロックとして `rules/figma-scope-lock.md` のscope manifestを開始する。visual・componentの修正scopeに、共通ルール、検証ツール、LOOP仕様、ログ昇格の変更を混ぜてはならない。これらはオーナーが明示した別scopeだけで扱う。
 
