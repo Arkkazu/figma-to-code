@@ -1,9 +1,11 @@
 {
   "version": 1,
-  "status": "waiting-human",
-  "intakePath": "learning/log-promotions/intake/figma-log-intake-d1fa4b20eec3d358.json",
-  "reportPath": "learning/log-promotions/reports/figma-log-intake-d1fa4b20eec3d358.json",
-  "proposalPaths": [],
+  "status": "pending-review-with-unclassified",
+  "intakePath": "learning/log-promotions/intake/figma-log-intake-c6cbe46d43e23b14.json",
+  "reportPath": "learning/log-promotions/reports/figma-log-intake-c6cbe46d43e23b14.json",
+  "proposalPaths": [
+    "learning/log-promotions/proposals/figma-log-page-coverage-review-invalidated-implementer-stops-ede9450263c8d706.json"
+  ],
   "nonPromotableCount": 30,
   "unclassifiedCount": 2,
   "closedProposalIds": []

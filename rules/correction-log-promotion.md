@@ -20,7 +20,34 @@ node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.
 node tools/figma-log-promote.mjs scan rules/log-promotion-policy.json learning/log-promotions
 ```
 
-同じ `recurrenceKey` が閾値以上なら不変の `pending-review` proposalを作る。未分類の新規ログがあれば `waiting-human` に停止し、提案を進めない。
+同じ `recurrenceKey` が閾値以上なら不変の `pending-review` proposalを作る。
+
+**未分類の節は、無関係な家族の提案生成を止めない（2026-09-01 変更）。**
+
+旧契約は「未分類の新規ログが1件でもあれば `waiting-human` に停止し、提案を進めない」だった。
+この全面停止のため、機構は設置以来**一度も提案を出していなかった**。2026-09-01 実測：
+閾値2に到達した promotable 家族が1件（`page-coverage-review-invalidated-implementer-stops`）
+あったにもかかわらず、それとは無関係な2節（`rules/corrections.md` の 2026-08-19 の節と
+`rules/mistakes.md` の 2026-08-26 の節）に marker が無いというだけで提案は0件だった。
+「規則は増えるが検証器は強くならない」の唯一の機械的な出口が、ここで塞がっていた。
+
+未分類は「その節が未分類である」という事実であって、他の家族の再発が起きていないという
+根拠にはならない。現契約は次のとおり。
+
+| 未分類 | 閾値到達family | status |
+|---|---|---|
+| なし | あり | `pending-review` |
+| **あり** | **あり** | **`pending-review-with-unclassified`** |
+| あり | なし | `waiting-human` |
+| なし | なし | `no-recurring-failure` |
+
+未分類の内訳（path / heading / line / SHA-256）は intake・report・latest が保持する。
+**提案本体には入れない。**提案は不変ファイルであり、無関係な節の分類が進むたびに
+同一IDの内容が変わって再スキャンが落ちるためである。
+
+提案が出ても、従来どおり `applyAllowed: false` の `pending-review` 止まりである。
+独立レビュー・負のE2E・オーナー承認なしに正本は変わらない。未分類の解消は、
+提案の承認とは別に必要な残務として `waiting-human` 相当の扱いを続ける。
 
 ## 3. 独立レビューと承認
 

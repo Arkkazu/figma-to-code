@@ -416,7 +416,11 @@ function scan(policyPathArg, outputPathArg) {
     })))
     .sort((a, b) => `${a.recurrenceKey}:${a.proposalId}`.localeCompare(`${b.recurrenceKey}:${b.proposalId}`));
   const intakeIdentity = {
-    promotionOutputVersion: 3,
+    // 生成契約が変わったら上げる。intake ID はこの identity の hash であり、
+    // 同じ入力から違う出力が出るようになった場合に ID を分けないと、
+    // 同一IDで内容だけ違う intake を書こうとして writeImmutableJson が落ちる。
+    // 4: 未分類が残っていても、無関係な分類済み family の提案生成を止めなくした（2026-09-01）。
+    promotionOutputVersion: 4,
     policySha256: sha256(readText(policyPath.absolutePath, "Log promotion policy")),
     records: records.map((record) => ({ id: record.id, source: record.source })),
     nonPromotable,
@@ -436,23 +440,38 @@ function scan(policyPathArg, outputPathArg) {
 
   const proposals = [];
   const closedProposalIds = [];
-  if (unclassified.length === 0) {
-    for (const group of [...groups.values()].sort((a, b) => a.key.localeCompare(b.key))) {
-      if (group.records.length < policy.recurrenceThreshold) continue;
-      const proposal = buildProposal(group, policy);
-      const closed = (recurrenceIndex[proposal.recurrence.key]?.closed || []);
-      if (closed.some((entry) => entry.proposalId === proposal.id)) {
-        closedProposalIds.push(proposal.id);
-        continue;
-      }
-      proposals.push(proposal);
+  // 2026-09-01 まで、この生成ブロック全体が `if (unclassified.length === 0)` で囲まれていた。
+  // marker の無い節が1つでもあると、**無関係な家族の提案生成まで全面的に止まった**。
+  //
+  // 実測（2026-09-01）: 閾値2に到達した promotable 家族が1件
+  // （page-coverage-review-invalidated-implementer-stops）あったにもかかわらず、
+  // それとは無関係な2節（corrections.md:135 / mistakes.md:17）が未分類であるという
+  // ただそれだけの理由で提案は0件だった。この機構は設置以来、一度も提案を出していない。
+  // 「規則は増えるが検証器は強くならない」の唯一の機械的な出口が、ここで塞がっていた。
+  //
+  // unclassified は「その節が未分類である」という事実であって、
+  // 他の家族の再発が起きていないという根拠にはならない。分類の未完了は status と
+  // 一覧に残し、提案生成は止めない。提案は従来どおり pending-review 止まりであり、
+  // 独立レビュー・負のE2E・オーナー承認なしに正本は変わらない（applyAllowed: false）。
+  for (const group of [...groups.values()].sort((a, b) => a.key.localeCompare(b.key))) {
+    if (group.records.length < policy.recurrenceThreshold) continue;
+    const proposal = buildProposal(group, policy);
+    const closed = (recurrenceIndex[proposal.recurrence.key]?.closed || []);
+    if (closed.some((entry) => entry.proposalId === proposal.id)) {
+      closedProposalIds.push(proposal.id);
+      continue;
     }
+    proposals.push(proposal);
   }
 
-  const status = unclassified.length > 0
-    ? "waiting-human"
-    : proposals.length > 0
-      ? "pending-review"
+  // 未分類が残ったまま提案が出た場合は、それを status で名乗る。
+  // 提案本体へ未分類の内訳を入れない：提案は writeImmutableJson で不変であり、
+  // 無関係な節の分類が進むたびに同一IDの内容が変わって再スキャンが落ちる。
+  // 内訳は intake / report / latest が保持する（unclassified, unclassifiedCount）。
+  const status = proposals.length > 0
+    ? (unclassified.length > 0 ? "pending-review-with-unclassified" : "pending-review")
+    : unclassified.length > 0
+      ? "waiting-human"
       : "no-recurring-failure";
   const intake = {
     version: 1,

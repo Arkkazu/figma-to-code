@@ -143,14 +143,66 @@ try {
   write("entries/non-promotable-targeted.json", json(dishonestTarget));
   assert(run("record", "rules/log-promotion-policy.json", "entries/non-promotable-targeted.json", "learning/log-promotions").status !== 0, "non-promotable record accepted a verifier or rule target");
 
-  // 本当に未分類の記録は引き続きwaiting-humanで停止する。
+  // 未分類の節（marker の無い見出し）の扱い。2026-09-01 変更。
+  //
+  // 旧契約: unclassified が1件でもあると proposal 生成ブロック全体を止めていた。
+  // 実測でこれが機構全体を停止させていた（閾値到達 family が1件あったのに、
+  // 無関係な2節が未分類というだけで提案0件。設置以来1件も提案が出ていなかった）。
+  //
+  // 新契約: 未分類は status と unclassifiedCount に残すが、
+  // 無関係な分類済み family の提案生成は止めない。
   const correctionsBeforeUnclassified = read("rules/corrections.md");
-  write("rules/corrections.md", correctionsBeforeUnclassified.replace("\n<!-- loop-log-schema: v1 -->", "\n\n## unclassified entry\n- metadata intentionally absent\n\n<!-- loop-log-schema: v1 -->"));
+  const addUnclassified = (text) =>
+    text.replace("\n<!-- loop-log-schema: v1 -->", "\n\n## unclassified entry\n- metadata intentionally absent\n\n<!-- loop-log-schema: v1 -->");
+
+  // (a) 未分類があり、閾値到達 family もある → 提案は出る。status が未分類の残存を名乗る。
+  write("rules/corrections.md", addUnclassified(correctionsBeforeUnclassified));
   pass(run("scan", "rules/log-promotion-policy.json", "learning/log-promotions"), "unclassified scan");
   const unclassifiedLatest = JSON.parse(read("learning/log-promotions/latest.json"));
-  assert(unclassifiedLatest.status === "waiting-human" && unclassifiedLatest.unclassifiedCount === 1 && unclassifiedLatest.proposalPaths.length === 0, "unclassified record did not stop proposal generation");
+  assert(
+    unclassifiedLatest.unclassifiedCount === 1,
+    `unclassified count was not reported: ${JSON.stringify(unclassifiedLatest)}`,
+  );
+  assert(
+    unclassifiedLatest.proposalPaths.length > 0,
+    `an unrelated unclassified section still blocked proposal generation: ${JSON.stringify(unclassifiedLatest)}`,
+  );
+  assert(
+    unclassifiedLatest.status === "pending-review-with-unclassified",
+    `status must name the remaining unclassified sections: ${JSON.stringify(unclassifiedLatest)}`,
+  );
+  // 提案本体は未分類の内訳を持たない（不変ファイルへ可変値を入れない）。
+  const unclassifiedProposal = JSON.parse(read(unclassifiedLatest.proposalPaths[0]));
+  assert(
+    unclassifiedProposal.status === "pending-review" && unclassifiedProposal.review.applyAllowed === false,
+    "a proposal generated alongside unclassified sections must stay pending-review and non-appliable",
+  );
+  assert(
+    !JSON.stringify(unclassifiedProposal).includes("unclassified"),
+    "the immutable proposal must not embed the mutable unclassified snapshot",
+  );
+
+  // (b) 未分類だけがあり、閾値到達 family が無い → 従来どおり waiting-human で提案0件。
+  const emptyOutput = "learning/log-promotions-unclassified-only";
+  pass(run("scan", "rules/log-promotion-policy.json", emptyOutput), "unclassified-only scan into a fresh output");
+  const emptyLatest = JSON.parse(read(`${emptyOutput}/latest.json`));
+  assert(
+    emptyLatest.unclassifiedCount === 1,
+    `unclassified count was not reported in the fresh output: ${JSON.stringify(emptyLatest)}`,
+  );
+  assert(
+    emptyLatest.status === (emptyLatest.proposalPaths.length > 0 ? "pending-review-with-unclassified" : "waiting-human"),
+    `status must match whether proposals were generated: ${JSON.stringify(emptyLatest)}`,
+  );
+
+  // (c) 未分類を解消すると status は通常の pending-review へ戻る。
   write("rules/corrections.md", correctionsBeforeUnclassified);
   pass(run("scan", "rules/log-promotion-policy.json", "learning/log-promotions"), "classified scan");
+  const classifiedLatest = JSON.parse(read("learning/log-promotions/latest.json"));
+  assert(
+    classifiedLatest.unclassifiedCount === 0 && classifiedLatest.status !== "pending-review-with-unclassified",
+    `status did not return to normal after classification: ${JSON.stringify(classifiedLatest)}`,
+  );
 
   // 別経路完了はcurrent index内で閉じ、同じevidenceでは再提案せず、新しいevidenceなら再開する。
   const outsideOptions = { failureClass: "completed-outside-promotion", recurrenceKey: "completed-outside-promotion" };
