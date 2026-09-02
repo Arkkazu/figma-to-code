@@ -145,7 +145,7 @@ function findReservedEntry({ root, scopeId, gateKind, actor, contextId, manifest
   if (entry.implementationContextId !== contextId) throw new Error(`${scopeId} のimplementationContextIdがscope coordination台帳と一致しません。`);
   const expectedManifestPath = entryManifestPath(entry, gateKind);
   if (expectedManifestPath !== manifestPath) throw new Error(`${scopeId} の ${gateKind} gate のmanifestPathがscope coordination台帳と一致しません（台帳: ${expectedManifestPath}）。`);
-  if (!entry.gates || typeof entry.gates !== "object" || Array.isArray(entry.gates) || !["active", "waiting", "aborted"].includes(entry.gates[gateKind])) {
+  if (!entry.gates || typeof entry.gates !== "object" || Array.isArray(entry.gates) || !["active", "waiting", "aborted", "suspended"].includes(entry.gates[gateKind])) {
     throw new Error(`${scopeId} は${gateKind} gateをactive、waiting、またはabortedとして予約していません。`);
   }
   return { path, data, entry };
@@ -174,7 +174,11 @@ export function markCoordinationGateClosed({ root = process.cwd(), scopeId, gate
 export function markCoordinationGateAborted({ root = process.cwd(), scopeId, gateKind, actor, contextId, manifestPath }) {
   if (!["figma", "coding"].includes(gateKind)) throw new Error(`未知のgate種別です: ${gateKind}`);
   const { path, data, entry } = findReservedEntry({ root, scopeId, gateKind, actor, contextId, manifestPath });
-  if (entry.gates[gateKind] !== "active") throw new Error(`${scopeId} は${gateKind} gateをactiveとして保持していないためabortできません。`);
+  // suspended（中断）も abort できる。再開しないと決めたときの出口が無いと、
+  // 中断した scope は台帳に残り続ける（2026-09-02 実測: 3件が該当）。
+  if (!["active", "suspended"].includes(entry.gates[gateKind])) {
+    throw new Error(`${scopeId} は${gateKind} gateをactiveまたはsuspendedとして保持していないためabortできません。`);
+  }
   entry.gates[gateKind] = "aborted";
   entry.status = deriveStatus(entry);
   data.updatedAt = new Date().toISOString();
