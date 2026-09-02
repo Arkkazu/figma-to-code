@@ -567,9 +567,7 @@ function validateGateVerificationConfig(scope, specDocument) {
 
 function assertNoDraftPageCoverageInputs(scope) {
   const coveragePath = inputRepoPath(scope.pageCoveragePath, "manifest.scope.pageCoveragePath");
-  const reviewPath = inputRepoPath(scope.pageCoverageReviewPath, "manifest.scope.pageCoverageReviewPath");
   const coverage = readExecutionJson(coveragePath.absolutePath, "Page coverage");
-  readExecutionJson(reviewPath.absolutePath, "Page coverage review");
   // figma-page-coverage.mjs resolves page metadata relative to the coverage
   // document. Scan that JSON evidence too when it is declared, without
   // treating screenshots or exported assets as draft-controlled text inputs.

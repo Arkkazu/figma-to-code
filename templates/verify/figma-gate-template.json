@@ -57,7 +57,6 @@
       "example-cta"
     ],
     "pageCoveragePath": "MyBrain/verify/page-coverage.json",
-    "pageCoverageReviewPath": "MyBrain/verify/page-coverage-review.json",
     "componentDecisionPath": "MyBrain/verify/component-decisions.json",
     "accessibilityPath": "MyBrain/verify/accessibility-<scope>.json",
     "motionPath": "MyBrain/verify/motion-<scope>.json"

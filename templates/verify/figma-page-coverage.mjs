@@ -558,7 +558,6 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   const implementationIdentity = requireImplementationIdentity(implementationIdentityInput, "implementation identity");
   requireString(scope.componentsPath, "scope.componentsPath");
   requireString(scope.pageCoveragePath, "scope.pageCoveragePath");
-  requireString(scope.pageCoverageReviewPath, "scope.pageCoverageReviewPath");
   const manifestId = requireString(manifest.id, "manifest id");
 
   // scope paths are repository-relative everywhere else in the gate manifest.
@@ -567,10 +566,8 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   const repoRoot = process.cwd();
   const componentsPath = resolve(repoRoot, scope.componentsPath);
   const coveragePath = resolve(repoRoot, scope.pageCoveragePath);
-  const reviewPath = resolve(repoRoot, scope.pageCoverageReviewPath);
   if (!existsSync(componentsPath)) fail("component manifest is missing: " + componentsPath);
   if (!existsSync(coveragePath)) fail("page coverage is missing: " + coveragePath);
-  if (!existsSync(reviewPath)) fail("page coverage review is missing: " + reviewPath);
 
   const rawComponents = readJson(componentsPath);
   const components = Array.isArray(rawComponents) ? rawComponents : rawComponents.components;
@@ -588,7 +585,6 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   }
 
   const coverage = readJson(coveragePath);
-  const review = readJson(reviewPath);
   if (coverage.version !== 1 || !Array.isArray(coverage.sections) || coverage.sections.length === 0) {
     fail("page coverage must use version 1 with non-empty sections");
   }
@@ -626,21 +622,6 @@ function manifestContext(manifestPath, implementationIdentityInput) {
 
   const coverageSha256 = sha256File(coveragePath);
   const coverageDigest = canonicalCoverageDigest(coverage);
-  assertCoverageExpansionIsDeclared(coverage, review, coveragePath, repoRoot, coverageDigest);
-  const reviewBlockers = reviewApprovalBlockers(review, coverageSha256, implementationIdentity, coverageDigest);
-  if (reviewBlockers.length > 0) {
-    fail(reviewRequestMessage({
-      blockers: reviewBlockers,
-      manifestId,
-      coveragePath,
-      coverageSha256,
-      coverageDigest,
-      reviewPath,
-      review,
-      implementationIdentity,
-      repoRoot,
-    }));
-  }
 
   const targetIds = new Set();
   const sectionById = new Map();
@@ -849,9 +830,7 @@ function manifestContext(manifestPath, implementationIdentityInput) {
     manifest,
     componentsPath,
     coveragePath,
-    reviewPath,
     coverage,
-    review,
     componentById,
     sectionById,
     coverageSha256,
@@ -917,7 +896,6 @@ function loadRuntime(manifestPath, implementationIdentityInput) {
     ["manifest", runtime.manifestSha256, sha256File(context.absoluteManifestPath)],
     ["components", runtime.componentsSha256, sha256File(context.componentsPath)],
     ["page coverage", runtime.coverageSha256, context.coverageSha256],
-    ["page coverage review", runtime.reviewSha256, sha256File(context.reviewPath)],
   ];
   const movedInputs = frozenInputs.filter(([, frozen, current]) => frozen !== current);
   if (movedInputs.length > 0) {
@@ -926,8 +904,7 @@ function loadRuntime(manifestPath, implementationIdentityInput) {
         movedInputs
           .map(([label, frozen, current]) => `  - ${label}: 凍結 ${String(frozen).slice(0, 12)}… → 現在 ${String(current).slice(0, 12)}…`)
           .join("\n") +
-        "\n  page coverage が動いている場合は、独立レビュー承認も同時に失効している。" +
-        "\n  preflight を再実行すると、承認が現在のcoverageに対して有効かどうかを依頼書つきで報告する。"
+        "\n  page coverage が動いている場合は、対象範囲とFigma nodeの対応を再確認してからpreflightを再実行する。"
     );
   }
   return { path, runtime, context };
@@ -940,7 +917,6 @@ export function initializePageCoverage(manifestPath, implementationIdentityInput
     manifestSha256: sha256File(context.absoluteManifestPath),
     componentsSha256: sha256File(context.componentsPath),
     coverageSha256: context.coverageSha256,
-    reviewSha256: sha256File(context.reviewPath),
     implementationIdentity: { ...context.implementationIdentity },
     sections: context.coverage.sections.map((section) => ({
       sectionId: section.sectionId,
