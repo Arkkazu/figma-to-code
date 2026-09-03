@@ -117,168 +117,16 @@ export function canonicalCoverageDigest(coverage) {
   return COVERAGE_DIGEST_VERSION + "-" + createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
-// 独立レビュー承認が現在のcoverageに対して有効かを、条件ごとに分解して返す。
-// 「まとめて1行で落とす」と、実装役には何を直せば通るのかが分からない。
-function reviewApprovalBlockers(review, coverageSha256, implementationIdentity, coverageDigest) {
-  const blockers = [];
-  if (!review || typeof review !== "object") {
-    blockers.push("review ファイルがJSONオブジェクトではない。");
-    return blockers;
-  }
-  if (review.version !== 2) blockers.push(`review.version が 2 ではない（現在: ${JSON.stringify(review.version)}）。`);
-  if (review.status !== "approved") blockers.push(`review.status が "approved" ではない（現在: ${JSON.stringify(review.status)}）。`);
-  if (review.reviewerRole !== "independent-reviewer") {
-    blockers.push(`review.reviewerRole が "independent-reviewer" ではない（現在: ${JSON.stringify(review.reviewerRole)}）。`);
-  }
-  for (const field of ["reviewerActor", "reviewerContextId", "reviewedAt"]) {
-    if (typeof review[field] !== "string" || review[field].trim() === "") {
-      blockers.push(`review.${field} が空、または文字列ではない。`);
-    }
-  }
-  // digest を宣言している承認は digest で判定する。分類を変えていない編集
-  // （注記の修正、coverageExpansion の宣言追加、キー順の変更）では失効しない。
-  // digest 未宣言の承認は旧来どおりバイト一致で判定する（移行互換）。
-  if (typeof review.pageCoverageDigest === "string" && review.pageCoverageDigest.trim() !== "") {
-    if (review.pageCoverageDigest !== coverageDigest) {
-      blockers.push(
-        "review.pageCoverageDigest が現在の page coverage の分類内容と一致しない。" +
-          `\n      承認済み digest: ${review.pageCoverageDigest}` +
-          `\n      現在値   digest: ${coverageDigest}` +
-          "\n      → role・componentIds・figmaNodeIds・measurement・追跡先のいずれかが変わっている。" +
-          "\n        これは分類の変更であり、再承認が必要な正常な状態である。"
-      );
-    }
-  } else if (review.pageCoverageSha256 !== coverageSha256) {
-    blockers.push(
-      "review.pageCoverageSha256 が現在の page coverage と一致しない。" +
-        `\n      承認済み: ${review.pageCoverageSha256 ?? "(未宣言)"}` +
-        `\n      現在値  : ${coverageSha256}` +
-        "\n      → coverage を変更したため、前回の承認は失効している。これは実装役の落ち度ではなく、再承認が必要な正常な状態である。" +
-        "\n      → この承認は pageCoverageDigest を宣言していないためバイト一致で判定している。" +
-        "\n        次の承認から pageCoverageDigest を宣言すると、分類を変えない編集では失効しなくなる。"
-    );
-  }
-  if (
-    review.reviewerActor === implementationIdentity.actor
-    && review.reviewerContextId === implementationIdentity.contextId
-  ) {
-    blockers.push(
-      "review の reviewer が実装役と完全に同一（actor・contextId の両方が一致）。" +
-        "\n      → actor か contextId の少なくとも一方が実装役と異なる必要がある。"
-    );
-  }
-  return blockers;
-}
-
-// 失敗をそのまま「依頼書」にする。実装役は独立レビュー承認を自分では作れないため、
-// ここで止まると手詰まりに見える。誰に何を頼めば前へ進むのかを、出力の時点で確定させる。
-function reviewRequestMessage({ blockers, manifestId, coveragePath, coverageSha256, coverageDigest, reviewPath, review, implementationIdentity, repoRoot }) {
-  const rel = (absolutePath) => relative(repoRoot, absolutePath).replace(/\\/g, "/");
-  const previous = Array.isArray(review?.previousReviews) ? review.previousReviews : [];
-  const lines = [];
-  lines.push("page coverage の独立レビュー承認が、現在のcoverageに対して有効ではありません。");
-  lines.push("");
-  lines.push("【不足している条件】");
-  for (const blocker of blockers) lines.push(`  - ${blocker}`);
-  lines.push("");
-  lines.push("【実装役が次にやること】");
-  lines.push("  承認は実装役が自分で作れません（独立性の要件）。ここで待機に入らず、下の依頼書をそのまま");
-  lines.push("  レビュー役（既定は同一エージェントの別contextセッション）へ渡してください。渡すまでが実装役の工程です。");
-  lines.push("  レビュー役が承認を書いたら preflight を再実行すれば、そのまま編集へ進めます。");
-  lines.push("");
-  lines.push("--- ここから依頼書（そのままコピーして渡す） ---");
-  lines.push(`scopeId: ${manifestId}`);
-  lines.push(`page coverage: ${rel(coveragePath)}`);
-  lines.push(`page coverage SHA-256（参考。ファイル全体のバイト列）: ${coverageSha256}`);
-  lines.push(`page coverage digest（この値に対して承認する）: ${coverageDigest}`);
-  lines.push(`承認を書き込むファイル: ${rel(reviewPath)}`);
-  if (review?.pageCoverageSha256) lines.push(`直前に承認済みだったSHA-256: ${review.pageCoverageSha256}`);
-  if (previous.length > 0) {
-    lines.push(`過去のレビュー: ${previous.length + 1} 回目になる（前回まで: ${previous.map((entry) => `round ${entry.round}=${entry.status}`).join(" / ")}）`);
-  }
-  lines.push(`実装役の identity: actor=${implementationIdentity.actor} / contextId=${implementationIdentity.contextId}`);
-  lines.push("レビュー役の identity 制約: actor か contextId の少なくとも一方を上と変えること。");
-  lines.push("");
-  lines.push("承認ファイルの必須フィールド:");
-  lines.push('  version: 2 / status: "approved" / reviewerRole: "independent-reviewer"');
-  lines.push("  reviewerActor / reviewerContextId / reviewedAt（ISO8601）");
-  lines.push(`  pageCoverageSha256: ${coverageSha256}`);
-  lines.push(`  pageCoverageDigest: ${coverageDigest}`);
-  lines.push("    ↑ digest を宣言すると、分類を変えない編集（注記の修正・宣言の追加）では承認が失効しません。");
-  lines.push("  findings: []（不合格が残る場合は status を changes-requested にして findings を埋める）");
-  lines.push("");
-  lines.push("レビュー役は、実装役の申告値を採用せず、凍結metadataとファイル実体から再計算して照合すること。");
-  lines.push("--- ここまで依頼書 ---");
-  return lines.join("\n");
-}
-
-// scope の途中で coverage を小刻みに広げると、そのたびに独立レビュー承認が失効し、
-// 人間を経由した再承認が1往復ずつ増える。実測（2026-08-26）で1 scope に6往復発生し、
-// オーナーからは「コードの修正を行わない」という問題として観測された。
-// 規則（figma-spec-pipeline.md「coverage は scope 開始時に確定させる」）だけでは工程が守られないため、
-// 「承認済みcoverageを後から変えた」ことを機械的に可視化し、オーナー指示によるものだと宣言させる。
+// page coverage の独立レビューゲートは 2026-09-02 (714f23c) に廃止した。
+// 判断を要していた指摘はすべて凍結metadataの構文解析で機械判定できたため、
+// assertFrozenMetadataConsistency の5検査へ移した
+//（rules/figma-spec-pipeline.md「機械で判定できる検査は自動化する」）。
 //
-// 禁止ではなく宣言の強制である。オーナーが対象を追加するのは正当な運用であり、
-// 止めたいのは「実装しながら気づいた順に足していく」ほうだけである。
-function assertCoverageExpansionIsDeclared(coverage, review, coveragePath, repoRoot, coverageDigest) {
-  const previous = Array.isArray(review?.previousReviews) ? review.previousReviews : [];
-  // 数えるのは「分類を変えた失効」だけにする。バイト単位で数えると、注記の修正や
-  // coverageExpansion の宣言追加そのものが回数に入り、宣言した瞬間に条件が動いて
-  // 永久に満たせなくなる（2026-08-26 に実際に発生させた）。
-  // digest を持たない過去のroundは、分類が変わったかを判定できないため数えない。
-  // 版が違う digest は比較しない。算出対象を変えただけで「分類が変わった」と数えてしまう。
-  const versionPrefix = COVERAGE_DIGEST_VERSION + "-";
-  const supersededApprovals = previous.filter((entry) => entry
-    && entry.status === "approved"
-    && typeof entry.pageCoverageDigest === "string"
-    && entry.pageCoverageDigest.startsWith(versionPrefix)
-    && entry.pageCoverageDigest !== coverageDigest);
-  if (supersededApprovals.length === 0) return;
-
-  const latest = supersededApprovals[supersededApprovals.length - 1];
-  const latestSha256 = typeof latest.pageCoverageDigest === "string" ? latest.pageCoverageDigest : null;
-  const relativeCoveragePath = relative(repoRoot, coveragePath).replace(/\\/g, "/");
-  const declaration = coverage.coverageExpansion;
-
-  const explain = (reason) => fail(
-    "承認済みの page coverage を後から変更しています。" + reason + "\n" +
-    `  この coverage は既に ${supersededApprovals.length} 回、承認を得たあとで分類が変更されています。\n` +
-    (latestSha256 ? `  直近で失効した承認の digest: ${latestSha256}\n` : "") +
-    "\n" +
-    "  原則は、scope 開始時にページ全体の coverage を確定させ、承認は1回にすることです。\n" +
-    "  実装しながら対象を継ぎ足すと、そのたびに承認が失効し再承認の往復が発生します\n" +
-    "  （figma-to-code/rules/figma-spec-pipeline.md「coverage は scope 開始時に確定させる」）。\n" +
-    "\n" +
-    "  この追加がオーナーの明示指示によるものなら、続けて構いません。\n" +
-    `  その場合は ${relativeCoveragePath} に次を宣言してください。\n` +
-    "\n" +
-    '  "coverageExpansion": {\n' +
-    `    "supersededApprovalDigest": ${JSON.stringify(latestSha256 ?? "<直近で失効した承認のdigest>")},\n` +
-    '    "ownerInstruction": "<オーナーが対象追加を指示した内容。20文字以上>",\n' +
-    '    "addedSectionIds": ["<今回targetへ加えたsectionId>"]\n' +
-    "  }\n" +
-    "\n" +
-    "  オーナー指示によるものでないなら、この追加は別scopeとして起票してください。"
-  );
-
-  if (!declaration || typeof declaration !== "object" || Array.isArray(declaration)) {
-    explain(" coverageExpansion の宣言がありません。");
-  }
-  if (typeof declaration.ownerInstruction !== "string" || declaration.ownerInstruction.trim().length < 20) {
-    explain(" coverageExpansion.ownerInstruction が空、または20文字未満です。");
-  }
-  if (!Array.isArray(declaration.addedSectionIds)) {
-    explain(" coverageExpansion.addedSectionIds が配列ではありません（role変更のみなら空配列で構いません）。");
-  }
-  // 宣言が古いまま放置されると、2回目以降の拡張が素通りする。
-  // 直近で失効した承認を指していることを必須にして、拡張のたびに書き直させる。
-  if (latestSha256 && declaration.supersededApprovalDigest !== latestSha256) {
-    explain(
-      " coverageExpansion.supersededApprovalDigest が、直近で失効した承認を指していません" +
-      `（宣言: ${declaration.supersededApprovalDigest ?? "(未宣言)"}）。前回の拡張のまま更新されていません。`
-    );
-  }
-}
+// 廃止時に reviewApprovalBlockers / reviewRequestMessage /
+// assertCoverageExpansionIsDeclared の3関数が呼び出し0件のまま残り、
+// ファイルを読んだ人には独立レビュー検査がまだ効いているように見えていた。
+// **動いていない安全網が動いて見える**のは、判定を代理でしているのと同じ型の
+// 欠陥なので消した（2026-09-03）。復活させるならコードを戻すのではなく契約から作り直す。
 
 // 凍結metadataの raw は Figma MCP が返すXML風の木。タグ名にはハイフンを含むもの
 // （rounded-rectangle 等）があるため `[\w-]+` で拾う。`\w+` だと取りこぼす。
@@ -492,8 +340,9 @@ export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionB
     fail(
       "page coverage が凍結Figma metadataと整合しません。\n" +
       problems.join("\n") + "\n\n" +
-      "  これらは凍結metadataの構文解析で機械的に判定できる項目です。独立レビューを依頼する前に解消してください\n" +
-      "  （figma-to-code/rules/figma-spec-pipeline.md「機械で判定できる検査を、人手のレビューに残さない」）。"
+      "  これらは凍結metadataの構文解析で機械的に判定できる項目です。coverage を直してから preflight し直してください\n" +
+      "  （figma-to-code/rules/figma-spec-pipeline.md「機械で判定できる検査は自動化する」）。\n" +
+      "  page coverage の独立レビューは 2026-09-02 に廃止し、この5検査へ移しています。承認を依頼する相手はいません。"
     );
   }
 }
