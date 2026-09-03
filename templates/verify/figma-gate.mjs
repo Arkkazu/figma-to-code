@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { FIGMA_GATE_CONTRACT_VERSION, assertCheckpointIsCurrent, assertPageCoverageComplete, completeSection, initializePageCoverage, prepareSectionClose, sectionStart } from "./figma-page-coverage.mjs";
 import { validateCorrectionReceipt } from "./correction-receipt.mjs";
-import { assertResponsiveHtmlSingleDom } from "./responsive-html-guard.mjs";
+import { assertResponsiveHtmlSingleDom, corroborateExceptions } from "./responsive-html-guard.mjs";
 import { markCoordinationGateActive, markCoordinationGateClosed, withScopePreflightLock } from "./scope-coordination.mjs";
 import { collectScopeLockStateFindings } from "./scope-lock-state.mjs";
 import { createHash, randomUUID } from "node:crypto";
@@ -929,6 +929,27 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   });
 
   const deferredResponsiveHtmlSourcePaths = new Set(validatedDeferredResponsiveHtmlSources.map(({ relativePath }) => relativePath));
+
+  // 例外の裏取り。2026-09-03 まで exceptions は `reason` に非空文字列があるだけで
+  // その class の単一DOM検査を恒久的に外していた（reason はガード側で一度も読まれない）。
+  // 実データの例外はいずれも「既存の…であり今回の変更対象外」と主張しており、
+  // これは検査できる。**このscopeより前から在った重複か**を突き合わせる。
+  // 前から在れば持ち越しとして通し、このscopeで新しく作った重複なら通さない。
+  if (validatedResponsiveHtmlExceptions.length > 0) {
+    const { violations: exceptionViolations, notes: exceptionNotes } = corroborateExceptions(
+      validatedResponsiveHtmlExceptions,
+      readPriorSourceAtHead
+    );
+    // 例外は黙って効かせない。裏を取れた/取れなかったを必ず出す。
+    for (const note of exceptionNotes) console.log(`NOTE responsiveHtml例外: ${note}`);
+    for (const entry of validatedResponsiveHtmlExceptions) {
+      console.log(`NOTE responsiveHtml例外を適用: ${entry.sourceFile}::${entry.baseClass}`);
+    }
+    if (exceptionViolations.length > 0) {
+      fail(`SPEC FAIL: responsiveHtml exceptions are not corroborated.\n  - ${exceptionViolations.join("\n  - ")}`);
+    }
+  }
+
   try {
     assertResponsiveHtmlSingleDom(
       phase === "preflight"
@@ -2012,6 +2033,25 @@ function assertNodeMapCoverage(nodeMap, spec, components, nodeEvidence, nodeEvid
 }
 
 // 「編集前ゲート」の実効化。
+// 例外の裏取り用に「このscopeが触る前の中身」を取る。
+//
+// 基準は HEAD とする。scope-lock の baseline は hash しか持たないため中身を復元できない。
+// **限界**: このscopeが途中でcommitしていると HEAD は既にその変更を含み、
+// 「前から在った」と判定されうる。方向としては安全側（誤って止めない側）に外れるので、
+// 止めるための根拠としてのみ使い、通ったことを「重複が無い証明」とは呼ばない。
+// 履歴を読めない場合・新規ファイルの場合は null を返し、呼び出し側が
+// 「裏を取れていない例外」として明示する。
+function readPriorSourceAtHead(relativePath) {
+  const result = spawnSync("git", ["show", `HEAD:${relativePath}`], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    shell: false,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) return null;
+  return result.stdout;
+}
+
 // preflight が変更対象のソース状態を基準化しないと、先に編集してから preflight を実行しても全工程が通る。
 // gitの作業ツリー状態で「preflight時点で既に編集されていたか」を判定する。
 function runGitLines(gitArgs, label) {

@@ -343,6 +343,27 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 - カタログに明示された `safe-auto` は、既存要求を削らない案件ローカル制約だけを `MyBrain/verify/learning/active-controls.json` に追加する。次のpreflightはその制約と検証器能力の互換性を確認する。
 - 正本ルールや検証器の設計変更が必要な場合は、`pending-review` の提案を保存して止める。独立レビューとオーナー承認なしに `C:\AI\figma-to-code\rules\` を書き換えない。
 - 詳細な入力、出力、停止条件は `C:\AI\figma-to-code\rules\self-improvement.md` を正本とする。
+## responsiveHtml の例外は「既存の重複の持ち越し」だけ（2026-09-03 追加・新しいFAIL条件）
+
+`manifest.scope.responsiveHtml.exceptions` は、PC/SP二重DOMの検査をその class だけ外す。
+2026-09-03 まで `reason` はガード側で**一度も読まれず**、非空文字列が1つあれば恒久的に外れた。
+文字列があるかで判定し、実際の危険（その重複が本当に不可避か）を見ていなかった。
+
+例外は **`git show HEAD:<file>` と突き合わせる**。
+
+- そのscopeより**前から在った**重複 → 持ち越しとして通る
+- そのscopeで**新しく作った**重複 → FAIL。単一DOM＋メディアクエリへ直す
+- 変更前を取得できない（新規ファイル・履歴を読めない）→ 通すが「裏を取れていない例外」と出力する
+
+適用した例外は毎phase `NOTE responsiveHtml例外を適用:` として出力する。黙って効かせない。
+
+限界：そのscopeが途中でcommitしていると HEAD が既にその変更を含み、「前から在った」と
+判定されうる。安全側（誤って止めない側）に外れるので、止める根拠としてのみ使い、
+通ったことを「重複が無い証明」とは呼ばない。
+
+回帰試験は `templates/verify/responsive-html-guard.e2e.mjs`。
+2026-09-03 実測：案件の既存例外3件はいずれも「既存重複」としてPASSする。
+
 ## Web完了ゲートへの受領証連携
 
 Figma scopeで `coding:gate` を併用する場合、coding manifest の `scope.figmaGate.manifestPath` は同一scopeのFigma manifestを指し、両方の `changeTargets` は完全一致させる。`figma:gate close` 成功後にだけ `coding:gate close` を実行する。後者は `.figma-gate/active.json` のclose受領証（`phase: "closed"`）、manifest hash、対象ファイルhashを検査するため、証跡文字列や手作業の報告だけでFigma照合済みとは扱わない。
