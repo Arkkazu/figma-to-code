@@ -4,6 +4,10 @@
 // 既知の失敗（KNOWN_FAILING）は集合から外してある。緑と赤を混ぜると
 // 「いつも赤いので誰も見ない」状態になり、検査そのものが無効化されるため。
 // 外した理由は各エントリに書く。解消したらCHECKSへ移す。
+//
+// 各エントリは `since` を持つ。理由文字列だけだと、その除外が今も妥当かを
+// 誰も測れず、除外が恒久化する（理由が書いてある＝正当、という代理判定になる）。
+// 実行のたびに経過日数を出して、放置を可視化する。日数そのものでは落とさない。
 
 import { spawnSync } from "node:child_process";
 import process from "node:process";
@@ -36,16 +40,23 @@ export const CHECKS = Object.freeze([
 ]);
 
 export const KNOWN_FAILING = Object.freeze([
-  { path: "templates/verify/fidelity-benchmark.e2e.mjs", reason: "検証基準と同一の描画環境（フォント・ブラウザ版）を要する。2026-08-21時点で本変更以前から赤。" },
-  { path: "templates/verify/p3-role-packet.e2e.mjs", reason: "P-3 clean-room の未解決（cleanRoomAuthorization のハッシュ不一致）。本変更以前から赤。" },
-  { path: "templates/verify/p3-p11-app-server-spike.e2e.mjs", reason: "P-11 のプロセスツリー確認が現行環境で成立しない。本変更以前から赤。" },
-  { path: "templates/verify/accessibility-verify.e2e.mjs", reason: "実ブラウザを要する。" },
-  { path: "templates/verify/asset-verify.e2e.mjs", reason: "実ブラウザを要する。" },
-  { path: "templates/verify/motion-verify.e2e.mjs", reason: "実ブラウザを要する。" },
-  { path: "templates/verify/gate-browser-batch.e2e.mjs", reason: "実ブラウザを要する。" },
-  { path: "templates/verify/p3-page-provider.e2e.mjs", reason: "実ブラウザを要する。" },
-  { path: "templates/verify/checkpoint-diff.e2e.mjs", reason: "案件側の成果物を要する。" },
+  { since: "2026-08-22", path: "templates/verify/fidelity-benchmark.e2e.mjs", reason: "検証基準と同一の描画環境（フォント・ブラウザ版）を要する。2026-08-21時点で本変更以前から赤。" },
+  { since: "2026-08-22", path: "templates/verify/p3-role-packet.e2e.mjs", reason: "P-3 clean-room の未解決（cleanRoomAuthorization のハッシュ不一致）。本変更以前から赤。" },
+  { since: "2026-08-22", path: "templates/verify/p3-p11-app-server-spike.e2e.mjs", reason: "P-11 のプロセスツリー確認が現行環境で成立しない。本変更以前から赤。" },
+  { since: "2026-08-22", path: "templates/verify/accessibility-verify.e2e.mjs", reason: "実ブラウザを要する。" },
+  { since: "2026-08-22", path: "templates/verify/asset-verify.e2e.mjs", reason: "実ブラウザを要する。" },
+  { since: "2026-08-22", path: "templates/verify/motion-verify.e2e.mjs", reason: "実ブラウザを要する。" },
+  { since: "2026-08-22", path: "templates/verify/gate-browser-batch.e2e.mjs", reason: "実ブラウザを要する。" },
+  { since: "2026-08-22", path: "templates/verify/p3-page-provider.e2e.mjs", reason: "実ブラウザを要する。" },
+  { since: "2026-08-22", path: "templates/verify/checkpoint-diff.e2e.mjs", reason: "案件側の成果物を要する。" },
 ]);
+
+// 除外からの経過日数。落とすためではなく、放置を目に見えるようにするためだけに使う。
+export function excludedDays(since, now = new Date()) {
+  const started = Date.parse(`${since}T00:00:00Z`);
+  if (Number.isNaN(started)) return "?";
+  return Math.max(0, Math.floor((now.getTime() - started) / 86400000));
+}
 
 export function runCheck(target, deps = {}) {
   const { run = spawnSync, root = REPO_ROOT } = deps;
@@ -72,7 +83,9 @@ if (process.argv[1] && fileURLToPath(new URL(import.meta.url)) === process.argv[
   process.stdout.write(`\n${results.length - failed.length}/${results.length} passed\n`);
   if (KNOWN_FAILING.length > 0) {
     process.stdout.write(`skipped (known failing): ${KNOWN_FAILING.length}\n`);
-    for (const entry of KNOWN_FAILING) process.stdout.write(`  - ${entry.path}: ${entry.reason}\n`);
+    for (const entry of KNOWN_FAILING) {
+      process.stdout.write(`  - ${entry.path} [除外 ${excludedDays(entry.since)}日]: ${entry.reason}\n`);
+    }
   }
   process.exit(ok ? 0 : 1);
 }
