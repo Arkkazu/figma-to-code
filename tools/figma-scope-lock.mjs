@@ -538,7 +538,21 @@ function amend(stateInputPath, amendmentInputPath) {
     },
   });
   saveState(state);
-  console.log("PASS scope-lock amend: " + additions.length + " path(s) added after explicit owner approval.");
+  // オーナー指示と、そこから導いたパスを並べて出す。
+  //
+  // 2026-09-03 実測（案件 amendment 56件）: instruction はオーナー発言の逐語記録として
+  // 機能している（相異なる47種、approvedAt は全件あり）。承認が偽物ということはない。
+  // ただし **instruction が追加パスのファイル名に言及しているのは 56件中 7件** だけで、
+  // 残りは「作業を完了させろ」のように目的を承認したものである。パスはそこからの導出である。
+  //
+  // 旧出力は "N path(s) added after explicit owner approval." とだけ言い、
+  // 指示も導出結果も見せなかった。承認したのは目的、広げたのはパス、という差が消える。
+  // 検査を足すのではなく、判断材料をその場に出す。導出が指示より広ければここで気づける。
+  console.log("PASS scope-lock amend: " + additions.length + " path(s) added.");
+  console.log("  オーナー指示（逐語）: " + approval.instruction);
+  console.log("  この指示から導いたパス:");
+  for (const path of additions) console.log("    - " + path);
+  console.log("  承認されたのはscopeの目的であり、パスはその導出である。導出が指示より広ければ差し戻すこと。");
 }
 
 // blocked からの正規の復帰手順（2026-08-25 訂正の後半 / 2026-08-29 実装）。
