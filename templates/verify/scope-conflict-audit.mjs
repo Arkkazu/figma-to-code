@@ -139,8 +139,17 @@ function dirtyPaths(root) {
 function validateOwnershipRules(ownership, violations, actors) {
   if (ownership?.version !== 2) violations.push("共有所有者台帳の version は 2 である必要があります。");
   const rules = ownership?.exclusivePathOwnership;
-  if (!Array.isArray(rules) || rules.length === 0) {
-    violations.push("共有所有者台帳に exclusivePathOwnership がありません。");
+  // 空配列は「排他所有を1件も置かない」という正当な状態である。
+  //
+  // 2026-09-01 実測: ここが `rules.length === 0` を違反にしていたため、**この機構は
+  // オフにできなかった**。台帳は常に最低1行を持たねばならず、「未登録のパスを触れない」
+  // 旧契約と組み合わさって、ディレクトリ全体を1担当へ与えるglob（`assets/scss/*.scss`
+  // など9件）が足された。そのglobが次の停止の原因になっている。
+  //
+  // 並行scope同士の排他は、下の受領証claim交差判定（宣言パスの交差）が担う。
+  // 所有台帳はその上に重なる二枚目の関門にすぎず、空でも安全側に倒れない理由がない。
+  if (!Array.isArray(rules)) {
+    violations.push("共有所有者台帳の exclusivePathOwnership は配列である必要があります（排他所有を置かない場合は空配列）。");
     return [];
   }
   for (const [index, rule] of rules.entries()) {

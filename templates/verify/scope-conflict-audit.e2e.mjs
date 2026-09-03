@@ -147,7 +147,34 @@ try {
   check("交差する並行scopeは止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
   check("交差の説明", result.stderr.includes("codex-other"), `交差相手を示していない: ${result.stderr}`);
 
-  // (f) grantedForScope の型が不正な台帳は受け付けない。
+  // (f) 排他所有を1件も置かない台帳（空配列）を、正当な状態として受け付ける。
+  //     2026-09-01 まで `rules.length === 0` を違反にしていたため、**この機構は
+  //     オフにできなかった**。台帳が常に最低1行を要求し、それが
+  //     `assets/scss/*.scss` のようなディレクトリ丸ごとのglobを生み、
+  //     そのglobが次の停止の原因になっていた。
+  write("shared-component-ownership.json", { version: 2, exclusivePathOwnership: [] });
+  write("scope-coordination.json", coordination([ownScope]));
+  result = audit("coding-codex-target.json");
+  check("空の排他所有台帳を受け付ける", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
+  check("空台帳でも交差判定は残る", !result.stderr.includes("exclusivePathOwnership がありません"), `空を欠落として扱っている: ${result.stderr}`);
+
+  // (g) 空台帳にしても、交差する並行scopeは従来どおり止まる（最後の砦が効いている）。
+  write("coding-codex-other.json", manifestFor("codex-other", [target], { contextId: "ctx-codex-other" }));
+  write("scope-coordination.json", coordination([
+    ownScope,
+    entry("codex-other", { contextId: "ctx-codex-other", manifest: "coding-codex-other.json" }),
+  ]));
+  result = audit("coding-codex-target.json");
+  check("空台帳でも交差する並行scopeは止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
+
+  // (h) exclusivePathOwnership が配列でない台帳は従来どおり拒否する。
+  write("shared-component-ownership.json", { version: 2, exclusivePathOwnership: "none" });
+  write("scope-coordination.json", coordination([ownScope]));
+  result = audit("coding-codex-target.json");
+  check("配列でない台帳は拒否", result.status === 1, `FAILするはずが exit ${result.status}`);
+  check("配列でない理由", result.stderr.includes("配列である必要があります"), `理由を示していない: ${result.stderr}`);
+
+  // (i) grantedForScope の型が不正な台帳は受け付けない。
   write("shared-component-ownership.json", {
     version: 2,
     exclusivePathOwnership: [
@@ -166,4 +193,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`FAIL: ${failure}`);
   process.exit(1);
 }
-console.log(`PASS: scope conflict audit e2e (6 case(s))`);
+console.log(`PASS: scope conflict audit e2e (9 case(s))`);

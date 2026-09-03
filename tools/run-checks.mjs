@@ -25,6 +25,8 @@ export const CHECKS = Object.freeze([
   "tools/public-memory-scan.e2e.mjs",
   "tools/figma-log-promote.e2e.mjs",
   "tools/figma-scope-lock.e2e.mjs",
+  // 排他所有の失効・空台帳・未登録・交差判定。通るのに集合へ入っていなかった。
+  "templates/verify/scope-conflict-audit.e2e.mjs",
   "templates/verify/figma-gate.e2e.mjs",
   "templates/verify/gate-contract-audit.e2e.mjs",
   "templates/verify/figma-feature-coverage.e2e.mjs",
