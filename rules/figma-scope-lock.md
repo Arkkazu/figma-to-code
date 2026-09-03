@@ -167,7 +167,23 @@ pre-commit が commit を拒否した。**6日前に close した scope 由来�
 - そのまま貼れる台帳差分（`pattern` / `owner` / `grantedForScope`）。解決は先頭一致なので、
   挿入位置が既存globより前であることも書く
 
-契約の回帰試験は `templates/verify/scope-conflict-audit.e2e.mjs`（6件）。失効の読み飛ばし、
+**既定は「排他所有を1件も置かない」である（2026-09-03）。**`exclusivePathOwnership` の
+空配列は正当な状態として受け付ける。2026-09-03 まで `rules.length === 0` を違反にしていたため
+**この機構はオフにできなかった**。台帳が常に最低1行を要求し、それがディレクトリ丸ごとのglobを
+生み、そのglobが次の停止の原因になっていた。
+
+行を足すのは、同じ共有ファイルを複数の担当が同時期に触ることが実際に分かっているときだけとし、
+必ず `grantedForScope` を付けて scope の終了で失効させる。並行編集の排他は受領証claimの
+交差判定（宣言パスの交差でのみ止める）が担っており、所有台帳が防げてこの判定が防げない事故は
+無い。編集にはそのパスを宣言した active scope が要るためである。
+
+2026-09-03 実測：案件の45行はすべて `grantedForScope` を持たない恒久所有で、
+`claude` は稼働scope 0件のまま3パスを保持していた。全45行を
+`shared-component-ownership.retired-20260903.json` へ退避し、台帳を空にした。
+退避後も交差判定は実在の競合scopeを名指しで止めている。
+
+契約の回帰試験は `templates/verify/scope-conflict-audit.e2e.mjs`（9件）。空台帳の受理、
+空台帳でも交差する並行scopeが止まること、配列でない台帳の拒否を追加した。失効の読み飛ばし、
 稼働中の所有による停止、休眠所有の明示と解除差分、未登録を止めないこと、交差する並行scopeが
 止まること、不正な `grantedForScope` の拒否を固定する。
 
