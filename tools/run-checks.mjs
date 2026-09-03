@@ -29,6 +29,8 @@ export const CHECKS = Object.freeze([
   "tools/public-memory-scan.e2e.mjs",
   "tools/figma-log-promote.e2e.mjs",
   "tools/figma-scope-lock.e2e.mjs",
+  // 配布記録。--allow-dirty で迂回した事実と理由が後から数えられることを固定する。
+  "tools/verifier-distribution-log.e2e.mjs",
   // 排他所有の失効・空台帳・未登録・交差判定。通るのに集合へ入っていなかった。
   "templates/verify/scope-conflict-audit.e2e.mjs",
   "templates/verify/figma-gate.e2e.mjs",

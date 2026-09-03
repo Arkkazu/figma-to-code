@@ -21,6 +21,12 @@ import { spawnSync } from "node:child_process";
 import { dirname, join, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
+import {
+  DISTRIBUTION_LOG_NAME,
+  appendDistributionLog,
+  buildDistributionEntry,
+  fileSha256,
+} from "./verifier-distribution-log.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const upstreamRoot = resolve(here, "..");
@@ -37,6 +43,12 @@ function git(args) {
   const result = spawnSync("git", args, { cwd: upstreamRoot, encoding: "utf8", shell: false });
   if (result.error) fail(`git を実行できません: ${result.error.message}`);
   return result;
+}
+
+// 配布記録へ「どの版から配ったか」を残すため。取れなければ null（配布は止めない）。
+function upstreamHead() {
+  const result = spawnSync("git", ["-C", upstreamRoot, "rev-parse", "HEAD"], { encoding: "utf8", shell: false });
+  return result.status === 0 ? result.stdout.trim() : null;
 }
 
 // 作業ツリーの状態。空文字なら HEAD と一致している。
@@ -74,6 +86,12 @@ if (!existsSync(destination) || !statSync(destination).isDirectory()) {
 if (allowDirty && (!reason || reason.trim().length < 20)) {
   fail("--allow-dirty には --reason で20文字以上の理由が必要です。未コミットの正本を配る判断は記録を残してください。");
 }
+// 2026-09-03 まで、この reason は上の長さ検査に使われたあと**一度も参照されず捨てられていた**。
+// 「記録を残してください」と言いながら何も記録していなかったので、
+// 「未コミットの検証器がいつ・なぜ案件へ配られたか」を後から数えられなかった。
+// 2026-08-26 に案件のゲートを2回全面停止させた事故はこの型で、
+// その再発防止に作った仕組みが、迂回された証跡を持っていなかった。
+// 退避先も tmpdir なので配布そのものの記録も残らない。配布先へ追記型で残す。
 
 // 配布対象。指定が無ければ、配布先に既に存在する .mjs / .json を対象にする
 // （案件へ配られていないものを勝手に増やさない）。
@@ -188,5 +206,28 @@ if (failures.length > 0) {
   }
   process.exit(1);
 }
+
+// 配布記録。e2e が通ってから追記する（巻き戻した配布を「配った」と記録しない）。
+// 置き場所は配布先そのもの。案件の MyBrain/ は git 管理外だが、tmpdir と違って消えない。
+const logPath = join(destination, DISTRIBUTION_LOG_NAME);
+const entry = buildDistributionEntry({
+  at: new Date().toISOString(),
+  upstreamHead: upstreamHead(),
+  files: ready.map((name) => ({
+    name,
+    sourceSha256: fileSha256(join(upstreamVerify, name)),
+    destinationSha256: fileSha256(join(destination, name)),
+  })),
+  allowDirty,
+  reason,
+  dirtyFiles: allowDirty
+    ? ready
+        .map((name) => ({ name, status: worktreeStatus(`templates/verify/${name}`).split("\n")[0] }))
+        .filter((item) => item.status !== "")
+    : [],
+  suites: [...suitesForDistributedFiles].filter((suite) => existsSync(join(destination, suite))),
+});
+appendDistributionLog(logPath, entry);
+console.log(`\n配布記録: ${join(basename(destination), DISTRIBUTION_LOG_NAME)}（${entry.allowDirty ? "未コミット配布あり" : "全て HEAD と一致"}）`);
 
 console.log("\nVERIFIER DISTRIBUTE: 配布と検証が完了しました。");
