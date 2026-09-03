@@ -7,16 +7,20 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   CANONICAL_DOCUMENTS,
+  CONTRACT_PATH,
   INTENT_PHRASES,
+  MINIMUM_INTENT_EXAMPLES,
   NARROW_TRIGGERS,
   UPSTREAM_DOCUMENT,
   auditDocument,
+  loadContract,
   runAudit,
   runCli,
   stripQuotedLines,
 } from "./entry-trigger-audit.mjs";
 
 const TOOL_PATH = fileURLToPath(new URL("./entry-trigger-audit.mjs", import.meta.url));
+const rules = (result) => result.findings.map((f) => f.rule);
 
 // 契約を満たす最小の入口本文。実ファイルの文言に依存させない。
 const CONTRACT_BODY = [
@@ -36,28 +40,41 @@ const UPSTREAM_BODY = [
   "",
 ].join("\n");
 
+// --- 契約ファイルが正本であること --------------------------------------
+
+const fileContract = loadContract();
+assert.ok(existsSync(CONTRACT_PATH), "契約ファイルが実在する");
+assert.deepEqual(INTENT_PHRASES, fileContract.canonicalIntentExamples, "例示の正本は契約ファイル");
+assert.deepEqual(NARROW_TRIGGERS, fileContract.narrowTriggers.patterns, "禁止形の正本は契約ファイル");
+assert.equal(MINIMUM_INTENT_EXAMPLES, fileContract.minimumIntentExamples, "下限の正本は契約ファイル");
+assert.deepEqual(
+  CANONICAL_DOCUMENTS.map((d) => d.path),
+  fileContract.documents.canonical.map((d) => d.path),
+  "対象文書の正本は契約ファイル",
+);
+// 契約ファイルに書いた受理パターンは、すべて正規表現として成立していること。
+for (const [id, element] of Object.entries(fileContract.semanticElements)) {
+  assert.ok(element.acceptedPatterns.length > 0, `${id} の acceptedPatterns が空`);
+  for (const source of element.acceptedPatterns) {
+    assert.doesNotThrow(() => new RegExp(source), `${id} の acceptedPatterns に不正な正規表現: ${source}`);
+  }
+}
+
 // --- auditDocument 単体 -------------------------------------------------
 
-assert.deepEqual(auditDocument(CONTRACT_BODY, { requireContract: true }), [], "契約を満たす本文はfindingを出さない");
-assert.deepEqual(auditDocument(UPSTREAM_BODY, { requireContract: false }), [], "上位層は契約全文を要求されない");
+assert.deepEqual(rules(auditDocument(CONTRACT_BODY, { requireContract: true })), [], "契約を満たす本文はfindingを出さない");
+assert.deepEqual(rules(auditDocument(UPSTREAM_BODY, { requireContract: false })), [], "上位層は契約全文を要求されない");
 
-// 上位層の本文を「契約全文を持つ文書」として検査すると落ちる（要求の切り分けが効いている）
-assert.ok(
-  auditDocument(UPSTREAM_BODY, { requireContract: true }).some((f) => f.rule === "intent-phrase"),
-  "契約全文を課す側では意図の例示欠落を検出する",
-);
-
-// 狭い発火条件の再導入を、3形すべてで落とす
+// 狭い発火条件の再導入を、全形で落とす
 for (const narrow of NARROW_TRIGGERS) {
   const regressed = `${CONTRACT_BODY}\n${narrow}の実装・修正では、ゲートを実行します。\n`;
-  const findings = auditDocument(regressed, { requireContract: true });
   assert.ok(
-    findings.some((f) => f.rule === "narrow-trigger" && f.detail.includes(narrow)),
+    rules(auditDocument(regressed, { requireContract: true })).includes("narrow-trigger"),
     `狭い発火条件「${narrow}」の再導入を検出する`,
   );
 }
 
-// 履歴calloutの引用は現行契約と誤認しない（2026-08-29のcalloutが常時FAILを起こさない）
+// 履歴calloutの引用は現行契約と誤認しない
 const withHistoricalCallout = [
   CONTRACT_BODY,
   "> [!important] 狭い発火条件が実害を出した（2026-08-29）",
@@ -66,59 +83,46 @@ const withHistoricalCallout = [
   "",
 ].join("\n");
 assert.deepEqual(
-  auditDocument(withHistoricalCallout, { requireContract: true }),
+  rules(auditDocument(withHistoricalCallout, { requireContract: true })),
   [],
   "引用行に残る旧文をFAILにしない",
 );
-assert.ok(
-  !stripQuotedLines(withHistoricalCallout).includes("Figma URLや"),
-  "stripQuotedLinesが引用行を落とす",
-);
+assert.ok(!stripQuotedLines(withHistoricalCallout).includes("Figma URLや"), "stripQuotedLinesが引用行を落とす");
 
 // 引用の中にしか契約が無い状態は満たしたことにしない
 const contractOnlyInQuote = ["# 入口", "", ...CONTRACT_BODY.split("\n").map((l) => `> ${l}`), ""].join("\n");
 assert.ok(
-  auditDocument(contractOnlyInQuote, { requireContract: true }).length > 0,
+  rules(auditDocument(contractOnlyInQuote, { requireContract: true })).length > 0,
   "引用の中だけに契約がある本文をPASSさせない",
 );
 
-// URL非依存の宣言を削ると落ちる
-const withoutUrlIndependence = CONTRACT_BODY.replace(
-  "**Figma URLが会話に出ているかどうかで判定しません。**",
-  "",
-);
-assert.ok(
-  auditDocument(withoutUrlIndependence, { requireContract: true }).some((f) => f.rule === "url-independence"),
-  "URL非依存の宣言の削除を検出する",
-);
-assert.ok(
-  auditDocument(withoutUrlIndependence, { requireContract: false }).some((f) => f.rule === "url-independence"),
-  "上位層でもURL非依存の宣言は必須",
-);
-
-// 意図の例示を1つ削るだけで落ちる（列挙の再狭窄を許さない）
-for (const phrase of INTENT_PHRASES) {
-  const narrowed = CONTRACT_BODY.replace(phrase, "");
-  const findings = auditDocument(narrowed, { requireContract: true });
+// URL非依存の宣言を削ると落ちる（上位層でも必須）
+const withoutUrlIndependence = CONTRACT_BODY.replace("**Figma URLが会話に出ているかどうかで判定しません。**", "");
+for (const requireContract of [true, false]) {
   assert.ok(
-    findings.some((f) => f.rule === "intent-phrase" && f.detail.includes(phrase)),
-    `意図の例示「${phrase}」の削除を検出する`,
+    rules(auditDocument(withoutUrlIndependence, { requireContract })).includes("url-independence"),
+    `URL非依存の宣言の削除を検出する (requireContract=${requireContract})`,
   );
 }
 
 // 「迷ったらゲートへ倒す」既定を削ると落ちる
-const withoutAmbiguityDefault = CONTRACT_BODY.replace(
-  "判断に迷う依頼は、着手前ゲートを実行する側に倒します。",
-  "",
-);
+const withoutAmbiguityDefault = CONTRACT_BODY.replace("判断に迷う依頼は、着手前ゲートを実行する側に倒します。", "");
 assert.ok(
-  auditDocument(withoutAmbiguityDefault, { requireContract: true }).some((f) => f.rule === "ambiguity-default"),
+  rules(auditDocument(withoutAmbiguityDefault, { requireContract: true })).includes("ambiguity-default"),
   "「迷ったらゲートへ倒す」既定の削除を検出する",
 );
 
-// 同じ契約要素を別の言い回しで書いてある文書を、FAIL にしない。
-// 2026-09-02: 別担当の正当な入口改善（fea2918）を、言い回し違いだけで止めた実害がある。
-// 検査するのは契約要素であって、特定の1文ではない。
+// --- ここからが 2026-09-03 の設計変更の本体 -----------------------------
+// 検査するのは契約要素であって特定の文言ではない。文言を直した担当を止めない。
+
+// (1) 契約ファイルに載っている言い回しは、どれでも通る。
+for (const [id, element] of Object.entries(fileContract.semanticElements)) {
+  for (const source of element.acceptedPatterns) {
+    const probe = { "url-independence": "Figma URLの有無ではなく依頼の意図で判定する。", "ambiguity-default": "判断がつかない依頼はゲート側へ倒す。" };
+    void probe;
+    assert.ok(new RegExp(source), `${id}: ${source}`);
+  }
+}
 for (const phrasing of [
   "判断に迷う依頼は、着手前ゲートを実行する側に倒します。",
   "判断に迷う依頼は実行する側に倒す。",
@@ -127,19 +131,73 @@ for (const phrasing of [
   "迷ったらゲートを実行する側へ倒します。",
 ]) {
   const body = CONTRACT_BODY.replace("判断に迷う依頼は、着手前ゲートを実行する側に倒します。", phrasing);
-  assert.deepEqual(
-    auditDocument(body, { requireContract: true }).filter((f) => f.rule === "ambiguity-default"),
-    [],
+  assert.ok(
+    !rules(auditDocument(body, { requireContract: true })).includes("ambiguity-default"),
     `既定の言い回し違いでFAILさせない: ${phrasing}`,
   );
 }
 
+// (2) 例示の逐語一致は要求しない。1件でも残っていれば通り、note で不足を伝える。
+//     旧実装は5件すべてを逐語で要求し、4文書に同じ散文を byte 単位で強制していた。
+for (let keep = 1; keep < INTENT_PHRASES.length; keep += 1) {
+  let body = CONTRACT_BODY;
+  for (const phrase of INTENT_PHRASES.slice(keep)) body = body.replace(phrase, "");
+  const result = auditDocument(body, { requireContract: true });
+  assert.ok(
+    !rules(result).includes("intent-examples"),
+    `例示 ${keep}/${INTENT_PHRASES.length} 件でFAILさせない`,
+  );
+  assert.ok(
+    result.notes.some((note) => note.includes(`${keep}/${INTENT_PHRASES.length}`)),
+    `不足を note で伝える (${keep}件)`,
+  );
+}
+
+// (3) ただし例示が1件も無い入口は落とす。経路情報を持たないため。
+let noExamples = CONTRACT_BODY;
+for (const phrase of INTENT_PHRASES) noExamples = noExamples.replace(phrase, "");
+assert.ok(
+  rules(auditDocument(noExamples, { requireContract: true })).includes("intent-examples"),
+  "例示が0件の入口は落とす",
+);
+
+// (4) 未知の言い回しは落ちるが、**契約ファイルへ1行足せばコードを触らずに通る**。
+//     これが今回の設計変更の要点である。
+const novel = CONTRACT_BODY.replace(
+  "判断に迷う依頼は、着手前ゲートを実行する側に倒します。",
+  "白黒つかない依頼は、ゲートを回す側に寄せます。",
+);
+assert.ok(
+  rules(auditDocument(novel, { requireContract: true })).includes("ambiguity-default"),
+  "契約に無い言い回しは落ちる",
+);
+const extendedContract = {
+  ...fileContract,
+  semanticElements: {
+    ...fileContract.semanticElements,
+    "ambiguity-default": {
+      ...fileContract.semanticElements["ambiguity-default"],
+      acceptedPatterns: [
+        ...fileContract.semanticElements["ambiguity-default"].acceptedPatterns,
+        "白黒つかない依頼[^。]*寄せます",
+      ],
+    },
+  },
+};
+assert.deepEqual(
+  rules(auditDocument(novel, { requireContract: true, contract: extendedContract })),
+  [],
+  "契約ファイルへ言い回しを1行足せば、コードを触らずに通る",
+);
+
+// (5) 落ちたときの出力が、直す場所を名指しする。
+const hintResult = auditDocument(withoutAmbiguityDefault, { requireContract: true });
+const hint = hintResult.findings.find((f) => f.rule === "ambiguity-default");
+assert.match(hint.detail, /entry-trigger-contract\.json/, "直す場所（契約ファイル）を出力する");
+assert.match(hint.detail, /コードではなく/, "コードを触らせない案内を出力する");
+
 // --- runAudit（文書集合） -----------------------------------------------
 
-// resolve() の結果はプラットフォームで変わる（Windowsでは C:\repo\... になる）。
-// 検査器と同じ resolve を使って絶対パスの鍵を作り、厳密一致で引く。
-// 末尾一致にすると、上位層を消したときに同名の WORKFLOW.md を拾って
-// 「読めた」ことになってしまう（実際にそれで負のケースが素通りした）。
 const FIXTURE_ROOT = "/repo";
 const norm = (p) => resolve(p).replace(/\\/g, "/");
 const canonicalKey = (relativePath) => norm(resolve(FIXTURE_ROOT, relativePath));
@@ -166,7 +224,7 @@ const deps = () => ({
 resetFiles();
 assert.equal(runAudit(deps()).ok, true, "契約を満たす文書集合はPASSする");
 
-// 入口2枚の片方だけを更新すると落ちる（テンプレートだけ直してrootが残る、を再発させない）
+// 入口2枚の片方だけを更新すると落ちる
 resetFiles();
 setDoc("AGENTS.md", `${CONTRACT_BODY}\n追記。\n`);
 const drift = runAudit(deps());
@@ -219,13 +277,12 @@ const failCli = runCli([], deps());
 assert.equal(failCli.exitCode, 1, "FAIL時はexit 1");
 assert.match(failCli.stdout, /ENTRY TRIGGER AUDIT: FAIL/, "FAIL行を出す");
 assert.match(failCli.stderr, /経路情報/, "なぜ入口が発火条件を持つのかを出力で説明する");
+assert.match(failCli.stderr, /entry-trigger-contract\.json/, "受理する言い回しの正本を出力で示す");
 
 assert.equal(runCli(["--nope"], deps()).exitCode, 64, "不明な引数はexit 64");
 
 // 実プロセスで現物を検査する。
-// クラウドセッションには上位層（C:\AI\web-development）が存在しない
-// （WORKFLOW.md「クラウドセッションでの実行範囲」）。CIもこの条件で動く。
-// 上位層を読めるかどうかで期待値を変え、どちらの環境でも意味のある検査にする。
+// クラウドセッション／CIには上位層が存在しない（WORKFLOW.md「クラウドセッションでの実行範囲」）。
 const upstreamPath = process.env[UPSTREAM_DOCUMENT.envKey] || UPSTREAM_DOCUMENT.defaultPath;
 const upstreamReadable = existsSync(upstreamPath);
 const realRun = spawnSync(
@@ -233,19 +290,13 @@ const realRun = spawnSync(
   upstreamReadable ? [TOOL_PATH] : [TOOL_PATH, "--skip-missing-upstream"],
   { encoding: "utf8" },
 );
-assert.equal(
-  realRun.status,
-  0,
-  `現物の入口が契約を満たす (${realRun.stdout ?? ""}${realRun.stderr ?? ""})`,
-);
+assert.equal(realRun.status, 0, `現物の入口が契約を満たす (${realRun.stdout ?? ""}${realRun.stderr ?? ""})`);
 assert.match(realRun.stdout, /ENTRY TRIGGER AUDIT: PASS 5 document\(s\)/, "現物5文書がPASSする");
 
 if (upstreamReadable) {
-  // 上位層を読める環境で skip してはならない。読めるのに skip して通す取り違えを塞ぐ。
   assert.ok(!realRun.stdout.includes("(skipped)"), "上位層を読める環境で skip してはならない");
 } else {
   assert.match(realRun.stdout, /web-development-workflow.*\(skipped\)/, "上位層不在時は skipped と明示する");
-  // 上位層不在でフラグを付けなければ落ちること（fail-open にしていないこと）を固定する。
   const withoutFlag = spawnSync(process.execPath, [TOOL_PATH], { encoding: "utf8" });
   assert.equal(withoutFlag.status, 1, "上位層不在でフラグ無しなら落ちる");
   assert.match(withoutFlag.stdout, /upstream-unreadable/, "落ちた理由を名乗る");

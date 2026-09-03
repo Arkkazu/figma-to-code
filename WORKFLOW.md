@@ -41,6 +41,8 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 node C:/AI/figma-to-code/tools/entry-trigger-audit.mjs
 ```
 
+検査するのは**契約要素**であって特定の文言ではない。落とすのは「狭窄（URLがあるときだけ、という書き方）」「URL非依存の宣言が無い」「迷ったらゲートへ倒す既定が無い」「例示が0件」の4つだけで、**例示の逐語一致は要求しない**（既定があるので列挙は網羅でなくてよい）。受理する言い回しの正本は `verify-config/entry-trigger-contract.json` にある。**文言を書き直して落ちたら、コードではなくこのファイルへ言い回しを1行足す。**要素そのものを消したときだけ書き戻す。
+
 工程と停止条件は暗記で再生しない。着手時に出力させる。
 
 ```bash
