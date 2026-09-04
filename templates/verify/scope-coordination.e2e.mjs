@@ -120,6 +120,20 @@ try {
   check("list に受領証の状態", result.stdout.includes("figma:preflight"), `受領証の状態が無い: ${result.stdout}`);
   check("list に解放手順", result.stdout.includes("release <scopeId> --by"), `解放手順を出していない: ${result.stdout}`);
 
+  // (f-2) 台帳が実在しないmanifestを指している行を「不明」に丸めない。
+  //       実測（2026-09-05）: service-detail-fixed-cta-20260826 の gateManifestPaths.coding が
+  //       実在せず、放置9.4日の scope が一覧で「manifest不明」になっていた。
+  //       宣言が実在しない scope は preflight もできないため、そのまま名指しする。
+  const ledger = readLedger();
+  ledger.scopes[0].gateManifestPaths = {
+    figma: "MyBrain/verify/coding-codex-stale.json",
+    coding: "MyBrain/verify/coding-codex-missing.json",
+  };
+  writeJson(join(verifyDirectory, "scope-coordination.json"), ledger);
+  result = cli("list");
+  check("実在しない宣言を名指しする", result.stdout.includes("coding-codex-missing.json"), `欠落を出していない: ${result.stdout}`);
+  check("欠落があっても日数は出す", /manifest最終更新 \d+\.\d日/.test(result.stdout), `実在する方の日数を出していない: ${result.stdout}`);
+
   // (g) 既に閉じた scope は解放対象にしない。二重解放で記録を汚さない。
   cli("release", "codex-stale", "--by", "claude", "--reason", "片付け");
   result = cli("release", "codex-stale", "--by", "claude", "--reason", "もう一度");
@@ -133,4 +147,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`FAIL: ${failure}`);
   process.exit(1);
 }
-console.log("PASS: scope coordination release e2e (7 case(s))");
+console.log("PASS: scope coordination release e2e (8 case(s))");

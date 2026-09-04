@@ -254,14 +254,36 @@ export function liveReceiptsOf(root, scopeId) {
   return found;
 }
 
-function manifestAgeDays(root, entry) {
-  const relativePath = entryManifestPath(entry, "coding") ?? entry?.manifestPath;
-  if (typeof relativePath !== "string") return null;
-  try {
-    return (Date.now() - statSync(resolve(root, relativePath)).mtimeMs) / 86400000;
-  } catch {
-    return null;
+// 宣言されている manifest を全部見て、いちばん新しいものを活動の目安にする。
+//
+// gate種別ごとに manifest が分かれる scope があるため、1本だけ見ると
+// 「片方が存在しない」を「活動が不明」に丸めてしまう。実測（2026-09-05）:
+// `service-detail-fixed-cta-20260826` の `gateManifestPaths.coding` は実在しないファイルを
+// 指しており、放置9.4日の scope が一覧で「manifest不明」になっていた。存在しない宣言は
+// 隠さず missing として返す。scope-conflict-audit も同じ宣言を読むため、これは
+// その scope が preflight できない状態でもある。
+function manifestActivity(root, entry) {
+  const candidates = new Set();
+  for (const gateKind of ["figma", "coding"]) {
+    const declared = entryManifestPath(entry, gateKind);
+    if (typeof declared === "string" && declared.trim() !== "") candidates.add(declared);
   }
+  if (typeof entry?.manifestPath === "string" && entry.manifestPath.trim() !== "") candidates.add(entry.manifestPath);
+
+  let newest = null;
+  const missing = [];
+  for (const relativePath of candidates) {
+    try {
+      const mtime = statSync(resolve(root, relativePath)).mtimeMs;
+      if (newest === null || mtime > newest) newest = mtime;
+    } catch {
+      missing.push(relativePath);
+    }
+  }
+  return {
+    ageDays: newest === null ? null : (Date.now() - newest) / 86400000,
+    missingManifests: missing,
+  };
 }
 
 /**
@@ -277,7 +299,7 @@ export function listReservations({ root = process.cwd() } = {}) {
       actor: entry.actor,
       status: entry.status,
       gates: entry.gates ?? {},
-      ageDays: manifestAgeDays(root, entry),
+      ...manifestActivity(root, entry),
       receipts: liveReceiptsOf(root, entry.id),
     }))
     .sort((left, right) => (right.ageDays ?? -1) - (left.ageDays ?? -1));
@@ -355,11 +377,14 @@ function runCli(argv) {
     const rows = listReservations({ root });
     console.log(`予約中の scope ${rows.length} 件（放置日数の長い順）`);
     for (const row of rows) {
-      const age = row.ageDays === null ? "manifest不明" : `${row.ageDays.toFixed(1)}日`;
+      const age = row.ageDays === null ? "実在するmanifestなし" : `${row.ageDays.toFixed(1)}日`;
       const receipts = row.receipts.length
         ? row.receipts.map((receipt) => `${receipt.gateKind}:${receipt.phase}(実行済み ${receipt.executed})`).join(", ")
         : "受領証なし";
       console.log(`  ${row.id} / ${row.actor} / ${row.status} / manifest最終更新 ${age} / ${receipts}`);
+      if (row.missingManifests.length > 0) {
+        console.log(`      台帳が実在しないmanifestを指しています: ${row.missingManifests.join("、")}（この scope は preflight できません）`);
+      }
     }
     console.log('解放: node MyBrain/verify/scope-coordination.mjs release <scopeId> --by <actor> --reason "..."');
     return 0;
