@@ -156,6 +156,15 @@ try {
   assert(silent.status !== 0, "apply accepted a removal that the negative E2E cannot see");
   assert(read("rules/figma-spec-pipeline.md") === baseline, "refused apply still touched the rule");
 
+  // 負のE2E自体を差分の対象にできない。追加だけで安全網を無効化する patch は
+  // 消失が1件も無いため弱体化検出を素通りする（実測済み）（2026-09-04 追加）。
+  const e2eBaseline = read("templates/verify/figma-gate.e2e.mjs");
+  const importLine = 'import { readFileSync } from "node:fs";';
+  write("plans/bypass.json", json({ ...planBase, id: "bypass", patches: [{ path: "templates/verify/figma-gate.e2e.mjs", expectedSha256: hash(e2eBaseline), find: importLine, replace: "process.exit(0);" + "\n" + importLine }] }));
+  const bypass = run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/bypass.json", "learning/log-promotions");
+  assert(bypass.status !== 0, "apply accepted a plan that disables its own negative E2E");
+  assert(read("templates/verify/figma-gate.e2e.mjs") === e2eBaseline, "refused apply still touched the negative E2E");
+
   // 申告が実測と食い違う場合も落ちる（起きない消失を書いて通せない）。
   write("plans/overdeclared.json", json({ ...planBase, id: "overdeclared", patches: [weakeningPatch], removedGuards: [{ target: "rules/figma-spec-pipeline.md", guard: "evidence-required", reason: removalReason }, { target: "rules/figma-spec-pipeline.md", guard: "# rule", reason: removalReason }] }));
   assert(run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/overdeclared.json", "learning/log-promotions").status !== 0, "apply accepted a removal declaration that does not match the patches");

@@ -984,6 +984,15 @@ function applyPromotion(policyPathArg, proposalPathArg, receiptPathArg, planPath
     if (matchCount !== 1) fail(`Promotion plan find text must occur exactly once in ${patch.path}; found ${matchCount}.`);
     return { ...patch, absolutePath, before, after: before.replace(patch.find, patch.replace) };
   });
+  // 安全網そのものを差分で書き換えさせない（2026-09-04 追加）。
+  // 受領書は「レビュー後に負のE2Eが変わっていないこと」を適用**前**に照合するだけで、
+  // 実際に走るのは適用**後**のファイルだった。実測：負のE2Eの先頭へ process.exit(0) を
+  // 足すだけの patch は、消失が1件も無いため弱体化検出も素通りし、apply は PASS した。
+  // 負のE2Eはレビュー時点で確定している前提なので、差分の対象にはできない。
+  const patchedNegativeE2E = updates.find((update) => update.path === receiptNegativePath);
+  if (patchedNegativeE2E) {
+    fail(`Promotion plan patches its own negative E2E: ${receiptNegativePath}. The negative E2E must be final before review.`);
+  }
   // 書き込む前に測る。ここで落ちれば対象は1バイトも変わらない。
   assertGuardRemovalsAreDeclared(
     updates.flatMap((update) => measureGuardRemovals(update.path, update.before, update.after)),
