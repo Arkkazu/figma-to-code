@@ -300,6 +300,12 @@
 
 <!-- ここから下に追記していく。最新を上に。 -->
 
+## 2026-09-05: 放置scopeの解放を、他エージェントへ差し戻さない
+<!-- loop-log: {"id":"correction-release-authority-bound-to-actor-20260905","kind":"correction","failureClass":"release-requires-original-actor","recurrenceKey":"stale-path-ownership-blocks-other-actor","action":"add","promotability":"promotable","ruleTargets":["rules/figma-scope-lock.md"],"verifierTargets":["templates/verify/scope-coordination.mjs","templates/verify/scope-coordination.e2e.mjs"]} -->
+- 指摘：「close / abort は担当の codex 側で実行してください、これ自体が別のAIで対応できないという問題だ」。放置予約に当たったとき「担当者に頼め」と差し戻し、オーナーを担当者間の配車係にしていた。調べると、予約を解放する手段は**どのエージェントにも無かった**。`markCoordinationGateAborted` は呼び出し元が1件も無い死んだ関数、gate に abort コマンドは無く、実際の解放は台帳を手で書き換えて受領証を `aborted-scopes/` へ手で移す未記録の操作だった（案件の同ディレクトリに16ファイル）。渡した先にも同じ機構しか無いのだから、「担当だから解放できる」という前提が最初から成り立っていない。
+- 今後：**解放は権限ではなく記録の問題として扱い、どのactorでも実行する。**`scope-coordination.mjs` に `list` と `release <scopeId> --by <actor> --reason "..."` を実装した。台帳の gate を aborted にすると同時に live な受領証を退避し（片方だけでは claim が残る）、誰がどのactorの予約をなぜ解放したかを `releases` へ追記する。守るのは担当者の縄張りではなく検証済みの結果なので、実行済みcheckpointを持つ受領証を捨てるときだけ、破棄内容を全部出したうえで `--force` を要求する。**他エージェントへの差し戻しを、自分が実行できない理由にしない。**手順が無いなら手順を作る。
+- 併せて：報告で「◯◯側で実行してください」と書く前に、**渡す先にその手段が実在するかを確認する。**確認せずに差し戻すと、往復だけが増えて状態は変わらない。
+
 ## 2026-09-04: 予約は編集ではない。受領証を持たない台帳行で他担当を止めない
 <!-- loop-log: {"id":"correction-stale-reservation-blocks-commit-20260904","kind":"correction","failureClass":"stale-path-ownership-blocks-other-actor","recurrenceKey":"stale-path-ownership-blocks-other-actor","action":"weaken","promotability":"promotable","ruleTargets":["rules/figma-scope-lock.md"],"verifierTargets":["templates/verify/scope-conflict-audit.mjs","templates/verify/scope-conflict-audit.e2e.mjs"]} -->
 - 指摘：「別の進行中scopeと競合しているためコミット・再デプロイできない。これが起こるのは問題だろ」。2026-09-01 に所有台帳へ入れた失効の仕組みが、同じ「解放されない保持」を scope coordination 台帳の active/waiting 行へ移しただけで終わっていた。実測（rpa-technologies-theme）で live scope 10件が42パスを保持し、うち5件は gate受領証を1件も持たず、5件は7日以上更新が無く、受領証を持たない1件が別担当の実装7ファイルを pre-commit まで止めていた。止める側の出力は「competes」の一行だけで、担当者も受領証の状態も放置日数も無かった。

@@ -222,6 +222,40 @@ NOTE で報告し、宣言は止めない。並行編集の排他は受領証cla
 予約は止めず放置日数付きで報告すること、(k) 同じ台帳のまま受領証を1件置けば従来どおり
 止まること、を追加した。(k) が無いと (j) は「交差判定ごと無効化した」と区別できない。
 
+## scope の解放は権限ではなく記録である（2026-09-05 追加）
+
+**放置された予約は、どのactorでも解放できる。**「担当の◯◯側で close / abort してください」と
+他エージェントへ差し戻さない。差し戻しはオーナーを担当者間の配車係にするだけで、
+渡された側にも同じ機構しか無いため、解放されない予約はそのまま残る。
+
+~~~powershell
+node MyBrain/verify/scope-coordination.mjs list
+node MyBrain/verify/scope-coordination.mjs release <scopeId> --by <actor> --reason "..." [--force]
+~~~
+
+`list` は予約中のscopeを、live な gate受領証の有無と manifest の放置日数つきで、
+放置の長い順に出す。**「誰に頼めばよいか」ではなく「どれが実際に動いていないか」**を出す。
+
+`release` は台帳の gate を `aborted` にし、**同時に live な受領証を
+`MyBrain/verify/aborted-scopes/` へ退避する**。片方だけでは claim が解放されない。
+`--by` と `--reason` は必須で、`releases` へ「誰が・どのactorの予約を・なぜ」を追記で残す。
+これが無いと「勝手に消された」と「放置を片付けた」を後から区別できない。
+
+守るのは担当者の縄張りではなく**検証済みの結果**である。実行済みcheckpointを持つ受領証が
+ある場合は、破棄する中身を全部出したうえで `--force` を要求する。close で再実行できるなら、
+解放ではなく close を選ぶ。
+
+根拠は実測（2026-09-05）。それまで予約を解放する手段は**どのエージェントにも無かった**。
+`markCoordinationGateAborted` は export されているだけで**呼び出し元が1件も無い死んだ関数**、
+figma-gate に abort コマンドは無く、実際の解放は台帳を手で書き換えて受領証を
+`aborted-scopes/` へ手で移す未記録の操作だった（案件の `aborted-scopes/` には
+16ファイルが手作業で積まれている）。「担当だから解放できる」という前提が
+最初から成り立っていなかった。
+
+回帰試験は `templates/verify/scope-coordination.e2e.mjs`（7件）。別actorによる解放、
+台帳と受領証の同時解放、`by`/`from`/`reason` の記録、実行済み受領証の `--force` 保護と
+破棄内容の提示、`by`/`reason` 欠落の拒否、`list` の出力項目、二重解放の拒否を固定する。
+
 ## 作業単位の分離
 
 「カードの余白を直す」「特定セクションをFigmaに合わせる」などの実装scopeでは、共通ルール、LOOP仕様、Figma検証ツール、ログ昇格機構の変更は対象外である。ownerがその改善を明示して別scopeを許可した場合だけ、別のscope manifestで扱う。

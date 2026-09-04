@@ -33,6 +33,7 @@ export const CHECKS = Object.freeze([
   "tools/verifier-distribution-log.e2e.mjs",
   // 排他所有の失効・空台帳・未登録・交差判定。通るのに集合へ入っていなかった。
   "templates/verify/scope-conflict-audit.e2e.mjs",
+  "templates/verify/scope-coordination.e2e.mjs",
   // responsiveHtml の例外が「既存の重複の持ち越しか」を裏取りされることを固定する。
   "templates/verify/responsive-html-guard.e2e.mjs",
   "templates/verify/figma-gate.e2e.mjs",
