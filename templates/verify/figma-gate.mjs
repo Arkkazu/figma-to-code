@@ -1278,6 +1278,83 @@ function validateComponentManifest(document) {
   return components;
 }
 
+// 同一actorのレビューを、素通りする真偽値から「後から壊れる受領証」へ変える。
+//
+// 2026-08-25 実測（`rules/corrections.md` independent-review-bypassable）：独立性の判定は
+// reviewerActor と reviewerContextId の**両方一致**でしか落ちないため、実装役が別の
+// contextId を名乗って自分の決定を approved にすると素通りした。オーナーが検証役を
+// 指定していたのに、実装役が自分で承認記録を作っていた。
+//
+// 共通Vault `rules/corrections.md` 2026-08-26 は「既定のレビュー役は同一エージェントの
+// 別contextセッション」と定めている。したがって **actorの相違を必須にはできない**
+// （必須にすると、この既定と正面から衝突し、常に他エージェント待ちになる）。
+//
+// 代わりに、同一actorのときだけ受領証をこの決定へ束ねる。要求するのは3つ。
+//   1. 同一セッションが実装にも関与した事実の開示（20文字以上）
+//   2. レビュー時点で読んだ検索証跡の SHA-256。**検証器が実体から計算し直す**
+//   3. レビュー時点で読んだ rationale と searchQueries の逐語（同上、決定本文と突き合わせる）
+//
+// これは独立性の証明ではない。証明はできない。できるのは、(a) 承認を黙って書けなくすること、
+// (b) 承認後に決定や証跡を書き換えたら approved が失効すること、(c) 同一actorレビューが
+// 受領証に残って後から数えられること、の3点である。
+function assertSameActorReviewReceipt(entry, elementId, reviewEvidencePath, searchEvidencePath) {
+  const label = `same-actor review receipt (${elementId})`;
+  const hint =
+    "実装役と同じactorがレビューする場合は、reviewEvidencePath に " +
+    '{"version":1,"reviews":[{"elementId","sameActorDisclosure","searchEvidenceSha256",' +
+    '"reviewedRationale","reviewedSearchQueries"}]} を置く。';
+  let document;
+  try {
+    document = JSON.parse(readFileSync(reviewEvidencePath.absolutePath, "utf8"));
+  } catch (error) {
+    fail(`${label} must be JSON: ${reviewEvidencePath.relativePath} (${error.message}). ${hint}`);
+  }
+  requireObject(document, label);
+  if (document.version !== 1) fail(`${label}.version must be 1. ${hint}`);
+  const reviews = requireArray(document.reviews, `${label}.reviews`);
+  const matched = reviews.filter((review) => review && typeof review === "object" && review.elementId === elementId);
+  if (matched.length === 0) {
+    fail(`${label} does not cover this component: ${elementId}. ${hint}`);
+  }
+  if (matched.length > 1) {
+    fail(`${label} covers this component more than once: ${elementId}.`);
+  }
+  const review = matched[0];
+  const disclosure = requireString(review.sameActorDisclosure, `${label}.sameActorDisclosure`);
+  if (disclosure.trim().length < 20) {
+    fail(
+      `${label}.sameActorDisclosure must state, in 20 characters or more, that the same actor implemented and reviewed: ${elementId}. ` +
+        "「同一セッションが実装にも関与した」事実を開示する。"
+    );
+  }
+  const declaredSha256 = requireString(review.searchEvidenceSha256, `${label}.searchEvidenceSha256`);
+  const actualSha256 = hashBuffer(readFileSync(searchEvidencePath.absolutePath));
+  if (declaredSha256 !== actualSha256) {
+    fail(
+      `${label}.searchEvidenceSha256 does not match ${searchEvidencePath.relativePath}: ${elementId}. ` +
+        `declared=${declaredSha256} actual=${actualSha256}. 承認後に証跡が変わったなら、レビューをやり直す。`
+    );
+  }
+  if (requireString(review.reviewedRationale, `${label}.reviewedRationale`) !== entry.rationale) {
+    fail(
+      `${label}.reviewedRationale does not match the reviewed decision: ${elementId}. ` +
+        "承認後に rationale を書き換えたなら、レビューをやり直す。"
+    );
+  }
+  const reviewedQueries = requireArray(review.reviewedSearchQueries, `${label}.reviewedSearchQueries`);
+  const declaredQueries = entry.searchQueries;
+  const sameQueries =
+    Array.isArray(declaredQueries) &&
+    reviewedQueries.length === declaredQueries.length &&
+    reviewedQueries.every((value, index) => value === declaredQueries[index]);
+  if (!sameQueries) {
+    fail(
+      `${label}.reviewedSearchQueries does not match the reviewed decision: ${elementId}. ` +
+        "承認後に searchQueries を書き換えたなら、レビューをやり直す。"
+    );
+  }
+}
+
 function validateComponentDecisionManifest(decisionPath, components, changeTargets, implementationIdentity) {
   const document = readExecutionJson(decisionPath, "Component decision manifest");
   requireObject(document, "component decision manifest");
@@ -1383,12 +1460,15 @@ function validateComponentDecisionManifest(decisionPath, components, changeTarge
         fail(
 `new decision review must be performed by a different actor or a different context: ${elementId}`);
       }
-      requireString(entry.reviewedAt, 
+      requireString(entry.reviewedAt,
 `new decision reviewedAt (${elementId})`);
-      const reviewEvidencePath = toRepoPath(entry.reviewEvidencePath, 
+      const reviewEvidencePath = toRepoPath(entry.reviewEvidencePath,
 `new decision reviewEvidencePath (${elementId})`);
-      toEvidencePath(reviewEvidencePath.absolutePath, 
+      toEvidencePath(reviewEvidencePath.absolutePath,
 `new decision reviewEvidencePath (${elementId})`);
+      if (reviewerActor === implementationIdentity.actor) {
+        assertSameActorReviewReceipt(entry, elementId, reviewEvidencePath, searchEvidencePath);
+      }
     }
   }
 

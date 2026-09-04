@@ -24,6 +24,17 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [199] 2026-09-04 / Claude（同一actorの独立レビューを、素通りする真偽値から失効する受領証へ変える）
+
+- owner指示: 「先に潰しておくべき地雷を対応しろ」。点検（`MyBrain/reports/independent-review-blockers-20260904.md`）で挙げた、`independent-review-bypassable` の再発防止案と共通Vaultの既定が衝突する件。
+- 事実（実測）: `rules/corrections.md` 2026-08-25 の再発防止案は「実装役と異なるactorを必須にし、contextIdの相違だけで独立性を認めない」だった。これは共通Vault `rules/corrections.md` 2026-08-26（既定のレビュー役は同一エージェントの別contextセッション。「実装役だから書けない」を停止理由にしない）と正面から衝突する。当該recurrenceKeyは現在**1件**で閾値2の手前にあり、もう1件記録されると `scan` が提案を生成し、昇格すれば全レビューが他エージェント待ちになる。優先順位は `rules/loop-execution.md`「優先順位」により上位層（共通Vault）が勝つため、**この案は採らない**と確定した。
+- 変更（`templates/verify/figma-gate.mjs`）: `new` 決定のレビューで `reviewerActor` が実装役と一致するとき（＝独立性の根拠が contextId の申告だけになるとき）、`reviewEvidencePath` に受領証を要求する `assertSameActorReviewReceipt` を追加した。要求は (1) `sameActorDisclosure` 20文字以上 (2) `searchEvidenceSha256` (3) `reviewedRationale` / `reviewedSearchQueries` の逐語で、**(2)(3) は検証器がファイル実体から計算し直して突き合わせる**。actorが異なるレビューは従来どおりで、受領証を要求しない。
+- 規則: `rules/loop-execution.md` に「独立レビューの成立条件」を追加（55行 → 必読合計 143,359 bytes / 上限 143,360 bytes、`rule-size-audit` PASS）。`rules/corrections.md` 2026-08-25 の項に、採らなかった案とその理由を **実装済み** 行として追記した。
+- 負のE2E: `figma-gate.e2e.mjs` に8件（受領証なし・対象外・開示不足・ハッシュ不一致・rationale書き換え・searchQueries書き換えの6件と、受領証が揃えば通る／actorが異なれば要求しないの対称2件）。**効くことを確認した**: 呼び出しを `if (false && …)` にすると1件目「同一actorのレビューに受領証が無い」で落ちた。復元後に再実行してPASS。
+- 検証: `figma-gate.e2e` PASS（626 assertions, 158s）。`run-checks` 15/15 PASS。`rule-size-audit` PASS。`entry-trigger-audit` 5文書 PASS。
+- 申告: これは独立性の証明ではない。同一actorレビューを禁止せず、黙って書けなくし、承認後の書き換えで失効させ、後から数えられるようにしただけである。規則本文にも明記した。
+- ⚠️ 未了: (1) 本変更の独立レビュー（別contextで書く。`rules/loop-execution.md` の新しい成立条件を、この変更自身に適用する）。(2) `figma-gate.mjs` の案件側配布。本リポジトリからは案件パスを持たないため未実施（[196] から継続）。(3) **必読合計が上限まで残り1 byte**。次に必読の手順書へ1行足す作業は、先に節の統合が要る。
+
 ## [198] 2026-09-01 / Claude（排他所有をscopeへ束ね、失効した所有が別担当を止めないようにする）
 
 - owner指示: 「機構を修正しろ」。所有権の問題でpushできない状態を、個別解除ではなく機構として直す。
