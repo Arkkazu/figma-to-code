@@ -81,6 +81,29 @@ try {
   const proposal = JSON.parse(proposalText);
   assert(proposal.review.promotionPlanRequired === true, "proposal does not require a plan");
 
+  // 提案の .md は人が読んで根拠へ辿るための面である。持っていない項目を刷って
+  // `undefined` を見せていた欠陥の再発を止める（2026-09-04）。
+  const proposalMd = read(proposalPath.replace(/\.json$/, ".md"));
+  assert(!proposalMd.includes("undefined"), "proposal markdown rendered an absent field");
+  for (const evidence of proposal.recurrence.evidence) {
+    assert(
+      proposalMd.includes(`${evidence.id}: ${evidence.source.path} / ${evidence.source.heading} (${evidence.source.sha256})`),
+      `proposal markdown does not identify evidence by heading and sha256: ${evidence.id}`,
+    );
+  }
+
+  // .md は .json から作り直せる面である。描画の欠陥を直したときに既存提案の .md が
+  // 「immutable and already differs」で scan を止めないことを確かめる（2026-09-04）。
+  const mdPath = proposalPath.replace(/\.json$/, ".md");
+  write(mdPath, "stale rendering");
+  pass(run("scan", "rules/log-promotion-policy.json", "learning/log-promotions"), "scan after a stale proposal rendering");
+  assert(read(mdPath) === proposalMd, "scan did not rebuild the proposal rendering from its json");
+
+  // 根拠そのものである .json の不変性は保つ。
+  write(proposalPath, json({ ...proposal, status: "tampered" }));
+  assert(run("scan", "rules/log-promotion-policy.json", "learning/log-promotions").status !== 0, "scan accepted a rewritten proposal json");
+  write(proposalPath, proposalText);
+
   const review = {
     version: 1,
     proposalId: proposal.id,

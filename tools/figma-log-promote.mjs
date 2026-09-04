@@ -92,12 +92,9 @@ function writeImmutableJson(filePath, value, label) {
   return true;
 }
 
-function writeImmutableText(filePath, text, label) {
-  if (existsSync(filePath)) {
-    const current = readText(filePath, label);
-    if (current !== text) fail(`${label} is immutable and already differs: ${filePath}`);
-    return false;
-  }
+function renderProposalMarkdown(filePath, proposal) {
+  const text = proposalMarkdown(proposal);
+  if (existsSync(filePath) && readText(filePath, `Log proposal ${proposal.id} markdown`) === text) return false;
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, text, "utf8");
   return true;
@@ -311,7 +308,11 @@ function proposalMarkdown(proposal) {
     `- failure class: ${proposal.recurrence.failureClass}`,
     `- recurrence key: ${proposal.recurrence.key}`,
     `- evidence count: ${proposal.recurrence.evidence.length} / threshold ${proposal.recurrence.threshold}`,
-    ...proposal.recurrence.evidence.map((evidence) => `- ${evidence.id}: ${evidence.source.path}:${evidence.source.line} (${evidence.source.sha256})`),
+    // 提案の evidence.source は path / heading / sha256 だけを持つ（buildProposal で line を落としている。
+    // 行番号は無関係な節が上に増えるたびに動き、同じ根拠のまま提案IDが変わってしまうため）。
+    // ここで line を出そうとして `:undefined` を刷っていた。review が突き合わせるのも heading と
+    // sha256 なので、読み手にも同じ同定手段を出す（2026-09-04）。
+    ...proposal.recurrence.evidence.map((evidence) => `- ${evidence.id}: ${evidence.source.path} / ${evidence.source.heading} (${evidence.source.sha256})`),
     "",
     "## Required change",
     "",
@@ -492,7 +493,11 @@ function scan(policyPathArg, outputPathArg) {
     const jsonPath = resolve(outputPath.absolutePath, "proposals", `${proposal.id}.json`);
     const markdownPath = resolve(outputPath.absolutePath, "proposals", `${proposal.id}.md`);
     writeImmutableJson(jsonPath, proposal, `Log proposal ${proposal.id}`);
-    writeImmutableText(markdownPath, proposalMarkdown(proposal), `Log proposal ${proposal.id} markdown`);
+    // .md は .json の描画であって根拠ではない（review が突き合わせるのは .json の SHA-256）。
+    // 以前は .md も不変扱いだったため、描画の欠陥を1つ直すと既存の提案すべてで scan が
+    // 「immutable and already differs」で落ちた。根拠の不変性は .json が担い、.md は
+    // .json から作り直せる面として扱う（2026-09-04）。
+    renderProposalMarkdown(markdownPath, proposal);
     proposalPaths.push(relative(repoRoot, jsonPath).replace(/\\/g, "/"));
   }
 

@@ -51,7 +51,7 @@ npm run figma:learn -- from-gate MyBrain/verify/gate-<target>.json .figma-gate/l
 node tools/figma-log-promote.mjs scan rules/log-promotion-policy.json learning/log-promotions
 ```
 
-同じ再発キーが閾値に達すると、Loop Engineering向けの `pending-review` 提案を生成する。提案は正本ルール・検証器を直接編集しない。負のE2E、独立レビュー、オーナー承認が揃うまで昇格しない。新しい横断ログが未分類なら `waiting-human` で停止する。
+同じ再発キーが閾値に達すると、Loop Engineering向けの `pending-review` 提案を生成する。提案は正本ルール・検証器を直接編集しない。負のE2E、独立レビュー、オーナー承認が揃うまで昇格しない。未分類の新しい横断ログは、無関係な再発キーの提案生成を止めない（2026-09-01 変更。以前は全面停止し、そのため機構は設置以来一度も提案を出していなかった）。閾値到達がなく未分類だけがあるときに `waiting-human`、両方あるときは `pending-review-with-unclassified` を返し、未分類の解消は提案の承認とは別の残務として残す。詳細は `rules/correction-log-promotion.md`。
 
 ## ログ昇格の実装ループ（D-011起草）
 
