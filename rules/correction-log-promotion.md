@@ -46,12 +46,14 @@ node tools/figma-log-promote.mjs scan rules/log-promotion-policy.json learning/l
 同一IDの内容が変わって再スキャンが落ちるためである。
 
 提案が出ても、従来どおり `applyAllowed: false` の `pending-review` 止まりである。
-独立レビュー・負のE2E・オーナー承認なしに正本は変わらない。未分類の解消は、
+負のE2E・弱体化の実測・オーナー承認なしに正本は変わらない。未分類の解消は、
 提案の承認とは別に必要な残務として `waiting-human` 相当の扱いを続ける。
 
-## 3. 独立レビューと承認
+## 3. 検証と承認
 
-`templates/figma-log-promotion-review.json` を作り、提案・入力ログSHA-256、実装役と異なるレビュー文脈、非緩和性、負のE2E、owner承認状態を記録する。
+**2026-09-04：レビュー役が実装役と別人格であることの要求を廃止した**（オーナー指示「独立レビューが仕様だと作業効率が悪すぎる」）。`review` を回すのに別セッション・別担当を用意しない。止めるのは下の機械検査とオーナー承認だけである。理由は `rules/loop-execution.md`「独立レビューを工程にしない」。
+
+`templates/figma-log-promotion-review.json` を作り、提案・入力ログSHA-256、この工程を回した identity、非緩和性、負のE2E、owner承認状態を記録する。
 
 ```powershell
 node tools/figma-log-promote.mjs review rules/log-promotion-policy.json <proposal.json> <review.json> learning/log-promotions
@@ -99,7 +101,7 @@ node tools/figma-log-promote.mjs apply rules/log-promotion-policy.json <proposal
 ## 5. 境界
 
 - `apply` は通常のFigma scope、`figma-gate close`、Git hook、commit、push、deployから自動起動しない。
-- 正本の昇格は独立レビュー、負のE2E、owner承認、STATE.md記録をすべて満たす別の仕様育成イテレーションだけで行う。
+- 正本の昇格は負のE2E、弱体化の実測、owner承認、STATE.md記録をすべて満たす別の仕様育成イテレーションだけで行う。
 - 案件固有の事実は案件側 `MyBrain/rules/corrections.md` に残す。
 
 ## 更新履歴

@@ -24,7 +24,19 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
-## [199] 2026-09-04 / Claude（同一actorの独立レビューを、素通りする真偽値から失効する受領証へ変える）
+## [200] 2026-09-04 / Claude（独立レビューを工程から外す）
+
+- owner指示: 「また本変更の独立レビューを求めている。そういうのがいらないんじゃないかといっている。独立レビューが仕様だと作業効率が悪すぎる。」
+- 判断: [199] で足した同一actor受領証は、**廃止される工程を守るための機構**だったので一緒に撤去した。前ターンの実装を1つ残らず取り消している。統治の仕組みが対象より大きくなっていた（共通Vault `rules/corrections.md` 2026-09-01）。
+- 変更（検証器）: `figma-gate.mjs` の `new` 決定から `independentApproved` / `reviewerActor` / `reviewerContextId` / `reviewedAt` / `reviewEvidencePath` と `assertSameActorReviewReceipt` を削除し、不要になった引数も落とした。`figma-log-promote.mjs` からレビュー役と実装役の相違要求、`policy.review.requiresIndependentReview`、提案への同フィールド出力を削除した（`rules/log-promotion-policy.json` も同期）。
+- 残した検査: 検索語が証跡に実在すること、`codePath` が `changeTargets` にあること、根拠ハッシュの再計算、負のE2Eの再実行、弱体化の実測（`removedGuards`）、オーナー承認。**撤廃したのは「別人格のレビュー役」だけで、オーナー承認は残している。**
+- 規則: `rules/loop-execution.md` を「独立レビューを工程にしない」へ差し替え。`WORKFLOW.md`、`LOOP.md`、`templates/LOOP.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`、`rules/figma-spec-pipeline.md`（5箇所）を同期した。`rules/corrections.md` 2026-08-25 の項は「解決」として結末を書き直した。共通Vault `rules/corrections.md` に 2026-09-04 の項を追加し、2026-08-26 の項を更新・縮約した（197行 / 上限200行）。
+- 弱体化の申告: **これは保護の弱体化である。**独立レビューという工程を1つ丸ごと外した。根拠は3つで、いずれも実測。(1) レビューで判断を要した項目はほぼ無く、構文解析で代替できた（page coverageでの実測、2026-08-26）。(2) 既定のレビュー役は同一エージェントの別contextであり、identityは実装役が自由に名乗れるため、偽装を止められていなかった（2026-08-25）。(3) 査読の往復が修正の代わりになっていた（共通Vault 2026-09-01、4往復で変更0行）。
+- 検証: `figma-gate.e2e` PASS（594 assertions, 104s）。`figma-log-promote.e2e` PASS。`run-checks` 15/15 PASS。`rule-size-audit` PASS（必読合計 143,343 / 上限 143,360 bytes）。`entry-trigger-audit` 5文書 PASS。共通Vault `verify-vault.sh` は corrections/mistakes とも上限内・機密混入なし。
+- 負のE2E: `figma-gate.e2e.mjs` の受領証8件を、新しい契約を固定する3件へ差し替えた（承認フィールドを1つも持たない `new` 決定が通る／検索語が証跡に無ければ落ちる／`codePath` 未宣言なら落ちる）。1件目が落ちるようになったら、廃止した承認要求がどこかで復活している。
+- ⚠️ 未了: (1) `figma-gate.mjs` の案件側配布（案件パスを本リポジトリから持たないため）。(2) 共通Vault `verify-vault.sh` が `scope-conflict-audit.mjs` の正本間drift（web-development 475行 / figma-to-code 560行）をNGとして報告している。[198] の変更が web-development 側へ同期されていない。本scope外のため未着手。
+
+## [199] 2026-09-04 / Claude（同一actorの独立レビューを、素通りする真偽値から失効する受領証へ変える。[200] で撤去）
 
 - owner指示: 「先に潰しておくべき地雷を対応しろ」。点検（`MyBrain/reports/independent-review-blockers-20260904.md`）で挙げた、`independent-review-bypassable` の再発防止案と共通Vaultの既定が衝突する件。
 - 事実（実測）: `rules/corrections.md` 2026-08-25 の再発防止案は「実装役と異なるactorを必須にし、contextIdの相違だけで独立性を認めない」だった。これは共通Vault `rules/corrections.md` 2026-08-26（既定のレビュー役は同一エージェントの別contextセッション。「実装役だから書けない」を停止理由にしない）と正面から衝突する。当該recurrenceKeyは現在**1件**で閾値2の手前にあり、もう1件記録されると `scan` が提案を生成し、昇格すれば全レビューが他エージェント待ちになる。優先順位は `rules/loop-execution.md`「優先順位」により上位層（共通Vault）が勝つため、**この案は採らない**と確定した。

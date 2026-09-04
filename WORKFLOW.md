@@ -128,7 +128,7 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local
 
 - このリポジトリ内で完結するテスト・E2E・lintの実行と、その失敗の修正
 - `spec/`・`rules/`・`tools/` の静的な整合確認と、機械的に検証できる修正
-- 独立レビュー（批評のみ。正本の変更を伴わないもの）
+- 静的な批評・調査（正本の変更を伴わないもの）
 
 次は実行してはならない。作業を止めてローカルセッションへ差し戻す。
 
@@ -176,7 +176,7 @@ Figma上で同じ表示名のノード、同種CTA、同じ文言のボタンが
 ```bash
 node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json
 ```
-- 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、独立レビュー、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
+- 案件横断のFigma失敗は手書き追記せず、`templates/figma-log-record.json` を埋めて `node tools/figma-log-promote.mjs record rules/log-promotion-policy.json <record.json> learning/log-promotions` を実行する。再発proposalは負のE2E、弱体化の実測、オーナー承認まで `pending-review` とする。承認済み差分だけは `rules/correction-log-promotion.md` の `review` / `apply` 契約で昇格し、通常scopeから正本を自動変更しない。
 
 ## 検査と反映
 
@@ -209,5 +209,5 @@ branch protection と required check は**まだ有効化していない**。有
 
 1. `LOOP.md` と `STATE.md` を読む。
 2. `spec/QUESTIONS.md` の未回答または差し戻し設問を1件だけ扱う。
-3. 仕様の起草・独立批評・STATE記録を分離する。
+3. 仕様の起草、負のE2Eによる検証、STATE記録を分離する。**独立レビューを工程にしない**（`rules/loop-execution.md`）。
 4. 案件固有の値・URL・認証情報をこのフォルダに書かない。

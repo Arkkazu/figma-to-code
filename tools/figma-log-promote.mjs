@@ -222,9 +222,12 @@ function validatePolicy(raw) {
   const allowedVerifierTargets = normalizeUniqueStringArray(raw.allowedVerifierTargets, "Log promotion policy.allowedVerifierTargets")
     .map((path, index) => normalizeRepoPath(path, `Log promotion policy.allowedVerifierTargets[${index}]`, { mustExist: true }));
 
+  // 2026-09-04：`requiresIndependentReview` を廃止した（オーナー指示）。
+  // 昇格を止めているのは、根拠ハッシュの再計算・負のE2Eの再実行・弱体化の実測・
+  // オーナー承認であり、レビュー役が実装役と別人格かどうかではない。
   const review = requireObject(raw.review, "Log promotion policy.review");
-  if (review.requiresIndependentReview !== true || review.requiresOwnerApproval !== true || review.requiresNegativeE2E !== true || review.requiresAtomicPromotionPlan !== true) {
-    fail("Log promotion policy.review must require independent review, owner approval, a negative E2E, and an atomic promotion plan.");
+  if (review.requiresOwnerApproval !== true || review.requiresNegativeE2E !== true || review.requiresAtomicPromotionPlan !== true) {
+    fail("Log promotion policy.review must require owner approval, a negative E2E, and an atomic promotion plan.");
   }
 
   return {
@@ -237,7 +240,6 @@ function validatePolicy(raw) {
     allowedVerifierTargets,
     review: {
       loopEngineeringSpec: requireString(review.loopEngineeringSpec, "Log promotion policy.review.loopEngineeringSpec"),
-      requiresIndependentReview: true,
       requiresOwnerApproval: true,
       requiresNegativeE2E: true,
       requiresAtomicPromotionPlan: true,
@@ -438,7 +440,6 @@ function buildProposal(group, policy) {
     },
     review: {
       loopEngineeringSpec: policy.review.loopEngineeringSpec,
-      requiresIndependentReview: true,
       requiresOwnerApproval: true,
       applyAllowed: false,
       promotionPlanRequired: true,
@@ -577,7 +578,7 @@ function scan(policyPathArg, outputPathArg) {
     unclassifiedCount: unclassified.length,
     proposalPaths,
     closedProposalIds,
-    promotionRule: "Canonical rules and verifier code remain unchanged until independent review, negative E2E, and owner approval are recorded.",
+    promotionRule: "Canonical rules and verifier code remain unchanged until the recorded evidence hashes, the negative E2E, and owner approval are verified.",
   };
   const reportPath = resolve(outputPath.absolutePath, "reports", `${intakeId}.json`);
   writeImmutableJson(reportPath, report, "Log promotion report");
@@ -864,9 +865,11 @@ function validateReview(raw, policy, proposalInfo) {
   if (requireIdentifier(raw.proposalId, "Promotion review.proposalId") !== proposalInfo.proposal.id) fail("Promotion review.proposalId does not match the proposal.");
   if (normalizeRepoPath(raw.proposalPath, "Promotion review.proposalPath", { mustExist: true }) !== proposalInfo.path.relativePath) fail("Promotion review.proposalPath does not match the proposal path.");
   if (requireSha256(raw.proposalSha256, "Promotion review.proposalSha256") !== proposalInfo.sha256) fail("Promotion review.proposalSha256 does not match the proposal.");
+  // 2026-09-04：レビュー役が実装役と別人格であることの要求を廃止した（オーナー指示）。
+  // identity は「誰がこの工程を回したか」の記録として残すが、相違は求めない。
+  // 昇格を止めるのは、下の根拠ハッシュ・負のE2E・オーナー承認である。
   const implementation = normalizeActor(raw.implementation, "Promotion review.implementation");
   const reviewer = normalizeActor(raw.reviewer, "Promotion review.reviewer");
-  if (implementation.actor === reviewer.actor && implementation.contextId === reviewer.contextId) fail("Promotion review must use an independent reviewer actor or context.");
   const checks = requireObject(raw.checks, "Promotion review.checks");
   for (const key of ["evidenceIntegrity", "recurrenceThreshold", "projectFactsExcluded", "strengthensOnly", "guardrailsUnchanged"]) {
     requirePass(checks[key], `Promotion review.checks.${key}`);

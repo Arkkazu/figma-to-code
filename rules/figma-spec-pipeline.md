@@ -44,7 +44,7 @@ verifyが対象外の変更を検知したらscopeは blocked となる。以降
 
 Figma実装案件では、案件側 `MyBrain/verify/figma-gate.mjs` を使い、実装の反復内で次を実行する。テンプレートの正本は `C:\AI\figma-to-code\templates\verify\` にある。
 
-- **編集前 `preflight`**：対象FigmaのPC/SP node、可視・非表示レイヤー、採用アセットのFigma export URL・形式・SHA-256、spec、DOM対応表、component manifest、component decision manifestをそろえる。decisionには既存コード検索証跡、reuse / extend / newの判定、コード側パス、根拠を記録し、newは独立承認・レビュー証跡を必須とする。manifest・spec・DOM対応表・component manifest・decision・Figma node/layer証跡・page coverageの入力ハッシュを固定する。変更前後の手入力矩形・スクリーンショットは合否に使わないため要求しない。
+- **編集前 `preflight`**：対象FigmaのPC/SP node、可視・非表示レイヤー、採用アセットのFigma export URL・形式・SHA-256、spec、DOM対応表、component manifest、component decision manifestをそろえる。decisionには既存コード検索証跡、reuse / extend / newの判定、コード側パス、根拠を記録し、newは検索語が証跡に実在することとコード側パスが `changeTargets` にあることを必須とする（2026-09-04 更新：独立承認・レビュー証跡の要求は廃止した）。manifest・spec・DOM対応表・component manifest・decision・Figma node/layer証跡・page coverageの入力ハッシュを固定する。変更前後の手入力矩形・スクリーンショットは合否に使わないため要求しない。
 - **編集中 `checkpoint <manifest> <elementId>`**：コンポーネントを実装・変更するごとに、対象specのCDP実測と、painted要素のブラウザ撮影・Figma参照画像との差分照合を実行する。PASSするまで次のコンポーネントへ進まない。
 - **編集後 `close`**：Sass build、単位lint、必要なPHP lint、PC/SPの全spec再実測を実行し、全componentを最終状態で再測定、painted要素はFigma参照画像との差分を再計算する。PASSしない限り「Figmaどおり」「作業完了」と報告しない。
 
@@ -146,7 +146,7 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 [ ] **1行も編集する前に** `figma:gate preflight` をPASSさせた（変更対象がgit上でcleanな状態で通した）
 [ ] specに `viewportPolicy.scrollbars` を宣言した（`hidden` または `visible`）
 [ ] カード・検索結果・表・リストなど反復要素は、PC/SPそれぞれの全可視itemをFigma順とDOM順で1対1に対応付け、title・label・`dt/dd`・補助文言・画像・リンク先を実DOMの出力値で照合した（先頭1件の抽出確認、親コンテナ寸法だけのPASS、ソース配列だけの確認は禁止）
-[ ] component decision manifestを作成した（全componentを1件ずつ、Figma COMPONENT / INSTANCEは既存コード検索証跡付きでreuse / extend / newを判定。newは独立承認・レビュー証跡必須）
+[ ] component decision manifestを作成した（全componentを1件ずつ、Figma COMPONENT / INSTANCEは既存コード検索証跡付きでreuse / extend / newを判定。newは検索語が証跡に実在すること）
 [ ] reuse / extendを選ぶ既存共通部品は、対象Figma nodeと現行部品の色・採用アセット（URL / SHA-256 / 形式）・通常/hover/open等の状態差分を個別に照合し、差分と採否をcomponent decision manifestへ記録した（未照合なら流用確定・実装開始を禁止）
 [ ] component manifestの全componentにspacingOwnershipを記録した（rootPaddingはnone/internalのみ。外側のセクション間余白はparent-layoutの責務で、component root paddingにしない）
 [ ] 実使用ページとコンポーネントページのDOM構造を照合した（見本DOMと実使用DOMのタグ・クラス構造を一致させる）
@@ -341,7 +341,7 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 - `figma-gate close` の成功後、案件側 `MyBrain/verify/loop-learn.mjs` が学習イベント、検知レポート、必要時の案件ローカル安全制御を生成する。これはコーディング反復の終了処理であり、Git hook、commit、push、deployでは実行しない。
 - 学習イベントは所要時間、componentごとのPC/SP実測回数、宣言外変更の観測可否、HTML/PHP変更時のW3C記録状態を事実として保存する。値が取れないものを推測で補完しない。
 - カタログに明示された `safe-auto` は、既存要求を削らない案件ローカル制約だけを `MyBrain/verify/learning/active-controls.json` に追加する。次のpreflightはその制約と検証器能力の互換性を確認する。
-- 正本ルールや検証器の設計変更が必要な場合は、`pending-review` の提案を保存して止める。独立レビューとオーナー承認なしに `C:\AI\figma-to-code\rules\` を書き換えない。
+- 正本ルールや検証器の設計変更が必要な場合は、`pending-review` の提案を保存して止める。負のE2Eとオーナー承認なしに `C:\AI\figma-to-code\rules\` を書き換えない。
 - 詳細な入力、出力、停止条件は `C:\AI\figma-to-code\rules\self-improvement.md` を正本とする。
 ## responsiveHtml の例外は「既存の重複の持ち越し」だけ（2026-09-03 追加・新しいFAIL条件）
 
@@ -435,7 +435,7 @@ page coverageは2層に分ける。単一セクションのscopeでも「ペー�
 
 **並び順もページ構造の一部として検査する（2026-08-03追加）。** `sections` は `inventory` と同じ並びであることを必須にする。`inventory` の並びは Figma ページ証跡（`pages.{pc,sp}.metadataPath`）のセクション順に揃える。順序が実際のページと違うと、レビュアーは「どこが抜けているか」を目視で追えず、証跡としての意味が落ちる。
 
-**coverage は自分がどのscopeのものかを宣言する（2026-08-03追加）。** `scopeId` を必須とし、gate manifest の `id` と一致しなければFAILする。先行scopeのcoverageを丸ごと複製すると、`deferred` の `reason` など**そのscope固有の記述が前のscopeのまま残る**。人が読めば分かるが、`reason` は非空文字列でありさえすれば通るため検証器は素通りする（実測：25件すべてが前scopeの記述のまま独立レビューに回り、レビュアーの指摘で発覚した）。`scopeId` の不一致で落とすことで、複製したまま提出することを不可能にする。
+**coverage は自分がどのscopeのものかを宣言する（2026-08-03追加）。** `scopeId` を必須とし、gate manifest の `id` と一致しなければFAILする。先行scopeのcoverageを丸ごと複製すると、`deferred` の `reason` など**そのscope固有の記述が前のscopeのまま残る**。人が読めば分かるが、`reason` は非空文字列でありさえすれば通るため検証器は素通りする（実測：25件すべてが前scopeの記述のまま提出された）。`scopeId` の不一致で落とすことで、複製したまま提出することを不可能にする。
 
 同一ページ・同一targetを扱う後続scopeが**変更せず**同じcoverageを使うのは正当な再利用なので、`sharedWithScopes` に共有先の `id` を列挙すれば通る。無宣言の共有は複製と区別がつかないため認めない。
 
@@ -443,15 +443,12 @@ page coverageは2層に分ける。単一セクションのscopeでも「ペー�
 
 検査は `templates/verify/figma-page-coverage.mjs` の `manifestContext`、回帰試験は `templates/verify/figma-gate.e2e.mjs` の負のE2E14件（deferredの必須項目4件＋正しい宣言のPASS、inventoryの分類漏れ・未登録・PC/SP対欠落・inventory自体の欠落、completedの必須項目・close-report不在・target未列挙・FAIL残存・component混入の5件＋正しい宣言のPASS）。
 
-この契約は独立レビュー（codex, 2026-08-02）の指摘から採用した。経緯は `rules/corrections.md` 2026-08-02。
 
 ### scopeの粒度（2026-08-04追加）
 
 **1スコープに複数の `target` セクションを入れられる。**`section-start` → `checkpoint` → `section-close` を宣言順に繰り返し、`close` が全targetの `verified` を要求する。検証器側の対応は不要（実測で3セクションの遷移が正常に回ることを確認済み）。
 
-粒度の選択はレビュー回数に直結する。`scopeId` が manifest `id` と一致必須なので、**scopeを1つ作るごとに page coverage の独立レビューが1往復必要**になる。1セクション1スコープにすると、23セクションのページではレビューが23往復になる。
-
-したがって粒度は「1セクション」ではなく、**独立レビューが一度に妥当性を判断できる範囲**で決める。目安はページの領域単位（上部・中部・料金・下部・関連など）で4〜6セクション。1スコープが大きすぎると、checkpointのFAILがどのセクション由来か切り分けにくくなり、レビュアーの負担も上がる。
+粒度は、**checkpointのFAILがどのセクション由来か切り分けられる範囲**で決める。目安はページの領域単位（上部・中部・料金・下部・関連など）で4〜6セクション。大きすぎると切り分けが難しくなり、小さすぎるとscopeの発行と凍結の手間だけが増える。
 
 > 実例：service詳細ページで1セクション1スコープを3回繰り返したところ、3件目には検証器の穴は出なくなり、見つかるのはページ側の実装差分だけになった。**検証手段として実スコープを回すのは、新しい穴が出なくなった時点で打ち切る。**そこから先は案件の実装作業であって、検証器の改善ではない。
 
@@ -466,24 +463,21 @@ page coverageは2層に分ける。単一セクションのscopeでも「ペー�
 - `role` は `target` / `context` / `deferred` / `completed`（上の分離節を正とする）。`target` は `next` / `current` / `verified` の状態を持つ。`context` は、当該scopeで共有部品本体・共有部品の選択条件・その条件が参照するルート/ページ種別判定を変更せず、対象URLの実DOMが同一であることを確認済みの共有ヘッダー・共有フッターだけに使う。いずれかを追加・変更するscopeでは、共有部品を `target` とし、PC/SPのルート要素・ブランド表示・操作要素をspecへ登録してcheckpoint対象にする。
 - ページトップの共有ヘッダー・フッターも、対象範囲なら `target` として登録する。
 - component manifestの各 `elementId` は1つのtargetセクションだけに属し、`component.sectionId` と一致させる。
-- L2開始前に、page coverage・対応表・Figma PC/SPメタデータ・セクション順序を機械検証し、`preflight` の入力として凍結する。独立レビュー承認は要求しない。
+- L2開始前に、page coverage・対応表・Figma PC/SPメタデータ・セクション順序を機械検証し、`preflight` の入力として凍結する。
 
 ### 機械で判定できる検査は自動化する（2026-09-02更新）
 
-- 指摘（オーナー、2026-08-26）：「毎回レビューさせないと先に進めない。作業効率が悪すぎる」。
-- 実測：独立レビューで実行していた検査のうち、**判断を要したのはごく一部**だった。
-  round 1〜3 で挙がった指摘 F-1（page root 直下の被覆漏れ）・F-2（PC/SP対の非等価）・
-  F-3（測定ノードの二重計上）は、**すべて凍結metadataを構文解析すれば機械的に判定できる**ものだった。
-  一方 `figma-page-coverage.mjs` は凍結metadataを**ハッシュ照合するだけで中身を一度も読んでいない**。
-  結果として、機械で出せる不合格を人手のレビュー往復で発見しており、往復回数がそのまま待ち時間になっていた。
-- 今後：page coverage の検査はすべて gate で実行する。レビューで同じ検査を2回以上手作業したら、それはゲートへ移す対象である。
-  1. coverage・nodemap が参照する Figma ノードが凍結metadataに実在すること
-  2. component / measurement ノードが所属 section ノードの子孫であること
-  3. 複数 section が同じ測定ノードを宣言していないこと（二重計上）
-  4. hidden 継承を受けたノードを測定対象にしていないこと
-  5. page root 直下の子が inventory で被覆されていること
-  これらはすべて凍結metadataの構文解析で判定でき、レビュー役の判断を要しない。
-- `deferred` の理由、target の選び方、`viewportPairingNote` は manifest とオーナー指示に基づき実装役が記録し、gate が必須項目と整合性を検査する。page coverage に独立レビュー工程は設けない。
+**page coverage に独立レビュー工程は設けない。**実測（2026-08-26）：レビューで挙がった指摘 F-1〜F-3 は全部、凍結metadataの構文解析で機械判定できるものだった。一方 `figma-page-coverage.mjs` は凍結metadataをハッシュ照合するだけで中身を読んでいなかった。機械で出せる不合格を人手の往復で見つけていた、というだけである。全体方針は `rules/loop-execution.md`「独立レビューを工程にしない」。
+
+gate が実行する検査（レビューで同じ検査を2回手作業したら、それはゲートへ移す対象）。
+
+1. coverage・nodemap が参照する Figma ノードが凍結metadataに実在すること
+2. component / measurement ノードが所属 section ノードの子孫であること
+3. 複数 section が同じ測定ノードを宣言していないこと（二重計上）
+4. hidden 継承を受けたノードを測定対象にしていないこと
+5. page root 直下の子が inventory で被覆されていること
+
+`deferred` の理由、target の選び方、`viewportPairingNote` は manifest とオーナー指示に基づき実装役が記録し、gate が必須項目と整合性を検査する。
 
 ### coverage は scope 開始時に確定させる（2026-08-26追加）
 
@@ -507,7 +501,7 @@ page coverageは2層に分ける。単一セクションのscopeでも「ペー�
 
 ### coverage を変更したときの再検証（2026-09-02更新）
 
-page coverage は `preflight` の入力ハッシュとして凍結する。coverage を更新した場合、実装役は更新後の coverage・対応表・Figma PC/SPメタデータ・セクション順序に対する機械検証を再実行してから `preflight` を実行する。独立レビュー記録および承認ハッシュは要求しない。
+page coverage は `preflight` の入力ハッシュとして凍結する。coverage を更新した場合、実装役は更新後の coverage・対応表・Figma PC/SPメタデータ・セクション順序に対する機械検証を再実行してから `preflight` を実行する。
 
 `loadRuntime` の凍結入力チェックも同様に、**どの入力が動いたか**（manifest / components / page coverage）を名指しで報告する。まとめて「変わった」とだけ言うと、実装役は毎回すべての入力を突き合わせ直すことになる。
 - L2は `section-start` → 対象componentの `checkpoint` → `section-close` の順で進める。checkpointがFAILならQ-10の診断→最小修正→同一componentの再実行をPASSまで行う。`section-close` は当該セクションの証跡整合性と完了だけを記録し、最終closeが全componentを最終状態で再照合する。

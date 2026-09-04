@@ -71,7 +71,7 @@ section-closeは一セクションの完了であり、ページ完了ではな�
 - モード: `safe-auto`。close後に `loop-learn.mjs` が学習イベントを1件保存する。
 - 保存先: `MyBrain/verify/learning/`。event / report / proposalは証跡であり、削除・上書きをしない。
 - 自動適用: 改善カタログで `effect: strengthen` かつ `scope: project-local` と宣言された安全制御だけをactive controlsへ追加する。次のpreflightは制御と検証器の互換性を確認する。
-- 正本昇格: `pending-review` 提案は独立レビューとkazuの承認が必要。Figma正本ルール、Git hook、commit、push、deployを学習器が変更することは禁止する。
+- 正本昇格: `pending-review` 提案は負のE2Eとkazuの承認が必要。Figma正本ルール、Git hook、commit、push、deployを学習器が変更することは禁止する。
 - 実行時点: Figma照合と同じコーディング反復のclose後だけ。Git hook、commit、push、deployでは実行しない。
 ## ゴール条件
 
@@ -93,9 +93,9 @@ section-closeは一セクションの完了であり、ページ完了ではな�
 ## 手順
 
 1. STATE.mdを読み、前回までの状況と未解決FAILを把握する
-2. L1でPC/SPページ全体のメタデータ、page coverage、component manifest、component decision manifest、DOM対応表、既存コード検索証跡、独立承認記録を作成する
+2. L1でPC/SPページ全体のメタデータ、page coverage、component manifest、component decision manifest、DOM対応表、既存コード検索証跡を作成する（2026-09-04 更新：独立承認記録は廃止した）
 3. 実装役は着手ゲートを宣言し、painted要素のFigma参照画像をSHA-256とともに登録する
-4. 独立レビュー承認後、component rootの外側section間padding禁止を含むcomponent manifestを固定し、npm run figma:gate -- preflight {gate-manifest} --implementation-actor {actor} --implementation-context-id {context} を**一度だけ**実行する。成功時にL2を開始する
+4. component rootの外側section間padding禁止を含むcomponent manifestを固定し、npm run figma:gate -- preflight {gate-manifest} --implementation-actor {actor} --implementation-context-id {context} を**一度だけ**実行する。成功時にL2を開始する
 5. L2では npm run figma:gate -- section-start {gate-manifest} {sectionId} を実行する
 6. 実装役はcurrentセクションのspecを作成し、未取得欄が残る間は停止する
 7. 実装役はcurrentセクションを実装し、各componentに npm run figma:gate -- checkpoint {gate-manifest} {elementId} を実行する。painted componentのPC/SPは同一Chrome sessionのbatch撮影・条件待機・宣言済みmask差分で照合する。FAILならQ-10の順で原因診断→必要最小限の修正→**同一componentのcheckpoint再実行**をPASSまで繰り返す。PASSまで次component・section-close・完了報告へ進まない

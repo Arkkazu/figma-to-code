@@ -860,7 +860,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   const components = validateComponentManifest(readExecutionJson(componentsPath.absolutePath, "Component manifest"));
   const componentDecisionPath = inputRepoPath(scope.componentDecisionPath, "manifest.scope.componentDecisionPath");
   toEvidencePath(componentDecisionPath.absolutePath, "manifest.scope.componentDecisionPath");
-  validateComponentDecisionManifest(componentDecisionPath.absolutePath, components, changeTargets, implementationIdentity);
+  validateComponentDecisionManifest(componentDecisionPath.absolutePath, components, changeTargets);
 
   const responsiveHtml = requireObject(scope.responsiveHtml, "manifest.scope.responsiveHtml");
   const responsiveHtmlKeys = Object.keys(responsiveHtml);
@@ -1278,84 +1278,7 @@ function validateComponentManifest(document) {
   return components;
 }
 
-// 同一actorのレビューを、素通りする真偽値から「後から壊れる受領証」へ変える。
-//
-// 2026-08-25 実測（`rules/corrections.md` independent-review-bypassable）：独立性の判定は
-// reviewerActor と reviewerContextId の**両方一致**でしか落ちないため、実装役が別の
-// contextId を名乗って自分の決定を approved にすると素通りした。オーナーが検証役を
-// 指定していたのに、実装役が自分で承認記録を作っていた。
-//
-// 共通Vault `rules/corrections.md` 2026-08-26 は「既定のレビュー役は同一エージェントの
-// 別contextセッション」と定めている。したがって **actorの相違を必須にはできない**
-// （必須にすると、この既定と正面から衝突し、常に他エージェント待ちになる）。
-//
-// 代わりに、同一actorのときだけ受領証をこの決定へ束ねる。要求するのは3つ。
-//   1. 同一セッションが実装にも関与した事実の開示（20文字以上）
-//   2. レビュー時点で読んだ検索証跡の SHA-256。**検証器が実体から計算し直す**
-//   3. レビュー時点で読んだ rationale と searchQueries の逐語（同上、決定本文と突き合わせる）
-//
-// これは独立性の証明ではない。証明はできない。できるのは、(a) 承認を黙って書けなくすること、
-// (b) 承認後に決定や証跡を書き換えたら approved が失効すること、(c) 同一actorレビューが
-// 受領証に残って後から数えられること、の3点である。
-function assertSameActorReviewReceipt(entry, elementId, reviewEvidencePath, searchEvidencePath) {
-  const label = `same-actor review receipt (${elementId})`;
-  const hint =
-    "実装役と同じactorがレビューする場合は、reviewEvidencePath に " +
-    '{"version":1,"reviews":[{"elementId","sameActorDisclosure","searchEvidenceSha256",' +
-    '"reviewedRationale","reviewedSearchQueries"}]} を置く。';
-  let document;
-  try {
-    document = JSON.parse(readFileSync(reviewEvidencePath.absolutePath, "utf8"));
-  } catch (error) {
-    fail(`${label} must be JSON: ${reviewEvidencePath.relativePath} (${error.message}). ${hint}`);
-  }
-  requireObject(document, label);
-  if (document.version !== 1) fail(`${label}.version must be 1. ${hint}`);
-  const reviews = requireArray(document.reviews, `${label}.reviews`);
-  const matched = reviews.filter((review) => review && typeof review === "object" && review.elementId === elementId);
-  if (matched.length === 0) {
-    fail(`${label} does not cover this component: ${elementId}. ${hint}`);
-  }
-  if (matched.length > 1) {
-    fail(`${label} covers this component more than once: ${elementId}.`);
-  }
-  const review = matched[0];
-  const disclosure = requireString(review.sameActorDisclosure, `${label}.sameActorDisclosure`);
-  if (disclosure.trim().length < 20) {
-    fail(
-      `${label}.sameActorDisclosure must state, in 20 characters or more, that the same actor implemented and reviewed: ${elementId}. ` +
-        "「同一セッションが実装にも関与した」事実を開示する。"
-    );
-  }
-  const declaredSha256 = requireString(review.searchEvidenceSha256, `${label}.searchEvidenceSha256`);
-  const actualSha256 = hashBuffer(readFileSync(searchEvidencePath.absolutePath));
-  if (declaredSha256 !== actualSha256) {
-    fail(
-      `${label}.searchEvidenceSha256 does not match ${searchEvidencePath.relativePath}: ${elementId}. ` +
-        `declared=${declaredSha256} actual=${actualSha256}. 承認後に証跡が変わったなら、レビューをやり直す。`
-    );
-  }
-  if (requireString(review.reviewedRationale, `${label}.reviewedRationale`) !== entry.rationale) {
-    fail(
-      `${label}.reviewedRationale does not match the reviewed decision: ${elementId}. ` +
-        "承認後に rationale を書き換えたなら、レビューをやり直す。"
-    );
-  }
-  const reviewedQueries = requireArray(review.reviewedSearchQueries, `${label}.reviewedSearchQueries`);
-  const declaredQueries = entry.searchQueries;
-  const sameQueries =
-    Array.isArray(declaredQueries) &&
-    reviewedQueries.length === declaredQueries.length &&
-    reviewedQueries.every((value, index) => value === declaredQueries[index]);
-  if (!sameQueries) {
-    fail(
-      `${label}.reviewedSearchQueries does not match the reviewed decision: ${elementId}. ` +
-        "承認後に searchQueries を書き換えたなら、レビューをやり直す。"
-    );
-  }
-}
-
-function validateComponentDecisionManifest(decisionPath, components, changeTargets, implementationIdentity) {
+function validateComponentDecisionManifest(decisionPath, components, changeTargets) {
   const document = readExecutionJson(decisionPath, "Component decision manifest");
   requireObject(document, "component decision manifest");
   if (document.version !== 1) {
@@ -1447,28 +1370,23 @@ function validateComponentDecisionManifest(decisionPath, components, changeTarge
     if (decision === "reuse" || decision === "extend") {
       if (!existsSync(codePath.absolutePath)) fail(`reuse/extend decision must point to an existing code path: ${elementId}`);
     }
+    // `new` 決定に独立レビュー承認を要求しない（2026-09-04 オーナー指示）。
+    //
+    // 廃止したのは `independentApproved` / `reviewerActor` / `reviewerContextId` /
+    // `reviewedAt` / `reviewEvidencePath` の5フィールドと、その独立性判定である。
+    // 理由は page coverage の独立レビューを廃止したときと同じで、**レビュー役の判断を
+    // 要する項目が実質的に無かった**こと。「既存部品ではなく新設でよいか」の実体は
+    // (1) 何を探したか (2) その検索が実際に行われた証跡か (3) 新設先が宣言済みの
+    // changeTargets か の3点で、いずれも上の機械検査で判定できる。承認の真偽値と
+    // レビュー役のidentityは、この3点に何も足していなかった。
+    //
+    // 残る唯一の効用は「もう一人が見た」という事実だが、その一人は既定で同一
+    // エージェントの別contextであり（共通Vault 2026-08-26）、identityは実装役が
+    // 自由に名乗れる（`rules/corrections.md` 2026-08-25）。止められない偽装を
+    // 検査の形で置くと、往復のコストだけが残る。
     if (decision === "new") {
       if (!changeTargetPaths.has(codePath.relativePath)) fail(
 `new decision codePath must be declared in scope.changeTargets: ${elementId}`);
-      if (entry.independentApproved !== true) fail(
-`new decision requires independentApproved: true before section-start: ${elementId}`);
-      const reviewerActor = requireString(entry.reviewerActor, 
-`new decision reviewerActor (${elementId})`);
-      const reviewerContextId = requireString(entry.reviewerContextId, 
-`new decision reviewerContextId (${elementId})`);
-      if (reviewerActor === implementationIdentity.actor && reviewerContextId === implementationIdentity.contextId) {
-        fail(
-`new decision review must be performed by a different actor or a different context: ${elementId}`);
-      }
-      requireString(entry.reviewedAt,
-`new decision reviewedAt (${elementId})`);
-      const reviewEvidencePath = toRepoPath(entry.reviewEvidencePath,
-`new decision reviewEvidencePath (${elementId})`);
-      toEvidencePath(reviewEvidencePath.absolutePath,
-`new decision reviewEvidencePath (${elementId})`);
-      if (reviewerActor === implementationIdentity.actor) {
-        assertSameActorReviewReceipt(entry, elementId, reviewEvidencePath, searchEvidencePath);
-      }
     }
   }
 

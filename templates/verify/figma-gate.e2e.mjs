@@ -545,38 +545,15 @@ function prepareClosedReleaseFixture(fixture) {
   writeJson(paths.runtimePath, runtime);
 }
 
-// 同一actorのレビュー受領証（2026-09-04 追加）。
-//
-// fixture の決定は not-applicable なので、この経路を通すには new へ変える。
-// reviewerContextId は実装役と別の値にする。落としたいのは「contextIdを名乗るだけで
-// 自己承認できる」ことであって、同一エージェントの別contextそのものではない
-// （共通Vault `rules/corrections.md` 2026-08-26 の既定）。
-function makeSameActorNewDecision(fixture, options = {}) {
-  const { reviewerActor = implementationIdentity.actor, evidenceRelativePath = "MyBrain/verify/fixture/review.json" } = options;
+// fixture の決定は not-applicable なので、`new` の経路を通すには変える。
+// 承認フィールド（independentApproved / reviewerActor / reviewerContextId /
+// reviewedAt / reviewEvidencePath）は**1つも書かない**。2026-09-04 に廃止したため、
+// 書かなくても通ることがこの fixture の主張である。
+function makeNewDecisionWithoutReview(fixture) {
   mutateJson(fixture.componentDecisionPath, (value) => {
     const decision = value.decisions[0];
     decision.figmaNodeType = "COMPONENT";
     decision.decision = "new";
-    decision.independentApproved = true;
-    decision.reviewerActor = reviewerActor;
-    decision.reviewerContextId = "fixture-review-context";
-    decision.reviewedAt = "2026-09-04T00:00:00.000Z";
-    decision.reviewEvidencePath = evidenceRelativePath;
-  });
-}
-
-function writeSameActorReviewReceipt(fixture, overrides = {}) {
-  const decision = JSON.parse(readFileSync(fixture.componentDecisionPath, "utf8")).decisions[0];
-  writeJson(join(fixture.directory, "review.json"), {
-    version: 1,
-    reviews: [{
-      elementId: "fixture-component",
-      sameActorDisclosure: "同一セッションが実装にも関与した。申告値ではなくファイル実体から読み直して判定した。",
-      searchEvidenceSha256: sha256(join(fixture.directory, "search.md")),
-      reviewedRationale: decision.rationale,
-      reviewedSearchQueries: decision.searchQueries,
-      ...overrides,
-    }],
   });
 }
 
@@ -610,76 +587,35 @@ function assertPreflightDraftGuardCases() {
         value.decisions[0].searchQueries = ["never-searched-token"];
       }),
     },
-    // 2026-09-04 追加。同一actorのレビューは contextId の申告だけが独立性の根拠になるため、
-    // 実装役が別contextを名乗って自分の決定を approved にできた（`rules/corrections.md`
-    // 2026-08-25 independent-review-bypassable）。actorの相違を必須にすると共通Vault
-    // 2026-08-26 の既定と衝突するので、同一actorのときだけ受領証を決定へ束ねる。
+    // 2026-09-04。`new` 決定に独立レビュー承認を要求しない（オーナー指示）。
+    // 承認フィールドを1つも持たない決定が通ることを固定する。ここが落ちるようになったら、
+    // 廃止したはずの承認要求がどこかで復活している。
     {
-      label: "同一actorのレビューに受領証が無い",
-      expected: "same-actor review receipt (fixture-component) must be JSON",
-      mutate: (fixture) => makeSameActorNewDecision(fixture, { evidenceRelativePath: "MyBrain/verify/fixture/search.md" }),
+      label: "new 決定は独立レビュー承認なしで通る",
+      expected: null,
+      mutate: (fixture) => makeNewDecisionWithoutReview(fixture),
     },
+    // 承認を外しても、「何を探したか」の裏取りは残っている。
     {
-      label: "受領証がこの決定を覆っていない",
-      expected: "does not cover this component",
+      label: "new 決定でも宣言した検索語が証跡に無ければ落ちる",
+      expected: "searchQueries are not present in the search evidence",
       mutate: (fixture) => {
-        makeSameActorNewDecision(fixture);
-        writeSameActorReviewReceipt(fixture, { elementId: "other-component" });
-      },
-    },
-    {
-      label: "同一セッション関与の開示が無い",
-      expected: "sameActorDisclosure must state",
-      mutate: (fixture) => {
-        makeSameActorNewDecision(fixture);
-        writeSameActorReviewReceipt(fixture, { sameActorDisclosure: "確認した" });
-      },
-    },
-    {
-      label: "レビュー時点の検索証跡ハッシュが実体と違う",
-      expected: "searchEvidenceSha256 does not match",
-      mutate: (fixture) => {
-        makeSameActorNewDecision(fixture);
-        writeSameActorReviewReceipt(fixture, { searchEvidenceSha256: "0".repeat(64) });
-      },
-    },
-    {
-      label: "承認後に rationale を書き換えた",
-      expected: "reviewedRationale does not match the reviewed decision",
-      mutate: (fixture) => {
-        makeSameActorNewDecision(fixture);
-        writeSameActorReviewReceipt(fixture);
+        makeNewDecisionWithoutReview(fixture);
         mutateJson(fixture.componentDecisionPath, (value) => {
-          value.decisions[0].rationale = "承認を得たあとで理由を書き換えた。";
+          value.decisions[0].searchQueries = ["never-searched-token"];
         });
       },
     },
+    // 新設先が宣言済みの changeTargets かの検査も残っている。
     {
-      label: "承認後に searchQueries を書き換えた",
-      expected: "reviewedSearchQueries does not match the reviewed decision",
+      label: "new 決定の codePath が changeTargets に無ければ落ちる",
+      expected: "new decision codePath must be declared in scope.changeTargets",
       mutate: (fixture) => {
-        makeSameActorNewDecision(fixture);
-        writeSameActorReviewReceipt(fixture);
+        makeNewDecisionWithoutReview(fixture);
         mutateJson(fixture.componentDecisionPath, (value) => {
-          value.decisions[0].searchQueries = ["fixture-shared-hero", "queried"];
+          value.decisions[0].codePath = "site/undeclared.txt";
         });
       },
-    },
-    {
-      label: "同一actorでも受領証が揃っていれば通る（negativeの対称確認）",
-      expected: null,
-      mutate: (fixture) => {
-        makeSameActorNewDecision(fixture);
-        writeSameActorReviewReceipt(fixture);
-      },
-    },
-    {
-      label: "actorが異なるレビューには受領証を要求しない（negativeの対称確認）",
-      expected: null,
-      mutate: (fixture) => makeSameActorNewDecision(fixture, {
-        reviewerActor: "fixture-reviewer",
-        evidenceRelativePath: "MyBrain/verify/fixture/search.md",
-      }),
     },
     // 2026-09-01 追加。寸法だけを検査して位置を検査しない要素は、置き場所の誤りを見逃す。
     // 実測（static-resource-detail）: PCパンくずが width/height/display だけで、

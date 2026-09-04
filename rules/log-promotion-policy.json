@@ -43,7 +43,6 @@
   ],
   "review": {
     "loopEngineeringSpec": "C:\\AI\\loop-engineering\\spec\\06-self-improvement.md",
-    "requiresIndependentReview": true,
     "requiresOwnerApproval": true,
     "requiresNegativeE2E": true,
     "requiresAtomicPromotionPlan": true
