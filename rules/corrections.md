@@ -300,6 +300,12 @@
 
 <!-- ここから下に追記していく。最新を上に。 -->
 
+## 2026-09-04: 予約は編集ではない。受領証を持たない台帳行で他担当を止めない
+<!-- loop-log: {"id":"correction-stale-reservation-blocks-commit-20260904","kind":"correction","failureClass":"stale-path-ownership-blocks-other-actor","recurrenceKey":"stale-path-ownership-blocks-other-actor","action":"weaken","promotability":"promotable","ruleTargets":["rules/figma-scope-lock.md"],"verifierTargets":["templates/verify/scope-conflict-audit.mjs","templates/verify/scope-conflict-audit.e2e.mjs"]} -->
+- 指摘：「別の進行中scopeと競合しているためコミット・再デプロイできない。これが起こるのは問題だろ」。2026-09-01 に所有台帳へ入れた失効の仕組みが、同じ「解放されない保持」を scope coordination 台帳の active/waiting 行へ移しただけで終わっていた。実測（rpa-technologies-theme）で live scope 10件が42パスを保持し、うち5件は gate受領証を1件も持たず、5件は7日以上更新が無く、受領証を持たない1件が別担当の実装7ファイルを pre-commit まで止めていた。止める側の出力は「competes」の一行だけで、担当者も受領証の状態も放置日数も無かった。
+- 今後：**台帳の予約行を停止事由にするのは、その scope が live な gate受領証を保持しているときだけにする。**両gateとも編集前に preflight 受領証を要求するため、受領証を持たない scope は定義上まだ1行も編集しておらず、守るべき編集が存在しない。受領証を持たない交差は、担当者・台帳ステータス・manifest最終更新日数を添えて NOTE で報告し、宣言は止めない。止めるときは交差判定の枝でも担当者・受領証の phase・次の行動を必ず出す。負のE2Eは「受領証を持たない予約は止めない」と「受領証を1件置けば従来どおり止まる」を対で置き、交差判定ごと無効化したのではないことを機械で区別できるようにする。
+- 弱体化の実測：同案件 live scope 10件で FAIL 総数 4 → 2。消えた2件はいずれも受領証を持たない予約による停止。**同じ形の停止は 2026-08-26・2026-09-01 に続き3回目である。台帳を手で解除して機構を直さない対処を繰り返さない。**
+
 ## 2026-08-02: page coverageを inventory と scope contract に分離する
 <!-- loop-log: {"id":"correction-page-coverage-inventory-20260802","kind":"correction","failureClass":"page-coverage-inventory","recurrenceKey":"page-coverage-inventory","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.e2e.mjs"]} -->
 - 指摘（codexの独立レビュー）：`spec/09-verification.md` §4 は「ページ全体のセクションを登録し対象外を暗黙に扱わない」と求めるが、`templates/verify/figma-page-coverage.mjs` は `context` を `shared-header` / `shared-footer` に限定し、それ以外を `target` かつcomponent必須とする。**単一セクションのscopeではこの両方を同時に満たせない**。対象外を検証器が読まないフィールド（`_outOfScopeSections` 等）へ置く回避策は、カバレッジ要件を満たさない。
