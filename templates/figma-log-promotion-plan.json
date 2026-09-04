@@ -11,5 +11,6 @@
     "expectedSha256": "replace-with-current-target-sha256",
     "find": "exact existing text",
     "replace": "exact replacement text that strengthens the rule"
-  }]
+  }],
+  "removedGuards": []
 }

@@ -69,6 +69,33 @@ node tools/figma-log-promote.mjs apply rules/log-promotion-policy.json <proposal
 
 `apply` はproposalが許可した対象だけを受け付ける。適用前SHA-256、一意な置換、変更MJSの構文、負のE2Eを検査し、失敗時は全対象を適用前に復元する。成功時だけ `promotions/` に不変のpromotion receiptを保存する。
 
+### 弱体化の実測（2026-09-04 追加）
+
+`review.checks.strengthensOnly` と `guardrailsUnchanged` は、レビュー役が文字列 `"PASS"` を書けば通る**申告**であり、弱体化を1つも止めていなかった。しかもレビューは提案に対して行われ、**差分そのものはレビュー役の目に触れない**。
+
+`apply` は書き込む前に、patchの前後から検査の在庫を数える。
+
+| 対象 | 在庫の単位 | 根拠 |
+|---|---|---|
+| `.mjs` | 文字列・テンプレートリテラル | 検査の識別子と失敗メッセージはここに現れる。補間は `${}` へ潰す |
+| `.md` | 空でない行 | 規則の弱体化は行の削除として現れる |
+
+同じ内容が複数あるものは多重集合として数える。在庫が空の対象は、比較が空振りするため落とす。
+
+**消失そのものは禁止しない。**言い換えれば消失として出るため、一律に止めれば正当な強化まで止まる。要求するのは「消えるものを事前に列挙し、20文字以上の理由を書く」ことで、機械はその列挙が実測と**過不足なく**一致するかを見る。
+
+```json
+"removedGuards": [
+  { "target": "templates/verify/x.mjs", "guard": "消える文字列そのもの", "reason": "なぜ消えてよいか" }
+]
+```
+
+- 申告のない消失があれば、対象を1バイトも書かずに落ちる。
+- 起きない消失を申告しても落ちる。
+- 何も消えないなら `removedGuards` は空でよい。純粋な追加は素通りする。
+
+消失は理由つきで promotion receipt の `removedGuards` に残る。負のE2Eが見逃す消失（テストが触れていない検査の削除）を止めるのがこの検査の役目である。
+
 ## 5. 境界
 
 - `apply` は通常のFigma scope、`figma-gate close`、Git hook、commit、push、deployから自動起動しない。

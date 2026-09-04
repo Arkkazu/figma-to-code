@@ -115,6 +115,71 @@ function lineNumber(text, index) {
   return text.slice(0, index).split(/\r?\n/).length;
 }
 
+// 昇格差分が実際に何を消したかを測る（2026-09-04 追加）。
+// review.checks.strengthensOnly / guardrailsUnchanged は文字列 "PASS" を書けば通る申告であり、
+// 「弱体化していない」という主張の根拠を1つも要求していなかった。ここで差分の前後から
+// 検査の在庫を数え、消えたものを列挙する。単位はファイル種別で変える。
+//   .mjs … 文字列・テンプレートリテラル（検査の識別子と失敗メッセージはここに現れる）
+//   .md  … 空でない行（規則の弱体化は行の削除として現れる）
+// 補間は ${} へ潰し、同じ内容が複数あるものは多重集合として数える。
+const GUARD_LITERAL = /`(?:[^`\\]|\\[\s\S])*`|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'/g;
+
+function guardInventory(relativePath, source) {
+  const counts = new Map();
+  const add = (key) => {
+    if (key !== "") counts.set(key, (counts.get(key) ?? 0) + 1);
+  };
+  if (relativePath.endsWith(".md")) {
+    for (const line of source.split(/\r?\n/)) add(line.trim());
+  } else {
+    for (const raw of source.match(GUARD_LITERAL) || []) {
+      add(raw.slice(1, -1).replace(/\$\{[^}]*\}/g, "${}").trim());
+    }
+  }
+  return counts;
+}
+
+function measureGuardRemovals(relativePath, before, after) {
+  const beforeInventory = guardInventory(relativePath, before);
+  // 在庫が空なら比較が空振りする。黙って通すと「検査した」という誤った記録だけが残る。
+  if (beforeInventory.size === 0) fail(`Promotion target has no guard inventory to compare: ${relativePath}`);
+  const afterInventory = guardInventory(relativePath, after);
+  const removals = [];
+  for (const [guard, count] of beforeInventory) {
+    const remaining = afterInventory.get(guard) ?? 0;
+    if (remaining < count) removals.push({ target: relativePath, guard, before: count, after: remaining });
+  }
+  return removals.sort((left, right) => left.guard.localeCompare(right.guard));
+}
+
+function guardKey(item) {
+  // 区切りに JSON を使う：guard 文字列は任意なので単一の区切り文字では衝突しうる。
+  return JSON.stringify([item.target, item.guard]);
+}
+
+// 消滅は禁止しない。書き換えでメッセージを言い換えれば消滅として出るためで、
+// 一律に止めれば正当な強化まで止まる。要求するのは「消えるものを事前に列挙し、
+// 理由を書く」ことであり、機械はその列挙が実測と過不足なく一致するかを見る。
+function assertGuardRemovalsAreDeclared(measured, declared) {
+  const declaredKeys = new Set(declared.map(guardKey));
+  const measuredKeys = new Set(measured.map(guardKey));
+  const undeclared = measured.filter((item) => !declaredKeys.has(guardKey(item)));
+  if (undeclared.length > 0) {
+    fail(
+      `Promotion removes ${undeclared.length} guard(s) the plan does not declare. ` +
+        "A strengthen-only promotion may remove a guard only when plan.removedGuards lists it with a reason:\n" +
+        undeclared.map((item) => `  - ${item.target}: ${item.guard} (${item.before} -> ${item.after})`).join("\n")
+    );
+  }
+  const unmatched = declared.filter((item) => !measuredKeys.has(guardKey(item)));
+  if (unmatched.length > 0) {
+    fail(
+      `Promotion plan.removedGuards declares ${unmatched.length} removal(s) the patches do not make:\n` +
+        unmatched.map((item) => `  - ${item.target}: ${item.guard}`).join("\n")
+    );
+  }
+}
+
 function markdownSections(text) {
   const matches = [...text.matchAll(/^##\s+(.+?)\s*$/gm)];
   return matches.map((match, index) => {
@@ -873,7 +938,25 @@ function validatePromotionPlan(raw, proposalInfo, receiptInfo) {
     return { path, expectedSha256: requireSha256(patch.expectedSha256, `Promotion plan.patches[${index}].expectedSha256`), find, replace };
   });
   if (new Set(patches.map((patch) => patch.path)).size !== patches.length) fail("Promotion plan may patch each target path only once.");
-  return { id: requireIdentifier(raw.id, "Promotion plan.id"), patches };
+  const removedGuards = normalizeDeclaredGuardRemovals(raw.removedGuards, allowedTargets);
+  return { id: requireIdentifier(raw.id, "Promotion plan.id"), patches, removedGuards };
+}
+
+function normalizeDeclaredGuardRemovals(raw, allowedTargets) {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) fail("Promotion plan.removedGuards must be an array.");
+  const declared = raw.map((rawItem, index) => {
+    const item = requireObject(rawItem, `Promotion plan.removedGuards[${index}]`);
+    const target = normalizeRepoPath(item.target, `Promotion plan.removedGuards[${index}].target`, { mustExist: true });
+    if (!allowedTargets.has(target)) fail(`Promotion plan.removedGuards[${index}].target is not approved by the proposal: ${target}`);
+    return {
+      target,
+      guard: requireString(item.guard, `Promotion plan.removedGuards[${index}].guard`),
+      reason: requireNonPromotableReason(item.reason, `Promotion plan.removedGuards[${index}].reason`),
+    };
+  });
+  if (new Set(declared.map(guardKey)).size !== declared.length) fail("Promotion plan.removedGuards must not declare the same guard twice.");
+  return declared;
 }
 
 function applyPromotion(policyPathArg, proposalPathArg, receiptPathArg, planPathArg, outputPathArg) {
@@ -901,6 +984,11 @@ function applyPromotion(policyPathArg, proposalPathArg, receiptPathArg, planPath
     if (matchCount !== 1) fail(`Promotion plan find text must occur exactly once in ${patch.path}; found ${matchCount}.`);
     return { ...patch, absolutePath, before, after: before.replace(patch.find, patch.replace) };
   });
+  // 書き込む前に測る。ここで落ちれば対象は1バイトも変わらない。
+  assertGuardRemovalsAreDeclared(
+    updates.flatMap((update) => measureGuardRemovals(update.path, update.before, update.after)),
+    plan.removedGuards
+  );
   try {
     for (const update of updates) writeFileSync(update.absolutePath, update.after, "utf8");
     for (const update of updates.filter((item) => item.path.endsWith(".mjs"))) executeNode(["--check", update.absolutePath], `Promotion syntax check ${update.path}`);
@@ -913,6 +1001,8 @@ function applyPromotion(policyPathArg, proposalPathArg, receiptPathArg, planPath
       reviewReceipt: { path: receiptInfo.path.relativePath, sha256: receiptInfo.sha256 },
       plan: { id: plan.id, path: planPath.relativePath, sha256: sha256(planText) },
       patches: updates.map((update) => ({ path: update.path, beforeSha256: sha256(update.before), afterSha256: sha256(update.after) })),
+      // 何が消えたかを承認済みの理由つきで残す。空配列は「何も消えなかった」の記録である。
+      removedGuards: plan.removedGuards,
       validation: { negativeE2E: { path: receiptNegativePath, execution: e2e } },
       appliedAt: new Date().toISOString(),
     };

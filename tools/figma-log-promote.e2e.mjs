@@ -136,8 +136,39 @@ try {
   assert(latestReview.status === "ready-to-apply", "approved review did not create ready receipt");
   const receipt = latestReview.receiptPath;
   const baseline = read("rules/figma-spec-pipeline.md");
-  write("plans/rollback.json", json({ version: 1, id: "rollback", proposalId: proposal.id, proposalPath, proposalSha256: hash(proposalText), reviewReceiptPath: receipt, reviewReceiptSha256: hash(read(receipt)), patches: [{ path: "rules/figma-spec-pipeline.md", expectedSha256: hash(baseline), find: "evidence-required", replace: "wrong-value" }] }));
-  assert(run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/rollback.json", "learning/log-promotions").status !== 0, "apply accepted a plan whose negative E2E fails");
+  const weakeningPatch = { path: "rules/figma-spec-pipeline.md", expectedSha256: hash(baseline), find: "evidence-required", replace: "wrong-value" };
+  const planBase = { version: 1, proposalId: proposal.id, proposalPath, proposalSha256: hash(proposalText), reviewReceiptPath: receipt, reviewReceiptSha256: hash(read(receipt)) };
+  const removalReason = "この行は別の検査へ移したため、規則本文からは落ちる。";
+
+  // 弱体化検出：この patch は "evidence-required" の行を消す。申告が無ければ
+  // 対象を1バイトも書かずに落ちなければならない（2026-09-04 追加）。
+  write("plans/undeclared.json", json({ ...planBase, id: "undeclared", patches: [weakeningPatch] }));
+  const undeclared = run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/undeclared.json", "learning/log-promotions");
+  assert(undeclared.status !== 0, "apply accepted a patch that removes an undeclared guard");
+  assert(`${undeclared.stdout}${undeclared.stderr}`.includes("removedGuards"), "apply did not name removedGuards when refusing an undeclared removal");
+  assert(read("rules/figma-spec-pipeline.md") === baseline, "refused apply still touched the rule");
+
+  // 負のE2Eが通ってしまう消失。ここで落とせるのは弱体化検出だけである。
+  // 見出し行を消しても "evidence-required" は残るため、E2E は PASS する。
+  const silentPatch = { path: "rules/figma-spec-pipeline.md", expectedSha256: hash(baseline), find: "# rule\n\nevidence-required", replace: "evidence-required" };
+  write("plans/silent.json", json({ ...planBase, id: "silent", patches: [silentPatch] }));
+  const silent = run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/silent.json", "learning/log-promotions");
+  assert(silent.status !== 0, "apply accepted a removal that the negative E2E cannot see");
+  assert(read("rules/figma-spec-pipeline.md") === baseline, "refused apply still touched the rule");
+
+  // 申告が実測と食い違う場合も落ちる（起きない消失を書いて通せない）。
+  write("plans/overdeclared.json", json({ ...planBase, id: "overdeclared", patches: [weakeningPatch], removedGuards: [{ target: "rules/figma-spec-pipeline.md", guard: "evidence-required", reason: removalReason }, { target: "rules/figma-spec-pipeline.md", guard: "# rule", reason: removalReason }] }));
+  assert(run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/overdeclared.json", "learning/log-promotions").status !== 0, "apply accepted a removal declaration that does not match the patches");
+
+  // 理由が空でも通らない（申告を「PASS」1語で済ませられないことの確認）。
+  write("plans/noreason.json", json({ ...planBase, id: "noreason", patches: [weakeningPatch], removedGuards: [{ target: "rules/figma-spec-pipeline.md", guard: "evidence-required", reason: "移した" }] }));
+  assert(run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/noreason.json", "learning/log-promotions").status !== 0, "apply accepted a removal declared without a substantive reason");
+
+  // 正しく申告された消失は関門を越え、従来どおり負のE2Eで落ちてロールバックする。
+  write("plans/rollback.json", json({ ...planBase, id: "rollback", patches: [weakeningPatch], removedGuards: [{ target: "rules/figma-spec-pipeline.md", guard: "evidence-required", reason: removalReason }] }));
+  const rolledBack = run("apply", "rules/log-promotion-policy.json", proposalPath, receipt, "plans/rollback.json", "learning/log-promotions");
+  assert(rolledBack.status !== 0, "apply accepted a plan whose negative E2E fails");
+  assert(`${rolledBack.stdout}${rolledBack.stderr}`.includes("rolled back"), "declared removal did not reach the negative E2E stage");
   assert(read("rules/figma-spec-pipeline.md") === baseline, "failed apply did not roll back the rule");
 
   write("plans/apply.json", json({ version: 1, id: "apply", proposalId: proposal.id, proposalPath, proposalSha256: hash(proposalText), reviewReceiptPath: receipt, reviewReceiptSha256: hash(read(receipt)), patches: [{ path: "rules/figma-spec-pipeline.md", expectedSha256: hash(baseline), find: "evidence-required", replace: "evidence-required" + "\n" + "verified-at-preflight" }] }));
