@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { isAbsolute, relative, resolve } from "node:path";
@@ -101,9 +101,11 @@ function gateClaimOf(state, gateKind) {
   if (!targets) throw new Error(`${gateKind} gateのactive受領証にchangeTargetsがありません。`);
   return {
     id: String(state.manifestId ?? "unknown"),
-    source: `${gateKind} gate receipt`,
+    source: `${gateKind} gate receipt:${state.phase ?? "phase不明"}`,
     targets,
     state,
+    actor: typeof state.actor === "string" ? state.actor : undefined,
+    hint: `${gateKind} gate の受領証が ${state.phase ?? "phase不明"} のまま保持されています。close / abort で解放されます。`,
   };
 }
 
@@ -183,6 +185,17 @@ function expiredOwnership(rule, scopeStatusById) {
 // 実装役は台帳のどの行をどう直せばよいか分からず、オーナーへの問い合わせに化ける。
 function ownershipPatchLine(target, actor, scopeId) {
   return `{ "pattern": "${target}", "owner": "${actor}", "grantedForScope": "${scopeId}" }`;
+}
+
+// 止めるときも読み飛ばすときも、放置日数を必ず出す。「competes」の一行だけでは、
+// 相手が作業中なのか置き去りなのかを実装役が判別できず、オーナーへの問い合わせに化ける。
+function manifestAgeLabel(manifestPath) {
+  try {
+    const days = (Date.now() - statSync(manifestPath).mtimeMs) / 86400000;
+    return `manifest最終更新 ${days.toFixed(1)}日前`;
+  } catch {
+    return "manifest最終更新 不明";
+  }
 }
 
 function hashFile(path) {
@@ -431,10 +444,45 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
     violations.push(`Coding scope ${codingState.manifestId} がFigma受領証 ${codingState.figmaGate.manifestId} を参照中です。Figma preflightで上書きできません。`);
   }
 
-  const claims = [
-    ...loadedEntries.map(({ entry, targets: entryTargets }) => ({ id: entry.id, source: `coordination:${entry.status}`, targets: entryTargets })),
-    ...[...figmaClaims, ...codingClaims],
-  ];
+  // 台帳の active / waiting 行は「予約」であって「進行中の編集」ではない。
+  //
+  // 両gateとも、対象ファイルを編集する前に preflight 受領証を要求する（下の dirty 判定が
+  // その担保）。したがって live な受領証を1件も持たない scope は、定義上まだ1行も編集して
+  // いない。守るべき編集が存在しないのに、その行が他担当の宣言を止める理由は無い。
+  // 並行編集の排他は、受領証claimの交差判定（この下）が担う。
+  //
+  // 2026-09-04 実測（rpa-technologies-theme）。台帳の live scope 10件が42パスを保持し、
+  // うち5件は受領証を1件も持たず、5件は7日以上更新が無かった。受領証を持たない
+  // `static-blog-route-and-comparison-20260831` が `page-static-blog-detail.php` を押さえ、
+  // 別担当の実装7ファイルが commit まで到達できなかった。しかもその行自身の
+  // `changeTargets` と note は「2026-09-02に対象外とした」と書いており、manifest だけが
+  // 古い宣言を残していた。**予約が失効しないまま、宣言時ではなく commit 直前で表面化した。**
+  // これは 2026-09-01 の `stale-path-ownership-blocks-other-actor` と同じ形であり、
+  // 所有台帳へ入れた失効の仕組みを、こちらの関門にも入れる。
+  const liveReceiptScopeIds = new Set([...figmaClaims, ...codingClaims].map((claim) => claim.id));
+  const coordinationClaims = [];
+  for (const { entry, targets: entryTargets, absoluteManifestPath: entryManifestPath } of loadedEntries) {
+    if (entry.id === scopeId) continue;
+    if (liveReceiptScopeIds.has(entry.id)) {
+      coordinationClaims.push({
+        id: entry.id,
+        source: `coordination:${entry.status}`,
+        targets: entryTargets,
+        actor: entry.actor,
+        hint: "相手はlive な gate受領証を保持しています。close / abort を待つか、担当を調整します。",
+      });
+      continue;
+    }
+    const overlap = entryTargets.filter((entryTarget) => targets.includes(entryTarget));
+    if (overlap.length === 0) continue;
+    notes.push(
+      `${entry.id}（${entry.actor} / coordination:${entry.status} / gate受領証なし / ${manifestAgeLabel(entryManifestPath)}）が`
+      + ` ${overlap.join("、")} を予約していますが、編集に必要な受領証を持たないため止めません。`
+      + " 実際に着手済みなら、先に preflight を実行して受領証を取り直します。",
+    );
+  }
+
+  const claims = [...coordinationClaims, ...figmaClaims, ...codingClaims];
   let dirty = new Set();
   try {
     dirty = dirtyPaths(root);
@@ -494,7 +542,13 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
     }
 
     for (const claim of claims.filter((claim) => claim.id !== scopeId && claim.targets.includes(target))) {
-      violations.push(`${target} は ${claim.id}（${claim.source}）と競合します。`);
+      // 所有台帳の枝には「貼れば直る差分まで出す」規則があるのに、交差判定の枝には
+      // 適用されていなかった。担当者も受領証の状態も出ないため、止められた側は
+      // 何を待てばよいのか分からない（2026-09-04 実測）。
+      violations.push(
+        `${target} は ${claim.id}（${claim.source}${claim.actor ? ` / ${claim.actor}` : ""}）と競合します。`
+        + (claim.hint ? `\n      ${claim.hint}` : ""),
+      );
     }
     if (dirty.has(target) && !permittedDirty.has(target) && !(operation === "amend" && frozenAmendTargets.has(target))) {
       violations.push(

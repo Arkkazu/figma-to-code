@@ -60,6 +60,18 @@ function coordination(scopes) {
   return { version: 1, actors: ["claude", "codex"], scopes };
 }
 
+// 台帳の行は「予約」であって「進行中の編集」ではない。編集には preflight 受領証が要るため、
+// 受領証を持たない行は1行も編集していない。止める側の証拠として受領証を置く。
+function writeCodingReceipt(id, targets, phase = "preflight") {
+  const path = join(repo, ".coding-gate", "active", `${id}.json`);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify({ version: 1, phase, manifestId: id, changeTargets: targets, checkpoints: {} }, null, 2)}\n`, "utf8");
+}
+
+function clearCodingReceipts() {
+  rmSync(join(repo, ".coding-gate"), { recursive: true, force: true });
+}
+
 function entry(id, { actor = "codex", status = "active", contextId = "ctx-codex", manifest }) {
   return {
     id,
@@ -137,15 +149,19 @@ try {
   check("未登録パスは止めない", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
   check("未登録パスの報告", result.stdout.includes("有効な排他所有はありません"), `報告していない: ${result.stdout}`);
 
-  // (e) 未登録を通すぶん、並行scopeの交差判定が最後の砦になる。ここは必ず止まること。
+  // (e) 未登録を通すぶん、並行scopeの交差判定が最後の砦になる。受領証を保持している
+  //     並行scopeは必ず止まること。
   write("coding-codex-other.json", manifestFor("codex-other", [target], { contextId: "ctx-codex-other" }));
   write("scope-coordination.json", coordination([
     ownScope,
     entry("codex-other", { contextId: "ctx-codex-other", manifest: "coding-codex-other.json" }),
   ]));
+  writeCodingReceipt("codex-other", [target]);
   result = audit("coding-codex-target.json");
   check("交差する並行scopeは止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
   check("交差の説明", result.stderr.includes("codex-other"), `交差相手を示していない: ${result.stderr}`);
+  check("交差の担当者", result.stderr.includes("codex-other（coordination:active / codex）"), `担当者と出どころを示していない: ${result.stderr}`);
+  clearCodingReceipts();
 
   // (f) 排他所有を1件も置かない台帳（空配列）を、正当な状態として受け付ける。
   //     2026-09-01 まで `rules.length === 0` を違反にしていたため、**この機構は
@@ -158,14 +174,16 @@ try {
   check("空の排他所有台帳を受け付ける", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
   check("空台帳でも交差判定は残る", !result.stderr.includes("exclusivePathOwnership がありません"), `空を欠落として扱っている: ${result.stderr}`);
 
-  // (g) 空台帳にしても、交差する並行scopeは従来どおり止まる（最後の砦が効いている）。
+  // (g) 空台帳にしても、受領証を保持する並行scopeは従来どおり止まる（最後の砦が効いている）。
   write("coding-codex-other.json", manifestFor("codex-other", [target], { contextId: "ctx-codex-other" }));
   write("scope-coordination.json", coordination([
     ownScope,
     entry("codex-other", { contextId: "ctx-codex-other", manifest: "coding-codex-other.json" }),
   ]));
+  writeCodingReceipt("codex-other", [target]);
   result = audit("coding-codex-target.json");
   check("空台帳でも交差する並行scopeは止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
+  clearCodingReceipts();
 
   // (h) exclusivePathOwnership が配列でない台帳は従来どおり拒否する。
   write("shared-component-ownership.json", { version: 2, exclusivePathOwnership: "none" });
@@ -185,6 +203,34 @@ try {
   result = audit("coding-codex-target.json");
   check("不正なgrantedForScope", result.status === 1, `FAILするはずが exit ${result.status}`);
   check("不正の説明", result.stderr.includes("grantedForScope"), `理由を示していない: ${result.stderr}`);
+
+  // (j) gate受領証を1件も持たない active 行は「予約」であって「進行中の編集」ではない。
+  //     編集には preflight 受領証が要るため、受領証の無い scope は定義上まだ1行も編集して
+  //     いない。ここを止めると、予約が失効しないまま他担当の実装が commit まで到達できない。
+  //
+  //     2026-09-04 実測（rpa-technologies-theme）: 台帳の live scope 10件が42パスを保持し、
+  //     5件は受領証を1件も持たず、5件は7日以上更新が無かった。受領証を持たない
+  //     `static-blog-route-and-comparison-20260831` が `page-static-blog-detail.php` を
+  //     押さえ、別担当の実装7ファイルが pre-commit で止まっていた。
+  write("shared-component-ownership.json", { version: 2, exclusivePathOwnership: [] });
+  write("coding-codex-other.json", manifestFor("codex-other", [target], { contextId: "ctx-codex-other" }));
+  write("scope-coordination.json", coordination([
+    ownScope,
+    entry("codex-other", { contextId: "ctx-codex-other", manifest: "coding-codex-other.json" }),
+  ]));
+  clearCodingReceipts();
+  result = audit("coding-codex-target.json");
+  check("受領証を持たない予約は止めない", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
+  check("読み飛ばした予約の報告", result.stdout.includes("gate受領証なし") && result.stdout.includes("codex-other"), `読み飛ばしを報告していない: ${result.stdout}`);
+  check("放置日数の提示", result.stdout.includes("manifest最終更新"), `放置日数を出していない: ${result.stdout}`);
+
+  // (k) 同じ台帳のまま受領証を1件置けば、従来どおり止まる。(j) が「交差判定ごと
+  //     無効化した」のではなく「予約と編集を切り分けた」ことを固定する。
+  writeCodingReceipt("codex-other", [target]);
+  result = audit("coding-codex-target.json");
+  check("受領証を置けば止まる", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
+  check("受領証保持の説明", result.stderr.includes("gate受領証"), `受領証を根拠として示していない: ${result.stderr}`);
+  clearCodingReceipts();
 } finally {
   rmSync(repo, { recursive: true, force: true });
 }
@@ -193,4 +239,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`FAIL: ${failure}`);
   process.exit(1);
 }
-console.log(`PASS: scope conflict audit e2e (9 case(s))`);
+console.log(`PASS: scope conflict audit e2e (11 case(s))`);

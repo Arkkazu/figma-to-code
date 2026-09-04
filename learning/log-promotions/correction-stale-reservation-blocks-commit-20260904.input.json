@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "correction-stale-reservation-blocks-commit-20260904",
+  "kind": "correction",
+  "occurredOn": "2026-09-04",
+  "failureClass": "stale-path-ownership-blocks-other-actor",
+  "recurrenceKey": "stale-path-ownership-blocks-other-actor",
+  "promotability": "promotable",
+  "ruleTargets": ["rules/figma-scope-lock.md"],
+  "verifierTargets": ["templates/verify/scope-conflict-audit.mjs", "templates/verify/scope-conflict-audit.e2e.mjs"],
+  "summary": "2026-09-01 に所有台帳へ入れた失効の仕組みが、同じ『解放されない保持』を scope coordination 台帳の active/waiting 行へ移しただけで終わっていた。台帳行は gate受領証の有無も更新日数も問われず、パス交差だけで他担当の宣言を止める。実測（rpa-technologies-theme）では live scope 10件が42パスを保持し、うち5件は受領証を1件も持たず、5件は7日以上更新が無かった。受領証を持たない static-blog-route-and-comparison-20260831 が page-static-blog-detail.php を押さえ、別担当の実装7ファイルが pre-commit（close-receipt-audit --require-coverage）で止まった。その行自身の changeTargets と note は『2026-09-02 に対象外とした』と記録していたが、監査が読む manifest だけが古い宣言を残していた。止める側の出力も『competes』の一行だけで、担当者・受領証の状態・放置日数・次の行動が無く、オーナーへの問い合わせに化けた。",
+  "prevention": "台帳の予約行を停止事由にするのは、その scope が live な gate受領証を保持しているときだけにする。両gateとも編集前に preflight 受領証を要求するため、受領証を持たない scope は定義上まだ1行も編集しておらず、守るべき編集が存在しない。受領証を持たない交差は、担当者・台帳ステータス・manifest 最終更新日数を添えて NOTE で報告し、宣言は止めない。止めるときは交差判定の枝でも担当者・受領証の phase・次の行動を必ず出す。負のE2Eは (j) 受領証を持たない予約は止めないこと と (k) 受領証を1件置けば従来どおり止まること を対で固定し、交差判定ごと無効化したのではないことを機械で区別できるようにする。"
+}
