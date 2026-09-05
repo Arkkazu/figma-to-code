@@ -21,14 +21,12 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 5. 本リポジトリの規則・テンプレート・tools・workflowを改善する場合は、リポジトリ直下の `MyBrain/README.md`、`MyBrain/STATE.md`、`MyBrain/rules/`
 6. 案件のFigma実装・修正を行う場合は、案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
 
-**この開始順が必読の唯一の定義である。**`rules/` や `README.md` に二つ目の一覧を置かない（2026-09-06：`rules/figma-mcp-implementation.md` が独自の8件の一覧を持ち、下記の「読む時点が違う文書」と食い違っていた）。
+**この開始順が必読の唯一の定義である。**`rules/` や `README.md` に二つ目の一覧を置かない（2026-09-06 に3箇所へ分裂していた）。
 
-次の2つは**着手前必読ではない**。読む時点が違うだけで、必須であることは変わらない。工程の該当箇所から必ず参照する。
+次は**着手前必読ではない**。読む時点が違うだけで必須であることは変わらず、工程の該当箇所から必ず参照する。`rules/corrections.md` / `mistakes.md` と同じ扱いである。
 
-- `rules/self-improvement.md` … close後の自己改善で読む。入口は `rules/figma-spec-pipeline.md`「フェーズ3C: close後の自己改善」。
-- `rules/correction-log-promotion.md` … 訂正・失敗を記録し昇格するときに読む。入口は `rules/figma-spec-pipeline.md` の受領証節、`rules/self-improvement.md`、`rules/loop-execution.md`「弱体化の実測」。
-
-これは `rules/corrections.md` / `rules/mistakes.md` を「記録・昇格のときに読む」として開始順4から外しているのと同じ扱いである。記録そのものを外しておいて、その昇格手順書だけを着手前必読に残すのは非対称であり、必読合計を上限（下記）超過させていた。
+- `rules/self-improvement.md` … close後。入口は `figma-spec-pipeline.md`「フェーズ3C」。
+- `rules/correction-log-promotion.md` … 記録・昇格時。入口は `figma-spec-pipeline.md` の受領証節、`self-improvement.md`、`loop-execution.md`「弱体化の実測」。
 
 `rules/`・`templates/`・本ファイルに書かれた `MyBrain/verify/…`、`MyBrain/rules/corrections.md` などのパスは、**すべて6の案件側 `MyBrain/` を指す**。5のリポジトリ直下 `MyBrain/` は本リポジトリを改善するための公開メモリであり、検証キットもgate manifestも置かない。同名だが別物として扱う。
 
@@ -194,7 +192,7 @@ node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-au
 
 GitHub Actions は2つある。
 
-- `.github/workflows/verify-and-merge.yml`：`claude/**` と `codex/**` への push で `run-checks.mjs` を実行し、緑なら `master` へ自動マージする。赤ならマージしない。
+- `.github/workflows/verify-and-merge.yml`：`claude/**` と `codex/**` への push で `run-checks.mjs` を実行し、緑なら `master` 宛のPRを開いてGitHubのauto-mergeに任せる。赤ならマージされない。直接pushでなくPRにしているのは、branch保護と両立させ、検査済みSHAとマージ対象をずらさないためである（2026-09-06 変更。経緯は同ファイル冒頭）。
 - `.github/workflows/audit.yml`：**すべてのブランチ**への push と pull request で同じ `run-checks.mjs` を実行する。自動マージはしない。`fix/**` など上記2つに当たらないブランチが未検査のまま残る穴を塞ぐ。
 
 実ブラウザや案件側の成果物を要するE2Eは `run-checks.mjs` の `KNOWN_FAILING` に理由つきで外してある。緑と赤を混ぜた集合は「いつも赤いので誰も見ない」状態を作り、検査そのものを無効化する。解消したら `CHECKS` へ移す。

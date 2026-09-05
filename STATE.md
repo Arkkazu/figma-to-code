@@ -38,7 +38,9 @@
 - 負のE2E: `rule-size-guard.e2e.mjs` に、上限を実測値より小さくした設定で**実際に落ちること**を固定した。手でも確認済み（上限1バイトで exit 2）。この試験が通らなくなったら、容量検査はどこかで無効化されている。
 - 検証: `run-checks` **18/18 PASS**（16→18本）。`vendored-verifier-audit` `ok: true`。`rule-size-guard` PASS（必読合計 139,219 / 上限 143,360）。`bootstrap --check` exit 0（drift 4件が解消）。web-development 側 e2e 9本すべて PASS。`verify-and-merge.yml` は YAML 構文検証済み。
 - 弱体化の申告: **保護は弱めていない。**開始順から外した2文書は必須のまま読む時点を移しただけで、削除も任意化もしていない。撤廃済み要求の除去は 2026-09-04 のオーナー指示に実装を追随させたものである。自動マージは対象を狭めたので厳しくなっている。
-- ⚠️ 未了: **branch protection と required check は無効のまま。**API実測で protection 404 / 適用ルール0件 / ruleset 0件。`WORKFLOW.md`「検査と反映」が既に「有効化はリポジトリ設定の変更であり、オーナーの判断事項」と定めているため、エージェントの判断で有効化しない。有効化するまで、CIは落ちたことが見えるだけで merge を止めない。
+- 追記（同日 / branch protection の着手）: ownerが有効化を指示。当初は「ruleset + GitHub Actions を bypass actor」で合意したが、**個人所有リポジトリではその指定自体が使えない**ことが実測で判明した（422 "Actor GitHub Actions integration must be part of the ruleset source or owner organization"。`owner_type: User`）。bot が master へ直接pushする限り保護と両立しないため、ownerの再判断で**PR方式へ移行**した。`verify-and-merge.yml` の `merge` job を `open-pr` へ差し替え、`gh pr create` + `gh pr merge --auto` にした。マージ実行者がGitHub自身になるので迂回が不要になり、head が進めば新しいSHAで `audit` が回り直すため検査済みSHAとマージ対象が構造的にずれない（前段の `github.sha` 固定より強い）。check名は実測で `audit`（全push・PRで実行）/ `verify`（特定ブランチのpushのみ）。**必須にできるのは `audit` だけ**で、`verify` はPRで走らないため必須にするとPRが永久に通らない。
+- ⚠️ 未了（2件）: (1) **リポジトリ設定2件が未適用。**`allow_auto_merge`（現在 false）と Actions の「PR作成を許可」（`can_approve_pull_request_reviews`、現在 false）。API呼び出しが auto mode の分類器にブロックされたため、owner の承認か手動操作が要る。(2) **ruleset 未作成。**新しい `verify-and-merge.yml` が master に載る前に有効化すると、旧workflowの直接pushが拒否されて `claude/**` の反映が止まるため、この順序を守る。
+- 自己適用の記録: 今回入れた `rule-size-guard` が、直後の自分の `WORKFLOW.md` 追記を捕まえた（26,017 > 上限 25,600）。節を圧縮して 25,075 へ戻した。[200] は余裕17バイト、今回の中間状態は8バイトで、どちらも次の1回の追記で破れる。**`WORKFLOW.md` へ書き足すときは残バイトを先に見る。**
 
 ## [200] 2026-09-04 / Claude（独立レビューを工程から外す）
 

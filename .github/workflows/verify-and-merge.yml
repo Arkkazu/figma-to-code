@@ -1,6 +1,22 @@
-# claude/** と codex/** への push で検査を実行し、緑なら master へ自動マージする。
-# PRを都度作らずに変更を反映するための仕組み。赤ならマージしないので、
+# claude/** と codex/** への push で検査を実行し、緑なら master へ入れる。
+# PRを人手で作らずに変更を反映するための仕組み。赤なら入らないので、
 # master には検査を通った変更だけが入る。
+#
+# 2026-09-06: 直接 push から「PR作成 + GitHubのauto-merge」へ変えた。
+#
+# 以前は merge job が master へ直接 push していた。この形は master を保護すると
+# 成立しない。bot が作るマージコミットには検査結果がまだ無く、必須ステータス
+# チェックが push を拒否するためである。GitHub Actions を bypass actor にすれば
+# 逃がせるが、**その指定は organization 所有のリポジトリでしか使えない**
+# （2026-09-06 実測: 個人所有では 422 "Actor GitHub Actions integration must be
+# part of the ruleset source or owner organization"）。
+#
+# PR方式にすると、マージを実行するのは bot ではなく GitHub 自身になるので、
+# 保護を迂回する仕組みが要らなくなる。さらに副次的な利点として、
+# **検査済みSHAの保証が構造的になる**。直接 push の頃は「検査した commit」と
+# 「マージする commit」がずれうるため github.sha への固定が要ったが、PRでは
+# head が進めばその新しいSHAで audit が回り直し、緑になるまで auto-merge は
+# 発火しない。ずれようがない。
 name: verify-and-merge
 
 on:
@@ -12,6 +28,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: verify-and-merge-${{ github.ref }}
@@ -28,7 +45,7 @@ jobs:
       - name: run repository checks
         run: node tools/run-checks.mjs
 
-  merge:
+  open-pr:
     needs: verify
     if: github.ref != 'refs/heads/master'
     runs-on: ubuntu-latest
@@ -36,27 +53,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: master
-      - name: merge the verified commit into master
+      - name: open a pull request and let GitHub merge it when checks are green
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
           VERIFIED_SHA: ${{ github.sha }}
         run: |
           set -eu
-          branch="${GITHUB_REF_NAME}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # verify job が検査したのは push された ${VERIFIED_SHA} であって、ブランチの
-          # 「今の先端」ではない。2026-09-06 まで origin/${branch} を取り直してマージして
-          # いたため、検査の後に同じブランチへ push されたcommitが、一度も検査されないまま
-          # master へ入る経路があった。マージ対象を検査済みSHAに固定して塞ぐ。
-          git fetch origin "${branch}"
-          # force-push などで検査済みSHAが到達不能になっていたら、黙って先端を
-          # マージせずに落とす。未検査の内容をmasterへ入れないことを優先する。
-          git cat-file -e "${VERIFIED_SHA}^{commit}"
-          if git merge-base --is-ancestor "${VERIFIED_SHA}" HEAD; then
-            echo "master already contains ${VERIFIED_SHA}; nothing to merge."
+          git fetch origin master
+          if git merge-base --is-ancestor "${VERIFIED_SHA}" origin/master; then
+            echo "master already contains ${VERIFIED_SHA}; nothing to open."
             exit 0
           fi
-          git merge --no-ff --no-edit "${VERIFIED_SHA}" \
-            -m "auto-merge ${branch}@${VERIFIED_SHA} (verified by tools/run-checks.mjs)"
-          git push origin master
+
+          # 同じブランチのPRを二重に作らない。再pushのたびに新しいPRが増えると
+          # auto-merge の対象が分裂し、どれが本命か分からなくなる。
+          number="$(gh pr list --head "${BRANCH}" --base master --state open \
+            --json number --jq '.[0].number // empty')"
+
+          if [ -z "${number}" ]; then
+            gh pr create --base master --head "${BRANCH}" \
+              --title "auto: ${BRANCH}" \
+              --body "tools/run-checks.mjs が緑になったので自動で開いた。マージは GitHub の auto-merge が行う。"
+            number="$(gh pr list --head "${BRANCH}" --base master --state open \
+              --json number --jq '.[0].number')"
+          fi
+
+          # auto-merge は必須チェックが緑になった時点で GitHub 側が実行する。
+          # ここで即マージしないのが要点で、head が進めばその新しいSHAの audit を
+          # 待ってから入る。
+          gh pr merge "${number}" --auto --merge
