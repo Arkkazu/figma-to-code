@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "date": "2026-09-06",
+  "environment": "local",
+  "scope": "Project hook trust and live denied-edit probe in the current Codex conversation; no client implementation or Figma measurement",
+  "result": "FAIL_CURRENT_CONVERSATION_EDIT_NOT_BLOCKED",
+  "trust": {
+    "client": "Codex CLI 0.149.0",
+    "operation": "/hooks > PreToolUse > project hook > trust",
+    "source": ".codex/hooks.json",
+    "matcher": "*",
+    "mode": "Sync",
+    "timeoutSeconds": 60,
+    "observedStatus": "Trusted",
+    "observedPreToolUseCounts": { "installed": 2, "active": 1, "review": 1 },
+    "otherHooksApproved": false,
+    "bypassHookTrustOptionUsed": false,
+    "configFileSha256": "807cbe401a692560548011c30919a8b9bd0bf323925c6ec949f9ab6baaa0c2a3",
+    "guardSourceSha256": "f00e285b5ecea95c777299553cfe907e5021f3e1649858cec16e20cacb6f7a99"
+  },
+  "liveProbe": {
+    "executionPath": "Current conversation: functions.exec -> tools.apply_patch",
+    "target": "tools/.codex-edit-guard-live-probe-20260906.txt",
+    "beforeExists": false,
+    "sessionBindingCreated": false,
+    "operation": "Add File",
+    "expected": "deny and target remains absent",
+    "observed": "apply_patch completed and Get-Item found a 78-byte file",
+    "observedLengthBytes": 78,
+    "passed": false,
+    "cleanup": "Deleted only the probe file using apply_patch",
+    "afterCleanupExists": false
+  },
+  "postProbe": {
+    "head": "e5d28c2278ce32eb7675831ac0b095c7bef66e52",
+    "worktreeCleanBeforeThisReport": true,
+    "cliExitedNormally": true,
+    "modelPromptSentByTest": false
+  },
+  "limitations": [
+    "The trusted CLI UI and the current conversation are different execution contexts.",
+    "No model-driven tool call was made inside the newly opened CLI.",
+    "The exact reason the current conversation did not enforce the hook remains undetermined.",
+    "Restart/reload has not been proven to resolve this discrepancy.",
+    "This report does not claim that all Codex routes or project rules are enforced."
+  ],
+  "nextRequiredVerification": "Determine hook loading and dispatch support in the actual application session, then repeat the live denied-edit probe there. Do not treat CLI Trusted/Active display or standalone E2E PASS as a substitute."
+}
