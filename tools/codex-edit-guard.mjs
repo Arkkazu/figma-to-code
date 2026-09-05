@@ -171,7 +171,12 @@ export function evaluateHook(event, deps = {}) {
     }
     if (["Bash", "exec_command", "shell_command"].includes(event.tool_name)) {
       const input = event.tool_input;
-      check(input && input.login === false && input.tty !== true, "Reader requires login=false and no persistent TTY.");
+      // The documented canonical PreToolUse payload carries only `tool_input.command`
+      // (learn.chatgpt.com/codex/hooks.md), so `login` is absent in practice. Requiring
+      // login===false denied every read, including the fixed reader. Reject an explicitly
+      // requested login/persistent shell instead; admission still rests on the exact
+      // command match below, not on these flags.
+      check(input && input.login !== true && input.tty !== true, "Reader must not request a login or persistent TTY shell.");
       check(Object.keys(input).every((key) => ["command", "cmd", "workdir", "login", "tty", "yield_time_ms", "max_output_tokens"].includes(key)),
         "Shell/environment/permission overrides are not admitted.");
       if (input.workdir !== undefined) check(same(realpathSync(input.workdir), realpathSync(event.cwd)), "Reader workdir must match hook cwd.");

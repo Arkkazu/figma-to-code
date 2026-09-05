@@ -52,7 +52,7 @@ node <playbook>/tools/codex-edit-guard.mjs read-command read <relative-file>
 node <playbook>/tools/codex-edit-guard.mjs read-command list .
 ```
 
-出力されたcommand文字列を変更せず使用します。shell入力は `login:false`、TTYなし、独自shell・環境変数・権限上書きなしに限定します。対応していないクライアントではこの経路も拒否されます。readerはリポジトリ内のファイル読出し・ディレクトリ列挙のみで、任意JavaScriptを実行しません。
+出力されたcommand文字列を変更せず使用します。フックに届く入力は正規化された `tool_input.command` だけです（公式仕様 `learn.chatgpt.com/codex/hooks.md`：`Bash` と `apply_patch` は `tool_input.command` を使う）。したがって `login` を必須にはせず、`login:true`・TTY要求・独自shell・環境変数・権限上書きが**明示された場合に拒否**します。許可の根拠はコマンド文字列の完全一致であって、これらのフラグではありません。対応していないクライアントではこの経路も拒否されます。readerはリポジトリ内のファイル読出し・ディレクトリ列挙のみで、任意JavaScriptを実行しません。
 
 ## 試験と限界
 

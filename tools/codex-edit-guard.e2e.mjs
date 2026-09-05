@@ -124,14 +124,20 @@ try {
     });
     test("fixed reader works; shell suffixes and read-op substitution do not", () => {
       const command = readCommand({ op: "read", path: "src/allowed.txt" });
+      // Documented canonical payload: `Bash` carries only `tool_input.command`.
+      for (const name of ["Bash", "exec_command", "shell_command"]) {
+        assert.equal(evaluateHook(event({ tool_name: name, tool_input: { command } })).allowed, true, name);
+      }
       assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command, login: false } })).allowed, true);
       for (const extra of [{ shell: "custom-shell" }, { env: { NODE_OPTIONS: "--import=evil.mjs" } }, { tty: true }, { login: true }]) {
-        assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command, login: false, ...extra } })).allowed, false);
+        assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command, ...extra } })).allowed, false, JSON.stringify(extra));
       }
       for (const suffix of ["; echo x", " && node evil.mjs", "\nwhoami"]) {
-        assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command: command + suffix, login: false } })).allowed, false);
+        assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command: command + suffix } })).allowed, false);
       }
-      assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command: readCommand({ op: "write", path: "src/allowed.txt" }) } })).allowed, false);
+      const substituted = evaluateHook(event({ tool_name: "Bash", tool_input: { command: readCommand({ op: "write", path: "src/allowed.txt" }) } }));
+      assert.equal(substituted.allowed, false);
+      assert.match(substituted.reason, /Unknown read operation/);
       const token = command.split(" ").at(-1);
       const result = spawnSync(process.execPath, [TOOL, "read", token], { cwd: root, encoding: "utf8" });
       assert.equal(result.status, 0, result.stderr); assert.equal(result.stdout, "before\n");
