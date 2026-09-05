@@ -211,7 +211,7 @@ node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-au
 node C:/AI/figma-to-code/tools/entry-trigger-audit.mjs
 ```
 
-branch protection と required check は**まだ有効化していない**。有効化するまでCIは「落ちたことが見える」だけで、mergeを止めない。有効化はリポジトリ設定の変更であり、オーナーの判断事項である。
+`master` は ruleset で保護している（2026-09-06 オーナー承認。deletion / non_fast_forward / PR必須（承認0） / 必須チェック `audit`）。**直接pushはできない。**反映はPR経由だけで、`audit` が緑になるとGitHubのauto-mergeが入れる。必須にできるのは `audit` だけである。`verify` は `claude/**` `codex/**` `master` のpushでしか走らずPRでは走らないため、必須にするとPRが永久に通らない。設定の変更はオーナーの判断事項であり、エージェントの判断で足し引きしない。
 
 ## この手法自体を編集する場合
 
