@@ -1,5 +1,5 @@
 {
-  "note": "C:/AI/figma-to-code 自身の蓄積ファイル・手順書の上限。根拠は WORKFLOW.md「手順書の上限」「蓄積ファイルの上限」。値をここだけで変えない（両方を直す）。実行: node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json",
+  "note": "C:/AI/figma-to-code 自身の蓄積ファイル・手順書の上限。根拠は WORKFLOW.md「手順書の上限」「必読合計の上限」「蓄積ファイルの上限」。値をここだけで変えない（両方を直す）。totals.paths は WORKFLOW.md「Figma実装・修正タスクの開始順」の3〜4と一致させる（2026-09-06: 開始順から外した self-improvement.md / correction-log-promotion.md をここでも外した）。実行: node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json",
   "note_machineRegion": "corrections.md / mistakes.md は <!-- loop-log-schema: v1 --> より前が機械管理領域で、figma-log-promote の再発判定が既存記録を数えるため件数上限を置かない。marker より後の legacy領域だけを 10件で抑える。件数と並び順は countAfterMarker でその領域だけを見る。",
   "version": 1,
   "files": [
@@ -36,9 +36,7 @@
       "rules/figma-scope-lock.md",
       "rules/figma-mcp-implementation.md",
       "rules/figma-image-export.md",
-      "rules/loop-execution.md",
-      "rules/self-improvement.md",
-      "rules/correction-log-promotion.md"
+      "rules/loop-execution.md"
     ]
   }
 }

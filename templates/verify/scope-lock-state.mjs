@@ -75,11 +75,18 @@ export function collectScopeLockStateFindings(raw, options = {}) {
     add(`scope lock state.status は ${SCOPE_LOCK_STATE_STATUSES.join(" か ")} でなければならない（実際: ${JSON.stringify(raw.status)}）。`);
   } else if (requireEditable && !SCOPE_LOCK_EDITABLE_STATUSES.includes(raw.status)) {
     add(
+      // 2026-09-06 まで、ここは復旧として amend を案内していた。しかし編集可能でない
+      // 状態は blocked だけであり、figma-scope-lock.mjs の amend() は status !== "active"
+      // を fail させる（同ファイルの blockedGuidance も「begin と amend はどちらも拒否
+      // される」と出力する）。案内どおり実行しても必ず落ちる袋小路だった。
+      // 正しい復旧は rebaseline ひとつで、オーナー承認ファイルを要する。
       `scope lock state.status が "${raw.status}" である。この状態で編集工程を進めてはならない。\n` +
         "      これは異常ではなく定常手順である。scope lock が宣言外の変更を検出して止めている。\n" +
-        "      復旧: 宣言外パスを元に戻すか、対象を増やすならオーナー承認を得て\n" +
-        "        node C:/AI/figma-to-code/tools/figma-scope-lock.mjs amend <state> <amendment>\n" +
-        "      をPASSさせてから、この工程をやり直す。blocked のまま active へ書き換えない。",
+        "      復旧: 宣言外パスを元に戻す。それでも解除が要るならオーナー承認ファイルを得て\n" +
+        "        node C:/AI/figma-to-code/tools/figma-scope-lock.mjs rebaseline <state> <approval>\n" +
+        "      をPASSさせてから、この工程をやり直す。blocked では amend も begin も拒否される。\n" +
+        "      対象を増やす amend が使えるのは active のときだけである。\n" +
+        "      blocked のまま active へ書き換えない。",
     );
   }
 

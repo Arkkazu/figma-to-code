@@ -24,6 +24,22 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [201] 2026-09-06 / Claude（検査は在ったが集合に繋がっていなかった。5件の指摘を実測で再現して塞ぐ）
+
+- owner指示: 「優先度順にすべて対応しろ」。codex が挙げた5件の指摘について、まず全件を自分で一次情報から再現した。**5件とも正しく、誤りは1件も無かった。**
+- 再現（実測）: (1) 同梱4ファイルすべてが正本と乖離（`lint-units` 110行 / `responsive-html-guard` 79行 / `scope-conflict-audit` 163行 / `scope-coordination` 238行）(2) `run-checks` は 16/16 PASS なのに `bootstrap --check` と `rule-size-audit` はいずれも exit 1 (3) `loop-learn.mjs` と `figma-feature-coverage.mjs` が撤廃済みの独立レビューを今も要求 (4) 必読合計 148,853 > 上限 143,360 bytes、かつ `figma-mcp-implementation.md` が WORKFLOW と食い違う独自の必読一覧を保持 (5) branch protection 404 / 適用ルール0件 / ruleset 0件、自動マージは検査済みSHAでなくブランチ先端を再取得。
+- 根本原因: **検査を持っていることと、検査していることが別だった。**乖離を検出する `tools/vendored-verifier-audit.mjs` は 2026-08-25 から在り、e2e も在り、実際に赤かった。それが `CHECKS` に入っていないだけで、4ファイルが腐ったまま 16/16 PASS が出続けていた。[200] の ⚠️未了(2) に drift を「本scope外」と書いて残した先が、この状態である。
+- 変更（同梱の乖離）: 方向を1本ずつ判定した。`responsive-html-guard` / `scope-conflict-audit` / `scope-coordination` は**同梱側が新しく**（`corroborateExceptions` など正本に無い機能を持つ）、正本 `C:\AI\web-development\verify\` へ昇格した。`lint-units` は正本側が新しく（W1警告＋行内コメント免除 → E10エラー＋台帳宣言）、同梱へ同期した。単純な上書きでは新機能を消していた。4本とも差分0行。
+- 変更（検査集合）: `CHECKS` へ `tools/vendored-verifier-audit.e2e.mjs` と、新設した `tools/rule-size-guard.e2e.mjs` を追加した。後者は上位層の `rule-size-audit.mjs` を呼ぶ薄いラッパで、`runCheck` が引数を渡せない制約と、CI runner に上位層が無い制約（`WORKFLOW.md`「検査と反映」）の両方を吸収する。上位層を読めない環境では `skipped` で exit 0 とし、mode を必ず出力する。
+- 変更（撤廃済み要求）: `loop-learn.mjs` の `requiredReview` / 提案文 / `expires`、`figma-feature-coverage.mjs` の `requiredReview` / note / summary / 冒頭コメント、`figma-feature-coverage-template.json` の記入指示から独立レビューを外した。`scope-lock-state.mjs` の blocked 復旧案内は `amend` を指していたが、`figma-scope-lock.mjs` の `amend()` は `status !== "active"` を fail させ、同ファイルの `blockedGuidance` 自身も「begin と amend はどちらも拒否される」と出力していた。案内どおり実行すると必ず落ちる袋小路だったので、正しい復旧手段 `rebaseline` へ直した。
+- 変更（必読）: `rules/self-improvement.md`（close後に読む）と `rules/correction-log-promotion.md`（記録・昇格時に読む）を開始順4から外した。**どちらも必須のまま**で、読む時点が違うだけであり、`figma-spec-pipeline.md` フェーズ3Cと受領証節から到達できることを確認した。`rules/corrections.md` / `mistakes.md` を既に「記録・昇格のときに読む」として外しているのに、その昇格手順書だけを着手前必読に残すのは非対称だった。必読合計 148,853 → 139,219 bytes。**規則本文は1行も削っていない。**必読9文書を横断した重複行は944 bytes（大半が markdown 記号）しかなく、統合で5,493 bytes を捻出する余地は無かった。
+- 変更（必読の一元化）: 必読の定義を `WORKFLOW.md` の開始順ひとつに絞り、`rules/figma-mcp-implementation.md` と `README.md` が持っていた二つ目・三つ目の一覧を、開始順を指す記述へ置き換えた。あわせて `WORKFLOW.md` へ「必読合計の上限」節を追加した。config の `note` は根拠として `WORKFLOW.md` を指していたのに、本文に総量上限の記述が無かった。
+- 変更（自動マージ）: `verify-and-merge.yml` のマージ対象を `origin/${branch}`（その時点の先端）から `${{ github.sha }}`（verify job が検査したcommit）へ固定した。検査後に同じブランチへ push されると未検査commitが master へ入る経路を塞いだ。force-push で検査済みSHAが到達不能なら、先端をマージせず `git cat-file -e` で落とす。
+- 負のE2E: `rule-size-guard.e2e.mjs` に、上限を実測値より小さくした設定で**実際に落ちること**を固定した。手でも確認済み（上限1バイトで exit 2）。この試験が通らなくなったら、容量検査はどこかで無効化されている。
+- 検証: `run-checks` **18/18 PASS**（16→18本）。`vendored-verifier-audit` `ok: true`。`rule-size-guard` PASS（必読合計 139,219 / 上限 143,360）。`bootstrap --check` exit 0（drift 4件が解消）。web-development 側 e2e 9本すべて PASS。`verify-and-merge.yml` は YAML 構文検証済み。
+- 弱体化の申告: **保護は弱めていない。**開始順から外した2文書は必須のまま読む時点を移しただけで、削除も任意化もしていない。撤廃済み要求の除去は 2026-09-04 のオーナー指示に実装を追随させたものである。自動マージは対象を狭めたので厳しくなっている。
+- ⚠️ 未了: **branch protection と required check は無効のまま。**API実測で protection 404 / 適用ルール0件 / ruleset 0件。`WORKFLOW.md`「検査と反映」が既に「有効化はリポジトリ設定の変更であり、オーナーの判断事項」と定めているため、エージェントの判断で有効化しない。有効化するまで、CIは落ちたことが見えるだけで merge を止めない。
+
 ## [200] 2026-09-04 / Claude（独立レビューを工程から外す）
 
 - owner指示: 「また本変更の独立レビューを求めている。そういうのがいらないんじゃないかといっている。独立レビューが仕様だと作業効率が悪すぎる。」

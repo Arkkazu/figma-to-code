@@ -22,14 +22,13 @@ CodexがFigmaデザインを実装するとき、目分量・推測・一部確�
 
 ## 着手前に必ず読む
 
-1. `C:\AI\vault\rules\corrections.md`（全作業共通の恒久ルール）
-2. `C:\AI\vault\rules\mistakes.md`（全作業共通の再発防止）
-3. `C:\AI\figma-to-code\rules\corrections.md`（Figma固有の恒久ルール）
-4. `C:\AI\figma-to-code\rules\mistakes.md`（Figma固有の再発防止）
-5. `C:\AI\figma-to-code\references\Figmaレビュー基準.md`
-6. `C:\AI\figma-to-code\rules\figma-image-export.md`
-7. 案件側 `MyBrain/README.md`
-8. 案件側 `MyBrain/rules/corrections.md`
+**必読の定義は `WORKFLOW.md`「Figma実装・修正タスクの開始順」だけとする。**ここに二つ目の一覧を置かない。
+
+2026-09-06 まで、この節は独自の8件の一覧を持ち、開始順と食い違っていた。`WORKFLOW.md`「蓄積ファイルの上限」は `rules/corrections.md` と `rules/mistakes.md` を**開始順4の必読には含めない**（記録・昇格のときに読む）と定めているのに、この節はその4ファイルを着手前必読の1〜4番として要求していた。どちらを読んだかで開始手順が変わる状態だった。`references/Figmaレビュー基準.md` も同様で、`README.md` が「参照資料」と位置づけているものを、ここだけが必読へ格上げしていた。
+
+- 着手前に読むもの：`WORKFLOW.md` の開始順1〜6に従う。
+- `rules/corrections.md` / `rules/mistakes.md`：着手前必読ではない。訂正・失敗を**記録するとき**と、`figma-log-promote` で昇格するときに読む。
+- `references/`：参照資料。必要になった時点で読む（`README.md`「`references/`」）。
 
 ## Figma MCPで取得するもの
 

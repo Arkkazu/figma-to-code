@@ -23,10 +23,76 @@
 //  W1: margin-bottom / margin-right → 余白は上・左で作る（scss.md）。理由コメント付きは許容
 import { existsSync, readFileSync } from 'node:fs';
 
-const files = process.argv.slice(2);
-if (files.length === 0) {
-  console.error('usage: node lint-units.mjs <scssファイル...>');
+// --exceptions <path> で例外台帳を渡す。台帳は coding manifest そのもの
+// （scope.styleRuleApplication.exceptions）でも、同じ形の単独ファイルでもよい。
+const argv = process.argv.slice(2);
+const exceptionsIndex = argv.indexOf('--exceptions');
+const exceptionsPath = exceptionsIndex >= 0 ? argv[exceptionsIndex + 1] : null;
+if (exceptionsIndex >= 0 && (!exceptionsPath || exceptionsPath.startsWith('--'))) {
+  console.error('--exceptions には台帳のパスが必要です。');
   process.exit(2);
+}
+const files = argv.filter((value, index) => {
+  // --exceptions が無いとき exceptionsIndex は -1 なので、+1 が 0 になって
+  // 先頭のファイルを取りこぼす。フラグがあるときだけ除外する。
+  if (exceptionsIndex >= 0 && (index === exceptionsIndex || index === exceptionsIndex + 1)) return false;
+  return !value.startsWith('--');
+});
+if (files.length === 0) {
+  console.error('usage: node lint-units.mjs [--exceptions <台帳.json>] <scssファイル...>');
+  process.exit(2);
+}
+
+// 例外は行内コメントではなく台帳で宣言する。
+//
+// 旧実装は「行に // があれば検査を飛ばす」だった（hasReason）。内容を問わないため
+// `// x` でも免除され、**検証が自己申告で消える**。実測（2026-09-01、
+// rpa-technologies-theme）: margin-bottom/right 20件のうち17件が行内コメントで
+// 免除されており、W1 は警告のままなので exit にも影響していなかった。
+// 今日塞いだ painted:false / uiChange:false と同じ族なので、同じ形で直す。
+//
+// 台帳の1件は file / selector / property / reason（20文字以上）を持つ。
+// 承認は求めない。機械が真偽を判定できない設計判断のため、記録して棚卸しできる形にする。
+function loadStyleRuleExceptions(pathname) {
+  if (!pathname) return [];
+  if (!existsSync(pathname)) {
+    console.error(`--exceptions の台帳がありません: ${pathname}`);
+    process.exit(2);
+  }
+  let document;
+  try {
+    document = JSON.parse(readFileSync(pathname, 'utf8'));
+  } catch (error) {
+    console.error(`--exceptions の台帳が不正なJSONです: ${pathname} (${error.message})`);
+    process.exit(2);
+  }
+  const block = document?.scope?.styleRuleApplication ?? document?.styleRuleApplication ?? document;
+  const list = Array.isArray(block?.exceptions) ? block.exceptions : [];
+  return list.map((entry, index) => {
+    const label = `styleRuleApplication.exceptions[${index}]`;
+    for (const key of ['file', 'selector', 'property', 'reason']) {
+      if (typeof entry?.[key] !== 'string' || entry[key].trim() === '') {
+        console.error(`${label}.${key} が必要です（${pathname}）。`);
+        process.exit(2);
+      }
+    }
+    if (entry.reason.trim().length < 20) {
+      console.error(`${label}.reason は20文字以上で理由を書いてください（${pathname}）。`);
+      process.exit(2);
+    }
+    return {
+      file: entry.file.replace(/\\/g, '/').trim(),
+      selector: entry.selector.trim(),
+      property: entry.property.trim(),
+    };
+  });
+}
+
+const styleRuleExceptions = loadStyleRuleExceptions(exceptionsPath);
+function hasDeclaredException(file, selector, property) {
+  const normalized = String(file).replace(/\\/g, '/');
+  return styleRuleExceptions.some((entry) =>
+    normalized.endsWith(entry.file) && entry.property === property && entry.selector === selector);
 }
 
 let errors = 0;
@@ -204,6 +270,16 @@ for (const file of files) {
   let depth = 0;
   const mediaStack = [];
   const topLevelMediaStack = [];
+  // 例外台帳はセレクタ単位で書く。行番号は編集で動くため鍵にしない。
+  // いちばん内側のセレクタ文字列（`&__label` など、ソースの表記そのまま）を鍵にする。
+  // lint の出力にこの文字列を出すので、そのまま台帳へ写せる。
+  const selectorStack = [];
+  const innermostSelector = () => {
+    for (let index = selectorStack.length - 1; index >= 0; index -= 1) {
+      if (typeof selectorStack[index] === 'string' && selectorStack[index] !== '') return selectorStack[index];
+    }
+    return '(セレクタ外)';
+  };
   lines.forEach((raw, i) => {
     const n = i + 1;
     // 行内コメントを分離（コメント部は検査対象外・理由コメント有無の判定に使う）
@@ -234,6 +310,13 @@ for (const file of files) {
     const opens = (code.match(/\{/g) || []).length;
     const closes = (code.match(/\}/g) || []).length;
     if (t.startsWith('@media')) mediaStack.push(depth);
+    // セレクタスタックの更新。開いた行は積み、閉じた分だけ取り崩す。
+    // @media などのアットルールはセレクタではないので null を積み、深さの辻褄だけ合わせる。
+    if (opens > closes) {
+      selectorStack.push(t.startsWith('@') ? null : t.replace(/\s*\{\s*$/, '').trim());
+    } else if (closes > opens) {
+      for (let close = 0; close < closes - opens; close += 1) selectorStack.pop();
+    }
     depth += opens - closes;
 
     while (topLevelMediaStack.length > 0 && depth <= topLevelMediaStack[topLevelMediaStack.length - 1].depth) {
@@ -270,12 +353,23 @@ for (const file of files) {
       }
     }
 
-    // W1: margin-bottom / margin-right（理由コメント付きは許容）
-    if (!hasReason) {
-      const mb = t.match(/margin-(bottom|right)\s*:/);
-      if (mb) {
-        warns++;
-        console.log(`W1 ${file}:${n}  margin-${mb[1]} → 余白は上・左で作る（scss.md）。必要なら理由コメントを付ける`);
+    // E10（旧W1）: margin-bottom / margin-right。
+    //
+    // 旧実装は警告で、しかも行内コメントがあれば検査自体を飛ばしていた（内容は問わない）。
+    // 実測（2026-09-01、rpa-technologies-theme）: 20件中17件がコメントで免除され、
+    // 警告は exit に影響しないため、規則は事実上機能していなかった。
+    // 例外は台帳（coding manifest の scope.styleRuleApplication.exceptions）で宣言する。
+    const mb = t.match(/margin-(bottom|right)\s*:/);
+    if (mb) {
+      const property = `margin-${mb[1]}`;
+      const selector = innermostSelector();
+      if (!hasDeclaredException(file, selector, property)) {
+        errors++;
+        console.log(
+          `E10 ${file}:${n}  ${property} → 余白は上・左で作る（scss.md）。`
+          + ` 例外にするなら台帳へ宣言する: { "file": "${file.replace(/\\/g, '/')}", "selector": "${selector}",`
+          + ` "property": "${property}", "reason": "<20文字以上の理由>" }`
+        );
       }
     }
   });

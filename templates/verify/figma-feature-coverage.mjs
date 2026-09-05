@@ -9,7 +9,8 @@
 //
 // audit は、監査器自体が実行できた場合に0を返す。--strict は発見した提案を
 // 未解消のまま通過させないためのCI向けモードであり、案件のfigma-gateには接続しない。
-// 正本や実行器の変更は、出力された proposal を独立レビューとowner承認で評価してから行う。
+// 正本や実行器の変更は、出力された proposal を負のE2Eとowner承認で評価してから行う
+// （独立レビューは 2026-09-04 に工程から外した。rules/loop-execution.md）。
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -125,7 +126,7 @@ function evaluateStage(raw, label) {
 const proposal = raw.proposal === undefined
         ? {
             title: "カタログの根拠を実行可能な状態へ復旧する",
-            summary: "coveredと宣言した根拠文字列が現在の正本または実行器に存在しない。対応する実装・文書・カタログのどれが変わったかを独立レビューで特定し、負のE2Eを添えて更新する。",
+            summary: "coveredと宣言した根拠文字列が現在の正本または実行器に存在しない。対応する実装・文書・カタログのどれが変わったかを特定し、負のE2Eを添えて更新する。",
             targets: [...new Set(missingEvidence.map((entry) => entry.path))],
             negativeE2ERequired: true,
           }
@@ -170,8 +171,8 @@ function featureProposal(feature, stage, result) {
       targets: proposal.targets,
       negativeE2ERequired: true,
     },
-    requiredReview: "independent-reviewer + owner approval",
-    note: "この提案は正本・gate・specを自動変更しない。実装後に負のE2E、独立批評、owner承認をそろえてから昇格する。",
+    requiredReview: "negative-e2e + owner approval",
+    note: "この提案は正本・gate・specを自動変更しない。実装後に負のE2Eとowner承認をそろえてから昇格する。",
   };
 }
 

@@ -34,7 +34,7 @@ node C:/AI/figma-to-code/tools/project-entry-install.mjs <ディレクトリ> [<
 4. `C:\AI\web-development\CLAUDE.md`
 5. `C:\AI\figma-to-code\CLAUDE.md`
 
-その後、共通で `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`、必要な `templates/` と案件側 `MyBrain/` を読む。
+その後に読むものは `WORKFLOW.md`「Figma実装・修正タスクの開始順」を唯一の定義とする。ここに二つ目の一覧を置かない（2026-09-06：この行が独自の一覧を持ち、開始順から外れた `rules/self-improvement.md` と `rules/correction-log-promotion.md` を着手前必読として残していた）。
 
 ## 構成
 

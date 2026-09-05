@@ -31,6 +31,17 @@ export const CHECKS = Object.freeze([
   "tools/figma-scope-lock.e2e.mjs",
   // 配布記録。--allow-dirty で迂回した事実と理由が後から数えられることを固定する。
   "tools/verifier-distribution-log.e2e.mjs",
+  // 同梱コピーと web-development 正本の一致。ツールもe2eも 2026-08-25 から在ったのに
+  // この集合へ入っておらず、4ファイルすべてが乖離したまま 16/16 PASS を出し続けていた
+  // （2026-09-06 実測: lint-units 110行 / responsive-html-guard 79行 /
+  // scope-conflict-audit 163行 / scope-coordination 238行）。検査を持っていることと
+  // 検査していることは別である。e2e は実リポジトリの一致も回帰として固定し、
+  // 正本を読めないクラウドでは skipped で通るので、CIを赤くしない。
+  "tools/vendored-verifier-audit.e2e.mjs",
+  // WORKFLOW.md の手順書・必読合計・蓄積ファイルの上限。判定器の正本は上位層に在るため
+  // ラッパ経由で呼ぶ。2026-09-06 実測: 必読合計が 148,853 bytes > 上限 143,360 bytes を
+  // 超えたまま、この集合は 16/16 PASS を出していた。上位層を読めないCIでは skipped。
+  "tools/rule-size-guard.e2e.mjs",
   // 排他所有の失効・空台帳・未登録・交差判定。通るのに集合へ入っていなかった。
   "templates/verify/scope-conflict-audit.e2e.mjs",
   "templates/verify/scope-coordination.e2e.mjs",

@@ -433,7 +433,9 @@ function createProposal(event, finding, reason) {
     target: finding.proposalTarget ?? "C:\\AI\\figma-to-code\\rules\\self-improvement.md",
     evidence: finding.evidence,
     reason,
-    requiredReview: "independent-reviewer + owner approval",
+    // 2026-09-04 に独立レビューを工程から外した（rules/loop-execution.md）。
+    // 残るのは機械で落ちるもの（負のE2E）とオーナー承認だけである。
+    requiredReview: "negative-e2e + owner approval",
     automaticChange: false,
   };
 }
@@ -456,7 +458,7 @@ function proposalMarkdown(proposal, eventPath) {
     "",
     "## 提案",
     "",
-    `${proposal.reason} 正本ルールは独立レビューとオーナー承認があるまで変更しない。`,
+    `${proposal.reason} 正本ルールは、変更を壊す方向の負のE2Eとオーナー承認がそろうまで変更しない。`,
     "",
   ].join("\n");
 }
@@ -546,7 +548,7 @@ function analyze(event, policy, outputDirectory) {
       ...control,
       sourceEventId: event.eventId,
       appliedAt: event.generatedAt,
-      expires: "independent-reviewer or owner removes it; automatic expiry is prohibited",
+      expires: "owner removes it; automatic expiry is prohibited",
     };
     active.document.controls.push(applied);
     activeIds.add(control.controlId);

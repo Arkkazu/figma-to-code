@@ -39,7 +39,7 @@
           "reason": "<現在の検証器で観測できない理由を20文字以上で記す。>",
           "proposal": {
             "title": "<改善提案のタイトル（12文字以上）>",
-            "summary": "<追加する観測・FAIL条件・独立レビューを20文字以上で記す。>",
+            "summary": "<追加する観測・FAIL条件・負のE2Eを20文字以上で記す。>",
             "targets": ["MyBrain/verify/<新規または変更する検証器>.mjs"],
             "negativeE2ERequired": true
           }

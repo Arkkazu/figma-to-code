@@ -17,9 +17,18 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs
 1. `C:\AI\vault\WORKFLOW.md`
 2. `C:\AI\web-development\WORKFLOW.md`
 3. 本ファイルと `README.md`
-4. `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`、`rules/self-improvement.md`、`rules/correction-log-promotion.md`
+4. `rules/figma-spec-pipeline.md`、`rules/figma-scope-lock.md`、`rules/figma-mcp-implementation.md`、`rules/figma-image-export.md`、`rules/loop-execution.md`
 5. 本リポジトリの規則・テンプレート・tools・workflowを改善する場合は、リポジトリ直下の `MyBrain/README.md`、`MyBrain/STATE.md`、`MyBrain/rules/`
 6. 案件のFigma実装・修正を行う場合は、案件側 `MyBrain/README.md`、`MyBrain/WORKFLOW.md`、`MyBrain/rules/`、案件側 `LOOP.md` / `STATE.md`
+
+**この開始順が必読の唯一の定義である。**`rules/` や `README.md` に二つ目の一覧を置かない（2026-09-06：`rules/figma-mcp-implementation.md` が独自の8件の一覧を持ち、下記の「読む時点が違う文書」と食い違っていた）。
+
+次の2つは**着手前必読ではない**。読む時点が違うだけで、必須であることは変わらない。工程の該当箇所から必ず参照する。
+
+- `rules/self-improvement.md` … close後の自己改善で読む。入口は `rules/figma-spec-pipeline.md`「フェーズ3C: close後の自己改善」。
+- `rules/correction-log-promotion.md` … 訂正・失敗を記録し昇格するときに読む。入口は `rules/figma-spec-pipeline.md` の受領証節、`rules/self-improvement.md`、`rules/loop-execution.md`「弱体化の実測」。
+
+これは `rules/corrections.md` / `rules/mistakes.md` を「記録・昇格のときに読む」として開始順4から外しているのと同じ扱いである。記録そのものを外しておいて、その昇格手順書だけを着手前必読に残すのは非対称であり、必読合計を上限（下記）超過させていた。
 
 `rules/`・`templates/`・本ファイルに書かれた `MyBrain/verify/…`、`MyBrain/rules/corrections.md` などのパスは、**すべて6の案件側 `MyBrain/` を指す**。5のリポジトリ直下 `MyBrain/` は本リポジトリを改善するための公開メモリであり、検証キットもgate manifestも置かない。同名だが別物として扱う。
 
@@ -167,6 +176,7 @@ Figma上で同じ表示名のノード、同種CTA、同じ文言のボタンが
 - 同じ指摘から案件横断の工程失敗が判明した場合だけ、プロジェクト固有値を除いた抽象ルールを `rules/corrections.md` または `rules/mistakes.md` へ昇格する。
 - `C:\AI\figma-to-code` には案件名、URL、node-id、セレクタ、数値、固有アセットを保存しない。案件固有の記録を共通ルールで代用しない。
 - **手順書の上限**：`rules/` の手順書（蓄積ログでないもの。`figma-spec-pipeline.md` など開始順4の必読）は **600行 / 80KB** を上限とする。手順は一部だけ読んでも役に立たないため、退避はしない。上限に達したら、同じ工程を扱う節を**統合**して縮める。新しい注意点は既存の該当節へ書き足し、`（YYYY-MM-DD追加）` の新節を積み増さない。2026-08-26 実測：`figma-spec-pipeline.md` 523行 / 72.9KB（上限内だが余裕は少ない）。
+- **必読合計の上限**：開始順3〜4の必読（`WORKFLOW.md`、`README.md`、`rules/` の手順書5件）の合計を **140KB（143,360 bytes）** までとする。1文書ずつ上限内でも、合計が読み切れなければ「一部だけ読んで着手する」が起きる。2026-09-06 まで、この上限は `verify-config/rule-size-audit.config.json` にしか無く、同ファイルの `note` が根拠として本ファイルを指しているのに本文へ記述が無かった。値を変えるときは両方を直す。2026-09-06 実測：148,853 bytes で超過していたため、着手前に読む必要のない `rules/self-improvement.md`（close後）と `rules/correction-log-promotion.md`（記録・昇格時）を開始順4から外して解消した。**規則本文を削って合計を合わせない。**上限に触れたら、まず「その文書は本当に着手前に要るか」を疑う。
 - **蓄積ファイルの上限**：`rules/corrections.md` と `rules/mistakes.md` は `<!-- loop-log-schema: v1 -->` を境に、前が機械管理領域、後が legacy領域である。
   - **機械管理領域には件数上限を置かない。**`figma-log-promote` の再発判定（`recurrenceKey` の件数）が既存記録を数えるため、退避すると3回目の再発が1回目に見える。サイズは再発検出の対価として受け入れる。この2ファイルは開始順4の必読には含まれない（記録・昇格のときに読む）。
   - **legacy領域は10件を上限**とし、超えたら日付の古い順に `rules/corrections-archive.md` / `rules/mistakes-archive.md` へ退避する。marker より後の記録は再発判定の対象外なので、退避しても検出は劣化しない。
