@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "date": "2026-09-06",
+  "environment": "local",
+  "scope": "Read-only investigation of the actual Codex application hook loading and tool dispatch route; no configuration, source, process restart, or model invocation changes",
+  "priorProbe": "codex-edit-guard-live-20260906.json",
+  "finding": "The on-disk hook and trust record are valid for the application-bundled engine. Reflection into the already-running application session remains unproven; stale runtime hook configuration is the leading hypothesis, not a confirmed root cause.",
+  "actualRoute": {
+    "host": "VS Code extension openai.chatgpt",
+    "extensionVersion": "26.5901.22334",
+    "bundledEngineVersion": "codex-cli 0.153.0",
+    "trustOperationEngineVersion": "codex-cli 0.149.0 (separate CLI)",
+    "observedProcessChain": ["VS Code extension host", "bundled codex.exe app-server", "codex-code-mode-host.exe"],
+    "extensionLaunchArgumentsObservedInBundledCode": ["-c", "features.code_mode_host=true", "app-server", "--analytics-default-enabled"],
+    "appServerStartedLocal": "2026-09-05T22:15:06+09:00",
+    "codeModeHostStartedLocal": "2026-09-05T23:22:49+09:00",
+    "projectHookCreatedLocal": "2026-09-06T02:39:36+09:00",
+    "currentSessionMetadataOriginator": "codex_vscode",
+    "runtimeFeatureLogIncludes": ["CodexHooks", "CodeModeHost"],
+    "runtimeDispatchLogIncludes": ["dispatch_tool_call_with_code_mode_result", "code-mode host operation completed"]
+  },
+  "freshBundledEngineDiscovery": {
+    "method": "initialize followed by hooks/list in a separate diagnostic app-server process using the same application-bundled executable",
+    "threadsStartedOrResumed": 0,
+    "modelPromptsSent": 0,
+    "result": {
+      "source": "project",
+      "eventName": "preToolUse",
+      "enabled": true,
+      "trustStatus": "trusted",
+      "matcher": "*",
+      "currentHash": "sha256:0759c51ea8f5a04e75f0e43a7c63c669b069f72b46b51cc945356daaea4508ad",
+      "errors": [],
+      "warnings": [],
+      "statusMessage": null
+    },
+    "interpretation": "Rules out a discovery error or cross-version trust-hash mismatch in this fresh-process check. Does not inspect the hook snapshot of the already-loaded conversation or prove a tool was blocked."
+  },
+  "bundledApplicationCode": {
+    "source": "webview/assets/app-initial-d8588f3b7d3f.js",
+    "sourceSha256": "eacb6a5f67f9ad7061e16a030e365bcc7782ef804e2f54c9f15486f6a44f7ca2",
+    "discoveryRequest": "hooks/list with cwds",
+    "trustMutation": "config/batchWrite, hooks.state, trusted_hash, mergeStrategy=upsert, reloadUserConfig=true",
+    "reloadParameterSchemaDescription": "When true, hot-reload updated runtime settings into loaded threads after writing. Session-static model, reasoning-effort, Plan-mode reasoning-effort, service-tier, and personality defaults are not reloaded.",
+    "activeDisplayComputation": "trustStatus === managed OR (enabled AND trustStatus === trusted)",
+    "activeDisplayMeaning": "Derived from configuration metadata, not an observed hook invocation or successful denied-edit probe.",
+    "limitation": "Packaged code establishes an intended client path, not that this path was invoked by the active VS Code session."
+  },
+  "logEvidenceLimit": {
+    "databaseOpenedReadOnly": true,
+    "currentThreadHookTargetRows": 0,
+    "interpretation": "No hook-target log rows were found for this thread in the retained database. This is not proof that no hook ever ran; successful runs may not be logged there."
+  },
+  "hypotheses": [
+    {
+      "name": "Already-loaded application thread did not refresh discovered hooks and/or trust after external CLI approval",
+      "rank": "leading",
+      "basis": "Live application predates hook creation; approval was made in another process; fresh same-version discovery succeeds; app trust code explicitly requests runtime reload.",
+      "notYetProven": "The live thread's in-memory hook set has not been directly inspected."
+    },
+    {
+      "name": "Runtime dispatch or hook startup defect",
+      "rank": "not excluded",
+      "basis": "The live edit was not blocked. Configuration discovery alone cannot distinguish skipped hooks, startup failure, or a dispatch defect."
+    }
+  ],
+  "officialSources": [
+    "https://learn.chatgpt.com/docs/hooks#tool-coverage",
+    "https://learn.chatgpt.com/docs/app-server"
+  ],
+  "officialScope": "Code-mode nested calls are documented as hook-covered; code mode is not intrinsically exempt. Some specialized paths can opt out. This investigation does not establish such an opt-out for the observed call.",
+  "nextDiagnostic": "Reload configuration in the actual application host or restart its extension session under owner direction, then repeat the same live denied-edit probe. If it still writes, capture hook started/completed or startup error evidence from that host and distinguish dispatch failure from guard-process failure.",
+  "noAutomaticRemediation": "No hook disabling, trust bypass, update, settings write, live thread resume, or application restart was performed."
+}
