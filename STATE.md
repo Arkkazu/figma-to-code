@@ -24,6 +24,17 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [202] 2026-09-06 / Codex（編集前フック接続と迂回試験。実機有効化は未確認）
+
+- owner指示: 「既存検証器の不整合修正 → 編集前フック接続 → 迂回試験」の順で修正する。
+- 既存不整合: 着手時点で [201] の修正が入っていたため重複変更せず、vendored検証器4件の一致・入口5文書・規則容量を再検証してPASS。作業中に入ったPR方式への変更も保持し、READMEの旧「PRは作らない」を現物へ同期した。
+- 実装: `tools/codex-edit-guard.mjs` を追加。同期PreToolUseでsessionとscopeを接続し、既存scope-lock assertと新しい読み取り専用 `figma-gate assert-edit` を呼ぶ。案件は同じscope lock、active preflight、session/context、凍結入力・検証器hash、宣言パスを照合する。ハッシュ欠落も拒否する。本プレイブックの保守に案件用Figma証跡を作らない。
+- 迂回拒否: 範囲外の追加・更新・削除・移動、別session/別scope、制御ファイル編集、パス別名、任意shell/MCP/未知ツールを拒否。shellは固定readerだけとし、独自shell/環境上書きも拒否する。通常のビルド・gate実行・Git操作はオーナー端末へ分離する制約がある。
+- 実行結果: `codex-edit-guard.e2e` **18 groups PASS**（同じ負の試験を検査除去版へ当てるmutationを含む）。`figma-gate.e2e` **637 assertions PASS**（実CLI接続・入力改変・runtime欠落・停止状態・退役束縛・bytes不変を含む）。`run-checks` **19/19 PASS**。従来の除外9件は未実行であり合格に読み替えない。入口5文書、容量、Git BashによるVault構造検査もPASS（週次lint未実施の既存WARNあり）。
+- 設置: このリポジトリのローカル `.codex/hooks.json` を生成した。既存設定を上書きせず、信頼承認は自動付与しない。導入・接続・制約は `tools/codex-edit-guard.md`。生成設定はGit管理外で、clone先へ自動適用されない。
+- ⚠️ 未了: Codex側のhook信頼と実機での発火・編集拒否試験。E2Eはhookプロトコルの再生であり、実Codexのdispatch試験ではない。未信頼/未ロード/起動失敗、既存write_stdin経路、専用ツールのhook対象外、別プロセス、OS権限分離はこの変更で閉じていない。「迂回不能」「稼働確認済み」とは報告しない。
+- scope外: 実案件への配布・Figma/browser測定・P-3/R5/P-11の実行/認可・GitHub保護設定は変更していない。追加の有料モデル呼出しなし。
+
 ## [201] 2026-09-06 / Claude（検査は在ったが集合に繋がっていなかった。5件の指摘を実測で再現して塞ぐ）
 
 - owner指示: 「優先度順にすべて対応しろ」。codex が挙げた5件の指摘について、まず全件を自分で一次情報から再現した。**5件とも正しく、誤りは1件も無かった。**

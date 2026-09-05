@@ -48,13 +48,15 @@ node C:/AI/figma-to-code/tools/project-entry-install.mjs <ディレクトリ> [<
 
 ## 検査と反映
 
+Codexの編集前フックの設置・scope接続・迂回試験と制約は [tools/codex-edit-guard.md](tools/codex-edit-guard.md) にまとめています。生成設定の設置だけでは有効化されず、Codex側での信頼と実機発火の検査が必要です。
+
 検査は1コマンドで実行する。CIと手元で同じ集合を実行する。
 
 ```bash
 node tools/run-checks.mjs
 ```
 
-`claude/**` と `codex/**` へ push すると、GitHub Actions（`.github/workflows/verify-and-merge.yml`）が同じ検査を実行し、緑なら `master` へ自動マージする。赤ならマージしない。プルリクエストは作らない。
+`claude/**` と `codex/**` へ push すると、GitHub Actions（`.github/workflows/verify-and-merge.yml`）が同じ検査を実行し、緑なら `master` 宛のPRを作成してGitHubのauto-mergeを設定する。必要なリポジトリ設定と未検査項目は `WORKFLOW.md`「検査と反映」に従う。
 
 実ブラウザや案件側の成果物を要するE2Eは、`run-checks.mjs` の `KNOWN_FAILING` に理由つきで列挙し、集合から外している。緑と赤を混ぜると検査そのものが無視されるため。解消したら `CHECKS` へ移す。
 

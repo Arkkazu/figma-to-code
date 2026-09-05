@@ -1496,10 +1496,77 @@ function assertPlaybookRootGuard() {
   }
 }
 
+function assertEditHookIntegration() {
+  const fixture = createFixture("figma-gate-edit-hook-");
+  const guard = join(playbookRoot, "tools/codex-edit-guard.mjs");
+  const lockPath = join(fixture.directory, "scope-lock.state.json");
+  const scopePath = join(fixture.directory, "scope-lock.json");
+  const args = ["assert-edit", fixture.manifestRelativePath, implementationIdentity.contextId, "site/view.txt"];
+  function guardCli(argv, input) {
+    const result = spawnSync(process.execPath, [guard, ...argv], {
+      cwd: fixture.root, encoding: "utf8", input,
+      env: { ...process.env, FIGMA_TO_CODE_ROOT: localWorkflowRoot },
+    });
+    assert(result.status === 0, `real hook CLI succeeds: ${result.stderr || result.error || result.stdout}`);
+    return JSON.parse(result.stdout);
+  }
+  const event = { hook_event_name: "PreToolUse", tool_name: "apply_patch", cwd: fixture.root,
+    session_id: implementationIdentity.contextId,
+    tool_input: { command: "*** Begin Patch\n*** Update File: site/view.txt\n@@\n-before\n+after\n*** End Patch" } };
+  const hook = () => guardCli(["hook"], JSON.stringify(event)).hookSpecificOutput.permissionDecision;
+  try {
+    writeJson(scopePath, validScopeLockState(fixture.root).scope);
+    // These are disposable fixture paths under a verified temp directory only.
+    assert(dirname(fixture.root) === resolve(tmpdir()), "edit-hook fixture is inside tmpdir");
+    rmSync(lockPath);
+    run(process.execPath, [join(playbookRoot, "tools/figma-scope-lock.mjs"), "begin", scopePath, lockPath], fixture.root);
+    const noPreflight = gate(args, fixture.root);
+    assert(noPreflight.result.status !== 0, "assert-edit without preflight rejects");
+    assert(hook() === "deny", "real hook without binding denies");
+    accept(preflightArgs(fixture), fixture.root);
+    const snapshot = snapshotGateArtifacts(fixture, "edit-hook");
+    const sourceHash = sha256(join(fixture.root, "site/view.txt"));
+    accept(args, fixture.root);
+    reject(["assert-edit", fixture.manifestRelativePath, "another-context", "site/view.txt"], "another session/context", fixture.root);
+    reject([...args.slice(0, 3), "site/other-view.txt"], "both scope lock and changeTargets", fixture.root);
+    guardCli(["bind", fixture.root, implementationIdentity.contextId, lockPath, fixture.manifestRelativePath]);
+    assert(hook() === "allow", "real hook connects scope-lock assert AND figma-gate assert-edit");
+    const lockBytes = readFileSync(lockPath);
+    mutateJson(lockPath, (state) => { state.status = "blocked"; });
+    assert(hook() === "deny", "real blocked lock denies hook");
+    writeFileSync(lockPath, lockBytes);
+    const specBytes = readFileSync(fixture.specPath);
+    writeFileSync(fixture.specPath, Buffer.concat([specBytes, Buffer.from("\n")]));
+    assert(hook() === "deny", "real frozen spec hash change denies hook");
+    writeFileSync(fixture.specPath, specBytes);
+    const activeBytes = readFileSync(snapshot.activePath);
+    for (const mutate of [
+      (state) => { state.phase = "closed"; },
+      (state) => { delete state.runtime; },
+      (state) => { state.runtime.entrySha256 = "0".repeat(64); },
+      (state) => { delete state.runtime.modules[Object.keys(state.runtime.modules)[0]]; },
+    ]) {
+      mutateJson(snapshot.activePath, mutate);
+      assert(hook() === "deny", "closed/incomplete/changed runtime cannot authorize an edit");
+      writeFileSync(snapshot.activePath, activeBytes);
+    }
+    assert(hook() === "allow", "restored matching inputs allow the same request");
+    guardCli(["unbind", fixture.root, implementationIdentity.contextId]);
+    assert(hook() === "deny", "retired binding can no longer authorize edits");
+    assert(readJson(join(fixture.root, ".codex/edit-guard.json")).retired.length === 1, "retirement preserves previous binding history");
+    assertGateArtifactsUnchanged(snapshot, "assert-edit is read-only");
+    assert(sha256(join(fixture.root, "site/view.txt")) === sourceHash, "hook replay does not dispatch or mutate source");
+  } finally {
+    assert(dirname(fixture.root) === resolve(tmpdir()), "cleanup target remains within tmpdir");
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+}
+
 // このE2Eは毎回100秒前後かかる（1ケースごとに使い捨てGitリポジトリを作り、実gateを起動するため）。
 // 従来は完了行まで一切出力が無く、2026-08-29 の独立検証は90秒で打ち切って「未合格・未確認」と報告した。
 // 実際には101秒でPASSしていた。無反応に見える時間を作らないよう、所要目安と各段の進捗を出す。
 const STEPS = [
+  ["edit hook + real verifier integration (protocol replay)", assertEditHookIntegration],
   ["workflow preflight guards", assertWorkflowPreflightGuards],
   ["start declaration guards", assertStartDeclarationGuards],
   ["process output guards", assertProcessOutputGuards],

@@ -29,6 +29,7 @@ export const CHECKS = Object.freeze([
   "tools/public-memory-scan.e2e.mjs",
   "tools/figma-log-promote.e2e.mjs",
   "tools/figma-scope-lock.e2e.mjs",
+  "tools/codex-edit-guard.e2e.mjs",
   // 配布記録。--allow-dirty で迂回した事実と理由が後から数えられることを固定する。
   "tools/verifier-distribution-log.e2e.mjs",
   // 同梱コピーと web-development 正本の一致。ツールもe2eも 2026-08-25 から在ったのに

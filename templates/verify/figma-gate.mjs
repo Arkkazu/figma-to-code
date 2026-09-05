@@ -181,10 +181,16 @@ function gateRuntimeEvidence() {
 }
 
 // preflight で凍結した検証器と、いま動いている検証器を突き合わせる。
-// close / release-check は受領証を書く工程なので止める。途中フェーズは報告に留める
+// close / release-check と編集直前の assert-edit は止める。他の途中フェーズは報告に留める
 // （止めても実装役は前に進めず、原因が見えれば自分で直せるため）。
 function assertVerifierRuntimeUnchanged(state, phase) {
   const frozen = state.runtime && typeof state.runtime === "object" ? state.runtime : null;
+  if (phase === "assert-edit") {
+    if (!frozen || typeof frozen.entrySha256 !== "string" || !frozen.modules ||
+        JSON.stringify(Object.keys(frozen.modules).sort()) !== JSON.stringify([...VERIFIER_MODULES].sort())) {
+      fail("assert-edit requires complete frozen verifier runtime hashes; re-run preflight.");
+    }
+  }
   if (!frozen || !frozen.modules || typeof frozen.modules !== "object") {
     // 版を持たない古い受領証。判定材料が無いので黙って通す（移行互換）。
     return;
@@ -209,7 +215,7 @@ function assertVerifierRuntimeUnchanged(state, phase) {
     "  凍結時と別の検証器で判定すると、受領証がどの契約の下で通ったのか特定できません。\n" +
     "  preflight を引き直してください。引き直すと現在の検証器で凍結し直します。";
 
-  if (phase === "close" || phase === "release-check") fail(`SPEC FAIL: ${detail}`);
+  if (phase === "close" || phase === "release-check" || phase === "assert-edit") fail(`SPEC FAIL: ${detail}`);
   pass(detail);
 }
 
@@ -2558,6 +2564,27 @@ function requireFrozenPreflight(manifestPath, phase) {
   return { absoluteManifestPath, state, validated, implementationIdentity };
 }
 
+// Read-only hook entry point: reuse the same frozen-input/runtime validators as
+// checkpoint. Do not re-run preflight, capture a new baseline, or measure a browser.
+function assertEdit(manifestPath, sessionId, paths) {
+  if (!sessionId || paths.length === 0) fail("assert-edit requires a session id and edit paths.");
+  const active = requireFrozenPreflight(manifestPath, "assert-edit");
+  if (active.implementationIdentity.contextId !== sessionId) {
+    fail("assert-edit: preflight belongs to another session/context.");
+  }
+  const declaration = readJson(active.validated.startDeclaration.absolutePath, "Start declaration");
+  const lock = readJson(inputRepoPath(declaration.scopeLockStatePath, "Scope lock state").absolutePath, "Scope lock state");
+  const allowed = new Set(lock.scope.allowedPaths);
+  const targets = new Set(active.validated.changeTargets.map(({ relativePath }) => relativePath));
+  for (const path of paths) {
+    const normalized = inputRepoPath(path, "Edit path").relativePath;
+    if (!allowed.has(normalized) || !targets.has(normalized)) {
+      fail(`assert-edit: path must be in both scope lock and changeTargets: ${normalized}`);
+    }
+  }
+  pass("assert-edit: matching preflight, frozen inputs, and edit paths verified (read-only).");
+}
+
 // The gate itself measures, captures, and compares each checkpoint. It does not accept self-reported evidence.
 //   1. Generate a filtered spec and run CDP layout verification.
 //   2. Capture browser output for painted elements by viewport.
@@ -3465,6 +3492,8 @@ if (command !== "versions") assertNotPlaybookRoot();
 
 if (command === "start") {
   start();
+} else if (command === "assert-edit") {
+  assertEdit(args[1], args[2], args.slice(3));
 } else if (command === "preflight") {
   const parsed = parsePreflightArguments(args.slice(1));
   preflight(parsed.manifestPath, parsed.implementationIdentity, { discardCheckpoints: parsed.discardCheckpoints });
@@ -3527,6 +3556,6 @@ if (command === "start") {
     }
   }
 } else {
-  console.error("Usage: node MyBrain/verify/figma-gate.mjs start | versions [manifest.json] | preflight <manifest.json> --implementation-actor <actor> --implementation-context-id <context> [--discard-checkpoints] | <checkpoint|section-start|section-close|close|release-check> <manifest.json> [elementId-or-release-record]");
+  console.error("Usage: node MyBrain/verify/figma-gate.mjs start | versions [manifest.json] | assert-edit <manifest.json> <session-id> <path...> | preflight <manifest.json> --implementation-actor <actor> --implementation-context-id <context> [--discard-checkpoints] | <checkpoint|section-start|section-close|close|release-check> <manifest.json> [elementId-or-release-record]");
   process.exit(1);
 }
