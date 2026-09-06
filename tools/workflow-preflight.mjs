@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from "node:fs";
+import { dirname } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -17,6 +18,16 @@ export const LOCAL_WORKFLOW_SOURCES = [
     envKey: "FIGMA_TO_CODE_WEB_DEVELOPMENT_WORKFLOW",
   },
 ];
+
+export const WORKFLOW_SOURCE_IDS = LOCAL_WORKFLOW_SOURCES.map((source) => source.id);
+
+// 上位層プレイブックのルート。判定に使う WORKFLOW.md と同じ出所から導くので、
+// 「判定は通るのに規則本文は読めない」というずれが起きない。
+export function workflowSourceRoot(id, env = process.env) {
+  const source = LOCAL_WORKFLOW_SOURCES.find((entry) => entry.id === id);
+  if (!source) return null;
+  return dirname(env[source.envKey] || source.defaultPath);
+}
 
 // 空ファイル・プレースホルダを `local` と誤認しないための下限。世代差の検出はできない。
 export const MIN_WORKFLOW_BYTES = 200;

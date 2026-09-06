@@ -56,6 +56,15 @@ node <playbook>/tools/codex-edit-guard.mjs read-command list .
 
 ガードが壊れたときの検出・遮断・修理・再武装の手順は `rules/codex-edit-guard-repair.md` を正本とします。変更したら `node codex-edit-guard.mjs selftest` を通すこと。`install` はこれに合格しないガードの設置を拒否します。
 
+`read` と `list` は既定でリポジトリ内に限定されます。`CLAUDE.md` が必読とする上位層の規則本文はリポジトリ外にあるため、要求に `root` を付けて読みます。`root` に指定できるのは `workflow-preflight.mjs` の `LOCAL_WORKFLOW_SOURCES` が宣言する id（`vault` / `web-development`）だけで、任意のディレクトリは指定できません。指定したroot配下でも、traversal・別名パス・シンボリックリンクの検査は同じく働きます。
+
+~~~powershell
+node tools/codex-edit-guard.mjs read-command read rules/corrections.md vault
+node tools/codex-edit-guard.mjs read-command list rules vault
+~~~
+
+**環境判定が ok を返すことと、規則本文が届くことは別です。**`selftest` は各上位層の `WORKFLOW.md` が実際にバイト数付きで返ることまで検査します。
+
 `preflight` は `CLAUDE.md` が必須とする環境判定を、シェルを開かずに行うための経路です。`node codex-edit-guard.mjs read-command preflight` が出す固定コマンドだけが許可され、ガード自身が `tools/workflow-preflight.mjs` を呼んで同じJSONを返します。実行されるファイルが増えないよう、`tools/workflow-preflight.mjs` は `protectedPath` に含めてセッションからの編集を禁止しています。
 
 ## 試験と限界

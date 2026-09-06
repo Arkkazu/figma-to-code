@@ -7,6 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, selftest, TOOL } from "./codex-edit-guard.mjs";
+import { evaluateWorkflowEnvironment } from "./workflow-preflight.mjs";
 
 const self = fileURLToPath(import.meta.url);
 const root = mkdtempSync(join(tmpdir(), "codex-edit-guard-test-"));
@@ -179,14 +180,45 @@ try {
       assert.throws(() => install(root), /will not be overwritten/);
       assert.equal(readFileSync(join(root, ".codex/hooks.json"), "utf8"), "other hooks");
     });
+    test("upper-layer required reading is delivered, and only through declared roots", () => {
+      const upstream = join(outside, "vault-fixture");
+      write(join(upstream, "WORKFLOW.md"), "# upstream\nrules body\n");
+      write(join(upstream, "rules/corrections.md"), "# corrections\n");
+      write(join(outside, "secret.txt"), "must not be reachable");
+      const env = { ...process.env, FIGMA_TO_CODE_VAULT_WORKFLOW: join(upstream, "WORKFLOW.md") };
+      const run = (request) => spawnSync(process.execPath, [TOOL, "read", readCommand(request).split(" ").at(-1)],
+        { cwd: root, encoding: "utf8", env });
+      const admitted = (request) => evaluateHook(event({ tool_name: "Bash", tool_input: { command: readCommand(request) } })).allowed;
+      // Admission alone is not access: the document must actually come back.
+      assert.equal(admitted({ op: "read", path: "WORKFLOW.md", root: "vault" }), true);
+      assert.equal(run({ op: "read", path: "WORKFLOW.md", root: "vault" }).stdout, "# upstream\nrules body\n");
+      assert.equal(run({ op: "read", path: "rules/corrections.md", root: "vault" }).stdout, "# corrections\n");
+      assert.match(run({ op: "list", path: "rules", root: "vault" }).stdout, /corrections\.md/);
+      // Only declared roots resolve, and the usual path checks still apply beneath one.
+      assert.equal(admitted({ op: "read", path: "WORKFLOW.md", root: "elsewhere" }), false);
+      assert.notEqual(run({ op: "read", path: "../secret.txt", root: "vault" }).status, 0);
+      assert.notEqual(run({ op: "read", path: "C:/Windows/win.ini", root: "vault" }).status, 0);
+      assert.notEqual(run({ op: "read", path: "C:/AI/vault/WORKFLOW.md" }).status, 0);
+    });
     test("selftest detects both brick directions, and install refuses to arm a failing guard", () => {
       const healthy = selftest();
       assert.equal(healthy.passed, true, JSON.stringify(healthy.results.filter((entry) => !entry.ok)));
+      // The delivery check is the whole lesson of 2026-09-06; it must not silently disappear.
+      const delivered = healthy.results.filter((entry) => entry.name.startsWith("required reading arrives:"));
+      assert.ok(delivered.length > 0, "selftest must cover upper-layer required reading");
+      for (const workflow of evaluateWorkflowEnvironment().localWorkflows) {
+        const entry = delivered.find((candidate) => candidate.name.endsWith(`${workflow.id}/WORKFLOW.md`));
+        assert.ok(entry, `missing delivery check for ${workflow.id}`);
+        // A present upstream must be really read; only an absent one may report a skip.
+        if (workflow.status === "ok") assert.match(entry.reason, /^ok \(\d+ bytes\)$/, entry.name);
+      }
       // Deny-everything is the direction that actually happened: the fixed reader stops working.
       const bricked = selftest({ evaluate: () => ({ allowed: false, reason: "bricked" }) });
       assert.equal(bricked.passed, false);
-      assert.deepEqual(bricked.results.filter((entry) => !entry.ok).map((entry) => entry.name),
-        ["fixed reader: read", "fixed reader: list", "fixed reader: preflight"]);
+      const failed = bricked.results.filter((entry) => !entry.ok).map((entry) => entry.name);
+      for (const name of ["fixed reader: read", "fixed reader: list", "fixed reader: preflight"]) {
+        assert.ok(failed.includes(name), `${name} should fail on a deny-everything guard: ${failed.join(", ")}`);
+      }
       // Allow-everything must fail too, otherwise the matrix would bless a disabled guard.
       assert.equal(selftest({ evaluate: () => ({ allowed: true, reason: "open" }) }).passed, false);
       assert.throws(() => install(root, { health: () => ({ passed: false, results: [{ name: "reader", expected: "allow", actual: "deny", ok: false, reason: "r" }] }) }),

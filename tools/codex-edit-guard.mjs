@@ -7,7 +7,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { collectScopeLockStateFindings } from "../templates/verify/scope-lock-state.mjs";
-import { evaluateWorkflowEnvironment } from "./workflow-preflight.mjs";
+import { evaluateWorkflowEnvironment, WORKFLOW_SOURCE_IDS, workflowSourceRoot } from "./workflow-preflight.mjs";
 
 export const TOOL = fileURLToPath(import.meta.url);
 export const PLAYBOOK_ROOT = resolve(dirname(TOOL), "..");
@@ -168,7 +168,12 @@ function validateReadRequest(request) {
     return;
   }
   check(typeof request.path === "string", "Read path is required.");
-  check(Object.keys(request).every((key) => ["op", "path"].includes(key)), "Unknown read parameter.");
+  check(Object.keys(request).every((key) => ["op", "path", "root"].includes(key)), "Unknown read parameter.");
+  // `root` names one of the upper-layer playbooks that CLAUDE.md makes required reading.
+  // Without it the agent can pass the environment check and still never receive the rules.
+  // Only these declared ids resolve; an arbitrary directory stays out of reach, and the
+  // same traversal/alias/symlink checks run under the chosen root.
+  if (request.root !== undefined) check(WORKFLOW_SOURCE_IDS.includes(request.root), "Unknown read root.");
 }
 
 export function evaluateHook(event, deps = {}) {
@@ -251,10 +256,30 @@ export function selftest({ cwd = PLAYBOOK_ROOT, evaluate = evaluateHook } = {}) 
     return { name, expected, actual, ok: actual === expected, reason: verdict.reason };
   });
   // Admitting the reader is not enough: a reader that cannot run leaves the agent just as stuck.
-  const run = spawnSync(process.execPath, [TOOL, "read", reader({ op: "preflight" }).split(" ").at(-1)],
-    { cwd, encoding: "utf8", timeout: 20000, windowsHide: true });
-  results.push({ name: "fixed reader actually executes", expected: "exit 0", actual: `exit ${run.status}`,
-    ok: run.status === 0, reason: run.status === 0 ? "ok" : (run.stderr || run.error?.message || "").trim() });
+  const execute = (name, request) => {
+    const run = spawnSync(process.execPath, [TOOL, "read", reader(request).split(" ").at(-1)],
+      { cwd, encoding: "utf8", timeout: 20000, windowsHide: true });
+    results.push({ name, expected: "exit 0", actual: `exit ${run.status}`, ok: run.status === 0,
+      reason: run.status === 0 ? `ok (${run.stdout.length} bytes)` : (run.stderr || run.error?.message || "").trim() });
+  };
+  execute("fixed reader actually executes", { op: "preflight" });
+  // The environment check reporting an upper-layer file as readable is NOT the same as the
+  // rules reaching the agent. CLAUDE.md makes those documents required reading, so each one
+  // must be admitted AND actually delivered through the reader.
+  for (const workflow of evaluateWorkflowEnvironment().localWorkflows) {
+    const request = { op: "read", path: "WORKFLOW.md", root: workflow.id };
+    const name = `required reading arrives: ${workflow.id}/WORKFLOW.md`;
+    if (workflow.status !== "ok") {
+      results.push({ name, expected: "exit 0", actual: "skipped", ok: true, reason: `upstream ${workflow.status}` });
+      continue;
+    }
+    const verdict = evaluate(shell(reader(request)));
+    if (!verdict.allowed) {
+      results.push({ name, expected: "allow", actual: "deny", ok: false, reason: verdict.reason });
+      continue;
+    }
+    execute(name, request);
+  }
   return { passed: results.every((entry) => entry.ok), results };
 }
 
@@ -319,6 +344,7 @@ function main(argv) {
   else if (argv[0] === "bind" && [4, 5].includes(argv.length)) console.log(JSON.stringify(bind(argv[1], argv[2], argv[3], argv[4]), null, 2));
   else if (argv[0] === "unbind" && argv.length === 3) console.log(JSON.stringify(unbind(argv[1], argv[2]), null, 2));
   else if (argv[0] === "read-command" && argv.length === 3) console.log(readCommand({ op: argv[1], path: argv[2] }));
+  else if (argv[0] === "read-command" && argv.length === 4) console.log(readCommand({ op: argv[1], path: argv[2], root: argv[3] }));
   else if (argv[0] === "read-command" && argv.length === 2 && argv[1] === "preflight") console.log(readCommand({ op: "preflight" }));
   else if (argv[0] === "selftest" && argv.length === 1) {
     const report = selftest();
@@ -329,8 +355,11 @@ function main(argv) {
     const request = JSON.parse(Buffer.from(argv[1], "base64url").toString());
     validateReadRequest(request);
     if (request.op === "preflight") return void console.log(JSON.stringify(evaluateWorkflowEnvironment(), null, 2));
-    const root = repositoryRoot(process.cwd());
-    const file = request.path === "." ? { absolute: root } : checkedPath(root, process.cwd(), request.path);
+    const base = request.root === undefined ? repositoryRoot(process.cwd()) : workflowSourceRoot(request.root);
+    check(typeof base === "string" && existsSync(base), `Upstream playbook root is unavailable: ${request.root}`);
+    // Relative paths resolve against the chosen root, never against the caller's cwd.
+    const from = request.root === undefined ? process.cwd() : base;
+    const file = request.path === "." ? { absolute: base } : checkedPath(base, from, request.path);
     if (request.op === "read") process.stdout.write(readFileSync(file.absolute, "utf8"));
     else console.log(JSON.stringify(readdirSync(file.absolute), null, 2));
   } else throw new Error("Usage: codex-edit-guard.mjs hook | selftest | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path> | read-command preflight");
