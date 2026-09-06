@@ -222,8 +222,48 @@ export function hookConfig() {
   };
 }
 
-export function install(root) {
+// Canonical admission matrix, evaluated against this module as it stands on disk. It exists
+// because a guard that denies EVERYTHING is as broken as one that allows everything, and the
+// deny side alone was covered when the fixed reader was bricked (rules/codex-edit-guard-repair.md).
+// It needs no binding, no scope lock and no hook, so it still runs when the guard is bricked.
+export function selftest({ cwd = PLAYBOOK_ROOT, evaluate = evaluateHook } = {}) {
+  const session = `selftest-${Date.now()}`;
+  const reader = (request) => readCommand(request);
+  const shell = (command, extra = {}) =>
+    ({ hook_event_name: "PreToolUse", tool_name: "Bash", session_id: session, cwd, tool_input: { command, ...extra } });
+  const edit = (path) => ({ hook_event_name: "PreToolUse", tool_name: "apply_patch", session_id: session, cwd,
+    tool_input: { command: `*** Begin Patch\n*** Add File: ${path}\n+x\n*** End Patch` } });
+  const read = reader({ op: "read", path: "WORKFLOW.md" });
+  const cases = [
+    ["allow", "fixed reader: read", shell(read)],
+    ["allow", "fixed reader: list", shell(reader({ op: "list", path: "tools" }))],
+    ["allow", "fixed reader: preflight", shell(reader({ op: "preflight" }))],
+    ["deny", "arbitrary command", shell("node tools/workflow-preflight.mjs")],
+    ["deny", "reader with an appended command", shell(`${read}; echo x`)],
+    ["deny", "reader requesting a login shell", shell(read, { login: true })],
+    ["deny", "unclassified tool", { hook_event_name: "PreToolUse", tool_name: "mcp__fs__write_file", session_id: session, cwd, tool_input: {} }],
+    ["deny", "unbound edit", edit("MyBrain/reports/selftest-probe.json")],
+    ["deny", "unbound edit of the guard itself", edit("tools/codex-edit-guard.mjs")],
+  ];
+  const results = cases.map(([expected, name, event]) => {
+    const verdict = evaluate(event);
+    const actual = verdict.allowed ? "allow" : "deny";
+    return { name, expected, actual, ok: actual === expected, reason: verdict.reason };
+  });
+  // Admitting the reader is not enough: a reader that cannot run leaves the agent just as stuck.
+  const run = spawnSync(process.execPath, [TOOL, "read", reader({ op: "preflight" }).split(" ").at(-1)],
+    { cwd, encoding: "utf8", timeout: 20000, windowsHide: true });
+  results.push({ name: "fixed reader actually executes", expected: "exit 0", actual: `exit ${run.status}`,
+    ok: run.status === 0, reason: run.status === 0 ? "ok" : (run.stderr || run.error?.message || "").trim() });
+  return { passed: results.every((entry) => entry.ok), results };
+}
+
+export function install(root, { health = selftest } = {}) {
   root = repositoryRoot(root);
+  // Never arm a guard that cannot pass its own matrix; that is how the repo got bricked.
+  const report = health();
+  check(report.passed, `Refusing to install a guard that fails its own admission matrix:\n${report.results
+    .filter((entry) => !entry.ok).map((entry) => `  ${entry.name}: expected ${entry.expected}, got ${entry.actual} (${entry.reason})`).join("\n")}`);
   const target = checkedPath(root, root, ".codex/hooks.json").absolute;
   const desired = `${JSON.stringify(hookConfig(), null, 2)}\n`;
   if (existsSync(target)) check(readFileSync(target, "utf8") === desired, "Existing hooks.json differs. Merge explicitly; it will not be overwritten.");
@@ -280,6 +320,11 @@ function main(argv) {
   else if (argv[0] === "unbind" && argv.length === 3) console.log(JSON.stringify(unbind(argv[1], argv[2]), null, 2));
   else if (argv[0] === "read-command" && argv.length === 3) console.log(readCommand({ op: argv[1], path: argv[2] }));
   else if (argv[0] === "read-command" && argv.length === 2 && argv[1] === "preflight") console.log(readCommand({ op: "preflight" }));
+  else if (argv[0] === "selftest" && argv.length === 1) {
+    const report = selftest();
+    console.log(JSON.stringify(report, null, 2));
+    if (!report.passed) process.exitCode = 3;
+  }
   else if (argv[0] === "read" && argv.length === 2) {
     const request = JSON.parse(Buffer.from(argv[1], "base64url").toString());
     validateReadRequest(request);
@@ -288,7 +333,7 @@ function main(argv) {
     const file = request.path === "." ? { absolute: root } : checkedPath(root, process.cwd(), request.path);
     if (request.op === "read") process.stdout.write(readFileSync(file.absolute, "utf8"));
     else console.log(JSON.stringify(readdirSync(file.absolute), null, 2));
-  } else throw new Error("Usage: codex-edit-guard.mjs hook | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path> | read-command preflight");
+  } else throw new Error("Usage: codex-edit-guard.mjs hook | selftest | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path> | read-command preflight");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

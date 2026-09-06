@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, TOOL } from "./codex-edit-guard.mjs";
+import { evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, selftest, TOOL } from "./codex-edit-guard.mjs";
 
 const self = fileURLToPath(import.meta.url);
 const root = mkdtempSync(join(tmpdir(), "codex-edit-guard-test-"));
@@ -178,6 +178,19 @@ try {
       write(join(root, ".codex/hooks.json"), "other hooks");
       assert.throws(() => install(root), /will not be overwritten/);
       assert.equal(readFileSync(join(root, ".codex/hooks.json"), "utf8"), "other hooks");
+    });
+    test("selftest detects both brick directions, and install refuses to arm a failing guard", () => {
+      const healthy = selftest();
+      assert.equal(healthy.passed, true, JSON.stringify(healthy.results.filter((entry) => !entry.ok)));
+      // Deny-everything is the direction that actually happened: the fixed reader stops working.
+      const bricked = selftest({ evaluate: () => ({ allowed: false, reason: "bricked" }) });
+      assert.equal(bricked.passed, false);
+      assert.deepEqual(bricked.results.filter((entry) => !entry.ok).map((entry) => entry.name),
+        ["fixed reader: read", "fixed reader: list", "fixed reader: preflight"]);
+      // Allow-everything must fail too, otherwise the matrix would bless a disabled guard.
+      assert.equal(selftest({ evaluate: () => ({ allowed: true, reason: "open" }) }).passed, false);
+      assert.throws(() => install(root, { health: () => ({ passed: false, results: [{ name: "reader", expected: "allow", actual: "deny", ok: false, reason: "r" }] }) }),
+        /Refusing to install a guard that fails its own admission matrix/);
     });
     test("mutation: removing the binding check makes the SAME negative test fail", () => {
       const mutationRoot = join(root, "mutant");

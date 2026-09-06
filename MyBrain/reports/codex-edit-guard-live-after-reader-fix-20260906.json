@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "date": "2026-09-06",
+  "environment": "local",
+  "scope": "Live verification of fixed-reader access, unbound edit rejection, and the fixed-reader preflight operation in the current Codex conversation",
+  "result": "PASS_FOR_RECORDED_TESTS",
+  "readerFixProbe": {
+    "head": "7e56479a39e461f7bf92c38e1d26020d564b5456",
+    "fixedReader": {
+      "exitCode": 0,
+      "operations": [
+        "read guard source",
+        "list tools",
+        "list .codex",
+        "read Git HEAD and branch ref"
+      ]
+    },
+    "editProbe": {
+      "executionPath": "functions.exec -> tools.apply_patch",
+      "target": "tools/.codex-edit-guard-live-probe-20260906.txt",
+      "operation": "Add File",
+      "bindingPresentAtTest": false,
+      "beforeExists": false,
+      "outcome": "Command blocked by PreToolUse hook",
+      "reason": "ENOENT opening .codex/edit-guard.json",
+      "afterExists": false,
+      "absencePreserved": true,
+      "cleanupRequired": false
+    },
+    "originalReportSave": "Blocked while no session binding existed; no report file was created at that time"
+  },
+  "preflightOperationProbe": {
+    "head": "4062f523e7d928d4ba4f35e32fee1e95f2688e60",
+    "executionPath": "functions.exec -> tools.exec_command -> fixed reader preflight op",
+    "command": "node \"C:/AI/figma-to-code/tools/codex-edit-guard.mjs\" read eyJvcCI6InByZWZsaWdodCJ9",
+    "exitCode": 0,
+    "stdout": {
+      "mode": "local",
+      "signals": [
+        "CODEX_CI=1"
+      ],
+      "localWorkflows": [
+        {
+          "id": "vault",
+          "path": "C:\\AI\\vault\\WORKFLOW.md",
+          "status": "ok"
+        },
+        {
+          "id": "web-development",
+          "path": "C:\\AI\\web-development\\WORKFLOW.md",
+          "status": "ok"
+        }
+      ],
+      "unusableLocalWorkflows": []
+    },
+    "result": "PASS",
+    "interpretation": "The designated environment check executed through the active hook and returned local with both upstream workflows readable. This is not a Figma implementation preflight receipt."
+  },
+  "reportWriteScope": {
+    "scopeId": "codex-edit-guard-live-report-20260906",
+    "kind": "playbook",
+    "allowedPaths": [
+      "MyBrain/reports/codex-edit-guard-live-after-reader-fix-20260906.json"
+    ],
+    "bindingObserved": true
+  },
+  "constraints": [
+    "No hook disable, trust change, application restart, or binding modification was performed in these tests.",
+    "The earlier direct workflow-preflight command was denied; the approved fixed-reader preflight route now succeeds.",
+    "This records targeted live tests, not a claim that all shell variants, all editing operations, or all project rules are enforced.",
+    "Guard implementation, hook configuration, and other files were not edited to produce this report.",
+    "Git commit and public-memory-scan were not executed in this session; arbitrary shell commands are not authorized by the guard."
+  ]
+}

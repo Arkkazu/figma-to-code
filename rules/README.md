@@ -6,6 +6,7 @@
 - `figma-mcp-implementation.md`：Figma MCPの取得・換算・診断手順
 - `figma-image-export.md`：アセット出力・透過・形式の規則
 - `loop-execution.md`：共通Vault、専門プレイブック、案件手順の優先順位
+- `codex-edit-guard-repair.md`：自己保護する統制（編集ガード）の検出・遮断・修理・再武装の経路
 - `self-improvement.md`：close後の学習イベント、安全制御、正本ルール提案の権限境界
 - `corrections.md`：Figma実装の訂正履歴
 - `mistakes.md`：Figma実装の失敗と再発防止
