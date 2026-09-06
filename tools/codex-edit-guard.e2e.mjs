@@ -142,6 +142,25 @@ try {
       const result = spawnSync(process.execPath, [TOOL, "read", token], { cwd: root, encoding: "utf8" });
       assert.equal(result.status, 0, result.stderr); assert.equal(result.stdout, "before\n");
     });
+    test("preflight op is admitted, runs, and cannot be widened or edited around", () => {
+      const command = readCommand({ op: "preflight" });
+      assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command } })).allowed, true);
+      for (const bad of [{ op: "preflight", path: "src/allowed.txt" }, { op: "preflight", extra: 1 }, { op: "prefl" }]) {
+        assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command: readCommand(bad) } })).allowed,
+          false, JSON.stringify(bad));
+      }
+      const result = spawnSync(process.execPath, [TOOL, "read", command.split(" ").at(-1)], { cwd: root, encoding: "utf8" });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(typeof JSON.parse(result.stdout).mode, "string");
+      // The preflight op executes workflow-preflight.mjs, so a session must not be able to edit it.
+      // Put it in scope first, otherwise "out of scope" would deny it and hide a lost protection.
+      write(stateFile, { ...state, scope: { ...state.scope, allowedPaths: ["tools/workflow-preflight.mjs"] } });
+      write(bindingFile, { ...config, bindings: { "session-a": { ...config.bindings["session-a"], allowedPaths: ["tools/workflow-preflight.mjs"] } } });
+      const protectedEdit = evaluateHook(event({ tool_input: { command: patch("tools/workflow-preflight.mjs") } }), deps);
+      assert.equal(protectedEdit.allowed, false);
+      assert.match(protectedEdit.reason, /Guard\/control path cannot be edited/);
+      reset();
+    });
     test("malformed patch/event/config and malformed stdin return explicit deny", () => {
       assert.throws(() => patchPaths("not a patch"));
       assert.equal(evaluateHook({}).allowed, false);
@@ -169,6 +188,7 @@ try {
       write(mutant, original.replace(needle, "    // MUTATION: disabled binding enforcement"));
       mkdirSync(join(mutationRoot, "templates/verify"), { recursive: true });
       cpSync(resolve(dirname(TOOL), "../templates/verify/scope-lock-state.mjs"), join(mutationRoot, "templates/verify/scope-lock-state.mjs"));
+      cpSync(resolve(dirname(TOOL), "workflow-preflight.mjs"), join(mutationRoot, "tools/workflow-preflight.mjs"));
       const good = spawnSync(process.execPath, [self, "--negative-only", TOOL], { encoding: "utf8" });
       assert.equal(good.status, 0, good.stderr);
       const bad = spawnSync(process.execPath, [self, "--negative-only", mutant], { encoding: "utf8" });

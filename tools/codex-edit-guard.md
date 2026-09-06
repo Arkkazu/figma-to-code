@@ -52,7 +52,9 @@ node <playbook>/tools/codex-edit-guard.mjs read-command read <relative-file>
 node <playbook>/tools/codex-edit-guard.mjs read-command list .
 ```
 
-出力されたcommand文字列を変更せず使用します。フックに届く入力は正規化された `tool_input.command` だけです（公式仕様 `learn.chatgpt.com/codex/hooks.md`：`Bash` と `apply_patch` は `tool_input.command` を使う）。したがって `login` を必須にはせず、`login:true`・TTY要求・独自shell・環境変数・権限上書きが**明示された場合に拒否**します。許可の根拠はコマンド文字列の完全一致であって、これらのフラグではありません。対応していないクライアントではこの経路も拒否されます。readerはリポジトリ内のファイル読出し・ディレクトリ列挙のみで、任意JavaScriptを実行しません。
+出力されたcommand文字列を変更せず使用します。フックに届く入力は正規化された `tool_input.command` だけです（公式仕様 `learn.chatgpt.com/codex/hooks.md`：`Bash` と `apply_patch` は `tool_input.command` を使う）。したがって `login` を必須にはせず、`login:true`・TTY要求・独自shell・環境変数・権限上書きが**明示された場合に拒否**します。許可の根拠はコマンド文字列の完全一致であって、これらのフラグではありません。対応していないクライアントではこの経路も拒否されます。readerはリポジトリ内のファイル読出し（`read`）・ディレクトリ列挙（`list`）・環境判定（`preflight`）のみで、任意JavaScriptを実行しません。
+
+`preflight` は `CLAUDE.md` が必須とする環境判定を、シェルを開かずに行うための経路です。`node codex-edit-guard.mjs read-command preflight` が出す固定コマンドだけが許可され、ガード自身が `tools/workflow-preflight.mjs` を呼んで同じJSONを返します。実行されるファイルが増えないよう、`tools/workflow-preflight.mjs` は `protectedPath` に含めてセッションからの編集を禁止しています。
 
 ## 試験と限界
 

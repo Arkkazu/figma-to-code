@@ -7,6 +7,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { collectScopeLockStateFindings } from "../templates/verify/scope-lock-state.mjs";
+import { evaluateWorkflowEnvironment } from "./workflow-preflight.mjs";
 
 export const TOOL = fileURLToPath(import.meta.url);
 export const PLAYBOOK_ROOT = resolve(dirname(TOOL), "..");
@@ -97,7 +98,9 @@ function protectedPath(path, binding) {
   return [".git", ".codex", ".figma-gate"].some((prefix) => lower === prefix || lower.startsWith(`${prefix}/`)) ||
     lower.startsWith("templates/verify/") || lower.startsWith("mybrain/verify/") ||
     lower.split("/").includes(".figma-gate") ||
-    ["tools/codex-edit-guard.mjs", "templates/verify/scope-lock-state.mjs", "tools/figma-scope-lock.mjs", ...binding.controlPaths]
+    // workflow-preflight.mjs is protected because the `preflight` read op executes it.
+    ["tools/codex-edit-guard.mjs", "templates/verify/scope-lock-state.mjs", "tools/figma-scope-lock.mjs",
+      "tools/workflow-preflight.mjs", ...binding.controlPaths]
       .some((name) => lower === name.toLowerCase());
 }
 
@@ -157,7 +160,13 @@ function parseReadCommand(command) {
 }
 
 function validateReadRequest(request) {
-  check(request && ["read", "list"].includes(request.op), "Unknown read operation.");
+  check(request && ["read", "list", "preflight"].includes(request.op), "Unknown read operation.");
+  // `preflight` takes no path. It only reports the workflow environment, so the executed
+  // file stays this guard, which protectedPath already refuses to edit through a session.
+  if (request.op === "preflight") {
+    check(Object.keys(request).every((key) => key === "op"), "Unknown read parameter.");
+    return;
+  }
   check(typeof request.path === "string", "Read path is required.");
   check(Object.keys(request).every((key) => ["op", "path"].includes(key)), "Unknown read parameter.");
 }
@@ -270,14 +279,16 @@ function main(argv) {
   else if (argv[0] === "bind" && [4, 5].includes(argv.length)) console.log(JSON.stringify(bind(argv[1], argv[2], argv[3], argv[4]), null, 2));
   else if (argv[0] === "unbind" && argv.length === 3) console.log(JSON.stringify(unbind(argv[1], argv[2]), null, 2));
   else if (argv[0] === "read-command" && argv.length === 3) console.log(readCommand({ op: argv[1], path: argv[2] }));
+  else if (argv[0] === "read-command" && argv.length === 2 && argv[1] === "preflight") console.log(readCommand({ op: "preflight" }));
   else if (argv[0] === "read" && argv.length === 2) {
     const request = JSON.parse(Buffer.from(argv[1], "base64url").toString());
     validateReadRequest(request);
+    if (request.op === "preflight") return void console.log(JSON.stringify(evaluateWorkflowEnvironment(), null, 2));
     const root = repositoryRoot(process.cwd());
     const file = request.path === "." ? { absolute: root } : checkedPath(root, process.cwd(), request.path);
     if (request.op === "read") process.stdout.write(readFileSync(file.absolute, "utf8"));
     else console.log(JSON.stringify(readdirSync(file.absolute), null, 2));
-  } else throw new Error("Usage: codex-edit-guard.mjs hook | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path>");
+  } else throw new Error("Usage: codex-edit-guard.mjs hook | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path> | read-command preflight");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
