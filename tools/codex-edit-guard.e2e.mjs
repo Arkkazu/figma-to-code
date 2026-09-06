@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, selftest, TOOL } from "./codex-edit-guard.mjs";
-import { evaluateWorkflowEnvironment } from "./workflow-preflight.mjs";
+import { deliveryVerdict, evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, readRequiredDocument, REQUIRED_READING, selftest, TOOL } from "./codex-edit-guard.mjs";
 
 const self = fileURLToPath(import.meta.url);
 const root = mkdtempSync(join(tmpdir(), "codex-edit-guard-test-"));
@@ -180,37 +179,124 @@ try {
       assert.throws(() => install(root), /will not be overwritten/);
       assert.equal(readFileSync(join(root, ".codex/hooks.json"), "utf8"), "other hooks");
     });
-    test("upper-layer required reading is delivered, and only through declared roots", () => {
-      const upstream = join(outside, "vault-fixture");
-      write(join(upstream, "WORKFLOW.md"), "# upstream\nrules body\n");
-      write(join(upstream, "rules/corrections.md"), "# corrections\n");
-      write(join(outside, "secret.txt"), "must not be reachable");
-      const env = { ...process.env, FIGMA_TO_CODE_VAULT_WORKFLOW: join(upstream, "WORKFLOW.md") };
+    test("every approved required-reading document is delivered whole through the real reader", () => {
       const run = (request) => spawnSync(process.execPath, [TOOL, "read", readCommand(request).split(" ").at(-1)],
-        { cwd: root, encoding: "utf8", env });
+        { cwd: root, encoding: "utf8" });
       const admitted = (request) => evaluateHook(event({ tool_name: "Bash", tool_input: { command: readCommand(request) } })).allowed;
-      // Admission alone is not access: the document must actually come back.
-      assert.equal(admitted({ op: "read", path: "WORKFLOW.md", root: "vault" }), true);
-      assert.equal(run({ op: "read", path: "WORKFLOW.md", root: "vault" }).stdout, "# upstream\nrules body\n");
-      assert.equal(run({ op: "read", path: "rules/corrections.md", root: "vault" }).stdout, "# corrections\n");
-      assert.match(run({ op: "list", path: "rules", root: "vault" }).stdout, /corrections\.md/);
-      // Only declared roots resolve, and the usual path checks still apply beneath one.
-      assert.equal(admitted({ op: "read", path: "WORKFLOW.md", root: "elsewhere" }), false);
-      assert.notEqual(run({ op: "read", path: "../secret.txt", root: "vault" }).status, 0);
-      assert.notEqual(run({ op: "read", path: "C:/Windows/win.ini", root: "vault" }).status, 0);
-      assert.notEqual(run({ op: "read", path: "C:/AI/vault/WORKFLOW.md" }).status, 0);
+      assert.ok(REQUIRED_READING.size > 0);
+      let checked = 0;
+      for (const [key, entry] of REQUIRED_READING) {
+        if (!existsSync(entry.absolute)) continue;
+        assert.equal(admitted({ op: "required", path: key }), true, key);
+        const result = run({ op: "required", path: key });
+        assert.equal(result.status, 0, `${key}: ${result.stderr}`);
+        // Whole-document equality, so a truncated or partial delivery cannot pass.
+        assert.equal(result.stdout, readFileSync(entry.absolute, "utf8"), key);
+        checked += 1;
+      }
+      assert.ok(checked > 0, "no approved document was present to verify");
+      // The list itself is metadata, never a directory listing.
+      const listing = JSON.parse(run({ op: "required" }).stdout);
+      assert.equal(listing.length, REQUIRED_READING.size);
+      assert.ok(listing.every((row) => typeof row.why === "string" && row.why.length > 0));
+      // Repository-scoped reading is unchanged.
+      assert.equal(admitted({ op: "read", path: "WORKFLOW.md" }), true);
+      assert.equal(admitted({ op: "list", path: "tools" }), true);
+      assert.equal(admitted({ op: "preflight" }), true);
+    });
+    test("external reading stays limited to the approved documents", () => {
+      const run = (request) => spawnSync(process.execPath, [TOOL, "read", readCommand(request).split(" ").at(-1)],
+        { cwd: root, encoding: "utf8" });
+      const admitted = (request) => evaluateHook(event({ tool_name: "Bash", tool_input: { command: readCommand(request) } })).allowed;
+      // An unapproved neighbour of an approved file, in the same approved directory.
+      for (const key of ["vault/rules/corrections-archive.md", "vault/rules/mistakes-archive.md", "vault/rules/", "vault"]) {
+        assert.equal(admitted({ op: "required", path: key }), false, key);
+      }
+      // Traversal, absolute paths and link tricks cannot reach an unapproved document.
+      for (const key of ["vault/../vault/rules/lint.md", "vault/rules/../rules/naming.md", "../vault/WORKFLOW.md",
+        "C:/AI/vault/WORKFLOW.md", "vault/WORKFLOW.md:stream", "vault/WORKFLOW.md."]) {
+        assert.equal(admitted({ op: "required", path: key }), false, key);
+      }
+      // The old repository-scoped reader still refuses everything outside the repository,
+      // including the very documents the approved list delivers, and every external directory.
+      for (const path of ["C:/AI/vault/WORKFLOW.md", "C:/AI/vault/rules/corrections.md", "../vault/WORKFLOW.md",
+        "C:/Users/tane1/.codex/auth.json"]) {
+        assert.notEqual(run({ op: "read", path }).status, 0, path);
+      }
+      for (const path of ["C:/AI/vault", "C:/AI/vault/rules", "../vault"]) {
+        assert.notEqual(run({ op: "list", path }).status, 0, path);
+      }
+      // A missing or redirected document is never reported as success.
+      const fixture = new Map([
+        ["vault/absent.md", { id: "vault", relativePath: "absent.md", why: "fixture", absolute: join(outside, "absent.md") }],
+        ["vault/linked.md", { id: "vault", relativePath: "linked.md", why: "fixture", absolute: join(outside, "linked.md") }],
+        ["vault/present.md", { id: "vault", relativePath: "present.md", why: "fixture", absolute: join(outside, "present.md") }],
+        ["vault/dir.md", { id: "vault", relativePath: "dir.md", why: "fixture", absolute: join(outside, "dir-as-doc") }],
+      ]);
+      write(join(outside, "present.md"), "body\n");
+      write(join(outside, "target.md"), "redirected\n");
+      mkdirSync(join(outside, "dir-as-doc"), { recursive: true });
+      symlinkSync(join(outside, "target.md"), join(outside, "linked.md"), "file");
+      assert.equal(readRequiredDocument("vault/present.md", fixture), "body\n");
+      assert.throws(() => readRequiredDocument("vault/absent.md", fixture), /ENOENT/);
+      assert.throws(() => readRequiredDocument("vault/linked.md", fixture), /Symlinked required-reading document denied/);
+      assert.throws(() => readRequiredDocument("vault/dir.md", fixture), /not a regular file/);
+      assert.throws(() => readRequiredDocument("vault/unknown.md", fixture), /Not an approved required-reading document/);
+      // A junction in the middle of an approved path leaves the file itself a regular file,
+      // so only comparing the resolved path against the approved one catches the redirect.
+      mkdirSync(join(outside, "real-dir"), { recursive: true });
+      write(join(outside, "real-dir/doc.md"), "redirected body\n");
+      symlinkSync(join(outside, "real-dir"), join(outside, "junction-dir"), process.platform === "win32" ? "junction" : "dir");
+      const redirected = new Map([["vault/doc.md",
+        { id: "vault", relativePath: "doc.md", why: "fixture", absolute: join(outside, "junction-dir/doc.md") }]]);
+      assert.equal(existsSync(join(outside, "junction-dir/doc.md")), true);
+      assert.equal(lstatSync(join(outside, "junction-dir/doc.md")).isFile(), true);
+      assert.throws(() => readRequiredDocument("vault/doc.md", redirected), /Resolved path differs from the approved path/);
+      // A hard link keeps the approved path and resolves to itself, so only the link count sees it.
+      write(join(outside, "hard-source.md"), "hard body\n");
+      linkSync(join(outside, "hard-source.md"), join(outside, "hard-link.md"));
+      const hardLinked = new Map([["vault/hard.md",
+        { id: "vault", relativePath: "hard.md", why: "fixture", absolute: join(outside, "hard-link.md") }]]);
+      assert.equal(lstatSync(join(outside, "hard-link.md")).isSymbolicLink(), false);
+      assert.throws(() => readRequiredDocument("vault/hard.md", hardLinked), /Hard-linked required-reading document denied/);
+    });
+    test("delivery is judged on content, not on the exit code alone", () => {
+      assert.equal(deliveryVerdict("d", { status: 0, stdout: "abcdef" }, "abcdef").ok, true);
+      const truncated = deliveryVerdict("d", { status: 0, stdout: "abc" }, "abcdef");
+      assert.equal(truncated.ok, false);
+      assert.match(truncated.reason, /does not match the source document/);
+      assert.equal(deliveryVerdict("d", { status: 0, stdout: "abcdefg" }, "abcdef").ok, false);
+      assert.equal(deliveryVerdict("d", { status: 2, stdout: "", stderr: "boom" }, "abcdef").ok, false);
+      assert.equal(deliveryVerdict("d", { status: 0, stdout: "anything" }).ok, true);
+    });
+    test("approved reading grants no write or execute permission", () => {
+      // Reading a document does not make it editable: edits still resolve against the repository.
+      for (const path of ["C:/AI/vault/WORKFLOW.md", "C:/AI/vault/rules/corrections.md", "C:/AI/web-development/rules/html.md"]) {
+        const verdict = evaluateHook(event({ tool_input: { command: patch(path) } }), deps);
+        assert.equal(verdict.allowed, false, path);
+        assert.match(verdict.reason, /outside repository|Ambiguous|Drive-relative/);
+      }
+      // Guard, authorisation config and out-of-scope edits stay refused.
+      for (const path of ["tools/codex-edit-guard.mjs", ".codex/edit-guard.json", ".codex/hooks.json", "src/outside.txt"]) {
+        assert.equal(evaluateHook(event({ tool_input: { command: patch(path) } }), deps).allowed, false, path);
+      }
+      // Arbitrary shell and command chaining stay refused.
+      const approved = readCommand({ op: "required", path: "vault/WORKFLOW.md" });
+      for (const command of [`${approved}; echo x`, `${approved} && node evil.mjs`, "node C:/AI/vault/read.mjs", "type C:\\AI\\vault\\WORKFLOW.md"]) {
+        assert.equal(evaluateHook(event({ tool_name: "Bash", tool_input: { command } }), deps).allowed, false, command);
+      }
     });
     test("selftest detects both brick directions, and install refuses to arm a failing guard", () => {
       const healthy = selftest();
       assert.equal(healthy.passed, true, JSON.stringify(healthy.results.filter((entry) => !entry.ok)));
       // The delivery check is the whole lesson of 2026-09-06; it must not silently disappear.
       const delivered = healthy.results.filter((entry) => entry.name.startsWith("required reading arrives:"));
-      assert.ok(delivered.length > 0, "selftest must cover upper-layer required reading");
-      for (const workflow of evaluateWorkflowEnvironment().localWorkflows) {
-        const entry = delivered.find((candidate) => candidate.name.endsWith(`${workflow.id}/WORKFLOW.md`));
-        assert.ok(entry, `missing delivery check for ${workflow.id}`);
-        // A present upstream must be really read; only an absent one may report a skip.
-        if (workflow.status === "ok") assert.match(entry.reason, /^ok \(\d+ bytes\)$/, entry.name);
+      assert.equal(delivered.length, REQUIRED_READING.size, "selftest must cover every approved document");
+      for (const [key, entry] of REQUIRED_READING) {
+        const covered = delivered.find((candidate) => candidate.name === `required reading arrives: ${key}`);
+        assert.ok(covered, `missing delivery check for ${key}`);
+        // A present document must be really read and compared; only an absent playbook may skip.
+        if (existsSync(entry.absolute)) assert.match(covered.reason, /^ok \(exact match, \d+ chars\)$/, key);
       }
       // Deny-everything is the direction that actually happened: the fixed reader stops working.
       const bricked = selftest({ evaluate: () => ({ allowed: false, reason: "bricked" }) });

@@ -7,16 +7,63 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { collectScopeLockStateFindings } from "../templates/verify/scope-lock-state.mjs";
-import { evaluateWorkflowEnvironment, WORKFLOW_SOURCE_IDS, workflowSourceRoot } from "./workflow-preflight.mjs";
+import { evaluateWorkflowEnvironment, LOCAL_WORKFLOW_SOURCES } from "./workflow-preflight.mjs";
 
 export const TOOL = fileURLToPath(import.meta.url);
 export const PLAYBOOK_ROOT = resolve(dirname(TOOL), "..");
 const CONFIG = ".codex/edit-guard.json";
+
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const hash = (path) => digest(readFileSync(path));
 const json = (path) => JSON.parse(readFileSync(path, "utf8"));
 const same = (a, b) => process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
 const check = (condition, message) => { if (!condition) throw new Error(message); };
+
+// The ENTIRE external read surface. Reading outside the repository is limited to these exact
+// documents: no directory is readable or listable, no arbitrary absolute path resolves, and no
+// environment variable extends the set. Roots come from the DEFAULT paths declared in
+// workflow-preflight.mjs, deliberately ignoring its env overrides, so pointing an env var
+// somewhere else cannot grant new reads. This list lives in a protectedPath file, so a Codex
+// session cannot widen its own access. Reading a document here never implies edit or execute
+// permission: edits still resolve against the repository root and are refused as outside it.
+const UPSTREAM_ROOTS = Object.fromEntries(LOCAL_WORKFLOW_SOURCES.map((source) => [source.id, dirname(source.defaultPath)]));
+
+const REQUIRED_READING_DECLARATION = [
+  ["vault/WORKFLOW.md", "共通Vaultの規則本文。vault WORKFLOW.md「起動時の必読手順」1"],
+  ["vault/Memory.md", "オーナーの前提・進行中案件。同 必読手順2（【必須】）"],
+  ["vault/rules/corrections.md", "恒久的な訂正指示。同 必読手順3"],
+  ["vault/rules/mistakes.md", "過去の失敗と再発防止。同 必読手順4"],
+  ["vault/wiki/index.md", "知識ベースの目次。同 必読手順5"],
+  ["vault/Home.md", "Vaultの玄関。vault WORKFLOW.md「Vault の構造」で【必須】、必読手順5の代替導線"],
+  ["vault/rules/naming.md", "命名規約。vault WORKFLOW.md「整理しすぎない」が正本として指定"],
+  ["vault/rules/lint.md", "週次点検の観点。vault WORKFLOW.md「週次の手入れ」が正本として指定"],
+  ["web-development/WORKFLOW.md", "Web実装の規則本文。web-development AGENTS.md が唯一の規則本文と宣言／同 WORKFLOW.md「開始順」2"],
+  ["web-development/AGENTS.md", "Codex向け入口。vault WORKFLOW.md がCodexの入口として指定"],
+  ["web-development/README.md", "同 WORKFLOW.md「開始順」2"],
+  ["web-development/rules/implementation-gate.md", "コーディング規則ゲート。同 WORKFLOW.md「コーディング規則ゲート」"],
+  ["web-development/rules/css-values.md", "CSS/SCSS変更時。同「必読規則」"],
+  ["web-development/rules/browser-compatibility.md", "CSS/SCSS・JS変更時。同「必読規則」"],
+  ["web-development/rules/safari-known-issues.md", "CSS/SCSS・JS変更時。同「必読規則」"],
+  ["web-development/rules/accessibility.md", "操作UI・HTML意味論の変更時。同「必読規則」"],
+  ["web-development/rules/html.md", "PHP/HTMLテンプレート変更時。同「必読規則」"],
+  ["web-development/rules/w3c-validation.md", "HTML/ARIA変更時。同「必読規則」／vault WORKFLOW.md が検証工程の正本として指定"],
+  ["web-development/rules/zap-baseline.md", "HTML/ARIA変更時。同「必読規則」／vault WORKFLOW.md が検証工程の正本として指定"],
+  ["web-development/rules/corrections.md", "Web実装の案件横断の訂正。同 WORKFLOW.md「運用」が記録先かつ正本として指定"],
+  ["web-development/rules/mistakes.md", "Web実装の案件横断の失敗。同 WORKFLOW.md「運用」が記録先かつ正本として指定"],
+];
+
+// Deliberately excluded: rules/corrections-archive.md and rules/mistakes-archive.md, which both
+// upstream WORKFLOW.md files state are NOT required reading (grep only). figma-to-code's own
+// documents are inside the repository and stay on the existing repository-scoped read path.
+export const REQUIRED_READING = new Map(REQUIRED_READING_DECLARATION.map(([key, why]) => {
+  const separator = key.indexOf("/");
+  const id = key.slice(0, separator);
+  const relativePath = key.slice(separator + 1);
+  const rootPath = UPSTREAM_ROOTS[id];
+  check(typeof rootPath === "string", `Required reading names an undeclared upstream playbook: ${id}`);
+  check(!relativePath.includes("..") && !relativePath.includes("\\"), `Required reading path must be a plain relative path: ${key}`);
+  return [key, { id, relativePath, why, absolute: resolve(rootPath, relativePath) }];
+}));
 
 export function repositoryRoot(cwd) {
   check(typeof cwd === "string" && isAbsolute(cwd), "Hook cwd must be absolute.");
@@ -160,20 +207,41 @@ function parseReadCommand(command) {
 }
 
 function validateReadRequest(request) {
-  check(request && ["read", "list", "preflight"].includes(request.op), "Unknown read operation.");
+  check(request && ["read", "list", "preflight", "required"].includes(request.op), "Unknown read operation.");
   // `preflight` takes no path. It only reports the workflow environment, so the executed
   // file stays this guard, which protectedPath already refuses to edit through a session.
   if (request.op === "preflight") {
     check(Object.keys(request).every((key) => key === "op"), "Unknown read parameter.");
     return;
   }
+  // `required` returns one approved upper-layer document, or the list itself when no path is
+  // given. Passing the environment check is not the same as receiving the rules, so this exists;
+  // it admits exact declared documents only, never a directory and never an arbitrary path.
+  if (request.op === "required") {
+    check(Object.keys(request).every((key) => ["op", "path"].includes(key)), "Unknown read parameter.");
+    if (request.path !== undefined) {
+      check(typeof request.path === "string" && REQUIRED_READING.has(request.path),
+        `Not an approved required-reading document: ${request.path}`);
+    }
+    return;
+  }
   check(typeof request.path === "string", "Read path is required.");
-  check(Object.keys(request).every((key) => ["op", "path", "root"].includes(key)), "Unknown read parameter.");
-  // `root` names one of the upper-layer playbooks that CLAUDE.md makes required reading.
-  // Without it the agent can pass the environment check and still never receive the rules.
-  // Only these declared ids resolve; an arbitrary directory stays out of reach, and the
-  // same traversal/alias/symlink checks run under the chosen root.
-  if (request.root !== undefined) check(WORKFLOW_SOURCE_IDS.includes(request.root), "Unknown read root.");
+  check(Object.keys(request).every((key) => ["op", "path"].includes(key)), "Unknown read parameter.");
+}
+
+// Reads one approved document. The declared absolute path is the only thing consulted; the
+// file must still be a real regular file at exactly that location, so a symlink, junction,
+// hard link or replaced entry cannot redirect an approved name at anything else. A missing or
+// unreadable document throws, and therefore never reports success.
+export function readRequiredDocument(key, entries = REQUIRED_READING) {
+  const entry = entries.get(key);
+  check(entry !== undefined, `Not an approved required-reading document: ${key}`);
+  const stat = lstatSync(entry.absolute);
+  check(!stat.isSymbolicLink(), `Symlinked required-reading document denied: ${key}`);
+  check(stat.isFile(), `Required-reading document is not a regular file: ${key}`);
+  check(stat.nlink === 1, `Hard-linked required-reading document denied: ${key}`);
+  check(same(realpathSync(entry.absolute), entry.absolute), `Resolved path differs from the approved path: ${key}`);
+  return readFileSync(entry.absolute, "utf8");
 }
 
 export function evaluateHook(event, deps = {}) {
@@ -231,6 +299,21 @@ export function hookConfig() {
 // because a guard that denies EVERYTHING is as broken as one that allows everything, and the
 // deny side alone was covered when the fixed reader was bricked (rules/codex-edit-guard-repair.md).
 // It needs no binding, no scope lock and no hook, so it still runs when the guard is bricked.
+// Separated so the comparison itself is testable: an exit code alone does not prove the document
+// arrived whole, and a silently truncated delivery must not be able to report success.
+export function deliveryVerdict(name, run, expected) {
+  if (run.status !== 0) {
+    return { name, expected: "exit 0", actual: `exit ${run.status}`, ok: false,
+      reason: (run.stderr || run.error?.message || "").trim() };
+  }
+  if (expected !== undefined && run.stdout !== expected) {
+    return { name, expected: `${expected.length} chars`, actual: `${run.stdout.length} chars`, ok: false,
+      reason: "delivered content does not match the source document" };
+  }
+  return { name, expected: "exit 0", actual: "exit 0", ok: true,
+    reason: expected === undefined ? `ok (${run.stdout.length} chars)` : `ok (exact match, ${run.stdout.length} chars)` };
+}
+
 export function selftest({ cwd = PLAYBOOK_ROOT, evaluate = evaluateHook } = {}) {
   const session = `selftest-${Date.now()}`;
   const reader = (request) => readCommand(request);
@@ -256,29 +339,36 @@ export function selftest({ cwd = PLAYBOOK_ROOT, evaluate = evaluateHook } = {}) 
     return { name, expected, actual, ok: actual === expected, reason: verdict.reason };
   });
   // Admitting the reader is not enough: a reader that cannot run leaves the agent just as stuck.
-  const execute = (name, request) => {
+  const execute = (name, request, expected) => {
     const run = spawnSync(process.execPath, [TOOL, "read", reader(request).split(" ").at(-1)],
       { cwd, encoding: "utf8", timeout: 20000, windowsHide: true });
-    results.push({ name, expected: "exit 0", actual: `exit ${run.status}`, ok: run.status === 0,
-      reason: run.status === 0 ? `ok (${run.stdout.length} bytes)` : (run.stderr || run.error?.message || "").trim() });
+    results.push(deliveryVerdict(name, run, expected));
   };
   execute("fixed reader actually executes", { op: "preflight" });
-  // The environment check reporting an upper-layer file as readable is NOT the same as the
-  // rules reaching the agent. CLAUDE.md makes those documents required reading, so each one
-  // must be admitted AND actually delivered through the reader.
-  for (const workflow of evaluateWorkflowEnvironment().localWorkflows) {
-    const request = { op: "read", path: "WORKFLOW.md", root: workflow.id };
-    const name = `required reading arrives: ${workflow.id}/WORKFLOW.md`;
-    if (workflow.status !== "ok") {
-      results.push({ name, expected: "exit 0", actual: "skipped", ok: true, reason: `upstream ${workflow.status}` });
+  // The environment check reporting an upper-layer file as readable is NOT the same as the rules
+  // reaching the agent, so every approved document must be admitted AND actually delivered.
+  // A whole playbook that is absent (a cloud checkout, say) is skipped; a document missing from a
+  // playbook that IS present is a failure, never a pass.
+  results.push({ name: "required-reading list is not empty", expected: "> 0", actual: `${REQUIRED_READING.size}`,
+    ok: REQUIRED_READING.size > 0, reason: `${REQUIRED_READING.size} approved documents` });
+  for (const [key, entry] of REQUIRED_READING) {
+    const name = `required reading arrives: ${key}`;
+    if (!existsSync(UPSTREAM_ROOTS[entry.id])) {
+      results.push({ name, expected: "exit 0", actual: "skipped", ok: true, reason: `upstream playbook absent: ${entry.id}` });
       continue;
     }
-    const verdict = evaluate(shell(reader(request)));
+    const verdict = evaluate(shell(reader({ op: "required", path: key })));
     if (!verdict.allowed) {
       results.push({ name, expected: "allow", actual: "deny", ok: false, reason: verdict.reason });
       continue;
     }
-    execute(name, request);
+    let expected;
+    try { expected = readFileSync(entry.absolute, "utf8"); }
+    catch (error) {
+      results.push({ name, expected: "readable", actual: "unreadable", ok: false, reason: error.message });
+      continue;
+    }
+    execute(name, { op: "required", path: key }, expected);
   }
   return { passed: results.every((entry) => entry.ok), results };
 }
@@ -344,8 +434,7 @@ function main(argv) {
   else if (argv[0] === "bind" && [4, 5].includes(argv.length)) console.log(JSON.stringify(bind(argv[1], argv[2], argv[3], argv[4]), null, 2));
   else if (argv[0] === "unbind" && argv.length === 3) console.log(JSON.stringify(unbind(argv[1], argv[2]), null, 2));
   else if (argv[0] === "read-command" && argv.length === 3) console.log(readCommand({ op: argv[1], path: argv[2] }));
-  else if (argv[0] === "read-command" && argv.length === 4) console.log(readCommand({ op: argv[1], path: argv[2], root: argv[3] }));
-  else if (argv[0] === "read-command" && argv.length === 2 && argv[1] === "preflight") console.log(readCommand({ op: "preflight" }));
+  else if (argv[0] === "read-command" && argv.length === 2 && ["preflight", "required"].includes(argv[1])) console.log(readCommand({ op: argv[1] }));
   else if (argv[0] === "selftest" && argv.length === 1) {
     const report = selftest();
     console.log(JSON.stringify(report, null, 2));
@@ -355,11 +444,14 @@ function main(argv) {
     const request = JSON.parse(Buffer.from(argv[1], "base64url").toString());
     validateReadRequest(request);
     if (request.op === "preflight") return void console.log(JSON.stringify(evaluateWorkflowEnvironment(), null, 2));
-    const base = request.root === undefined ? repositoryRoot(process.cwd()) : workflowSourceRoot(request.root);
-    check(typeof base === "string" && existsSync(base), `Upstream playbook root is unavailable: ${request.root}`);
-    // Relative paths resolve against the chosen root, never against the caller's cwd.
-    const from = request.root === undefined ? process.cwd() : base;
-    const file = request.path === "." ? { absolute: base } : checkedPath(base, from, request.path);
+    if (request.op === "required") {
+      if (request.path === undefined) {
+        return void console.log(JSON.stringify([...REQUIRED_READING].map(([document, entry]) => ({ document, why: entry.why })), null, 2));
+      }
+      return void process.stdout.write(readRequiredDocument(request.path));
+    }
+    const base = repositoryRoot(process.cwd());
+    const file = request.path === "." ? { absolute: base } : checkedPath(base, process.cwd(), request.path);
     if (request.op === "read") process.stdout.write(readFileSync(file.absolute, "utf8"));
     else console.log(JSON.stringify(readdirSync(file.absolute), null, 2));
   } else throw new Error("Usage: codex-edit-guard.mjs hook | selftest | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path> | read-command preflight");

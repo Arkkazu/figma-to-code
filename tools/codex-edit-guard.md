@@ -56,14 +56,16 @@ node <playbook>/tools/codex-edit-guard.mjs read-command list .
 
 ガードが壊れたときの検出・遮断・修理・再武装の手順は `rules/codex-edit-guard-repair.md` を正本とします。変更したら `node codex-edit-guard.mjs selftest` を通すこと。`install` はこれに合格しないガードの設置を拒否します。
 
-`read` と `list` は既定でリポジトリ内に限定されます。`CLAUDE.md` が必読とする上位層の規則本文はリポジトリ外にあるため、要求に `root` を付けて読みます。`root` に指定できるのは `workflow-preflight.mjs` の `LOCAL_WORKFLOW_SOURCES` が宣言する id（`vault` / `web-development`）だけで、任意のディレクトリは指定できません。指定したroot配下でも、traversal・別名パス・シンボリックリンクの検査は同じく働きます。
+`read` と `list` はリポジトリ内に限定されます。`CLAUDE.md` と上位 `WORKFLOW.md` が必読とする規則本文はリポジトリ外にあるため、`required` op で読みます。**読める外部ファイルは、ガード内に定義した許可リストの文書だけです。**ディレクトリの読み取り・列挙はできず、任意の絶対パスも解決しません。許可リストのルートは `workflow-preflight.mjs` の `defaultPath` から導き、**環境変数の上書きは意図的に無視**します。環境変数を書き換えても読める範囲は増えません。
 
 ~~~powershell
-node tools/codex-edit-guard.mjs read-command read rules/corrections.md vault
-node tools/codex-edit-guard.mjs read-command list rules vault
+node tools/codex-edit-guard.mjs read-command required                          # 許可リスト全件と必読根拠
+node tools/codex-edit-guard.mjs read-command required vault/rules/corrections.md
 ~~~
 
-**環境判定が ok を返すことと、規則本文が届くことは別です。**`selftest` は各上位層の `WORKFLOW.md` が実際にバイト数付きで返ることまで検査します。
+許可された文書でも、シンボリックリンク・ジャンクション・ハードリンク・解決先の不一致・通常ファイル以外は拒否します。存在しない文書は成功扱いにしません。**読めることは書けることを意味しません。**編集は従来どおりリポジトリルート基準で解決され、これらの外部文書はすべて拒否されます。
+
+**環境判定が ok を返すことと、規則本文が届くことは別です。**`selftest` は許可リストの各文書について、固定readerの実プロセスで取得し、**本文がファイルと完全一致すること**（切捨てなし）まで検査します。
 
 `preflight` は `CLAUDE.md` が必須とする環境判定を、シェルを開かずに行うための経路です。`node codex-edit-guard.mjs read-command preflight` が出す固定コマンドだけが許可され、ガード自身が `tools/workflow-preflight.mjs` を呼んで同じJSONを返します。実行されるファイルが増えないよう、`tools/workflow-preflight.mjs` は `protectedPath` に含めてセッションからの編集を禁止しています。
 

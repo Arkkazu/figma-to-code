@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { readFileSync } from "node:fs";
-import { dirname } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -19,15 +18,10 @@ export const LOCAL_WORKFLOW_SOURCES = [
   },
 ];
 
-export const WORKFLOW_SOURCE_IDS = LOCAL_WORKFLOW_SOURCES.map((source) => source.id);
-
-// 上位層プレイブックのルート。判定に使う WORKFLOW.md と同じ出所から導くので、
-// 「判定は通るのに規則本文は読めない」というずれが起きない。
-export function workflowSourceRoot(id, env = process.env) {
-  const source = LOCAL_WORKFLOW_SOURCES.find((entry) => entry.id === id);
-  if (!source) return null;
-  return dirname(env[source.envKey] || source.defaultPath);
-}
+// 必読文書の許可リストは codex-edit-guard.mjs が LOCAL_WORKFLOW_SOURCES の defaultPath から
+// 導く。envKey による上書きは環境判定にのみ効かせ、読み取り許可の範囲には影響させない
+// （環境変数だけで読める範囲が増える構造にしないため）。ここに env 由来のルート解決関数を
+// 置くと、その区別が失われるので置かない。
 
 // 空ファイル・プレースホルダを `local` と誤認しないための下限。世代差の検出はできない。
 export const MIN_WORKFLOW_BYTES = 200;

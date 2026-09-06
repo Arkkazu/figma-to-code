@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "date": "2026-09-06",
+  "environment": "local",
+  "author": "Claude (当該Codexフックの対象外クライアント。rules/codex-edit-guard-repair.md P4-A)",
+  "request": "修正依頼：Codex編集ガードが必読文書の読取りを拒否する不整合",
+  "scope": "必読文書を取得できない不具合の修正。規則の未取得時の編集禁止や、読了記録と編集許可の接続は対象外",
+
+  "defect": {
+    "symptom": "固定readerで {\"op\":\"read\",\"path\":\"C:/AI/vault/WORKFLOW.md\"} を要求すると EDIT GUARD: Edit path is outside repository. で非0終了する",
+    "worseThanReported": "フックは allow を返し、実行時にのみ失敗する。許可判定だけを見ると正常に見える",
+    "cause": "read の実行処理が編集用の checkedPath を共用しており、リポジトリ外を一律に拒否していた",
+    "secondCause": "selftest の実行確認が preflight op のみで、必読文書の本文取得成功を検証していなかった",
+    "priorAttempt": {
+      "commit": "feafda4",
+      "approach": "read/list に root パラメータを足し、宣言された上位ルート配下を読めるようにした",
+      "whyInsufficient": [
+        "方針2違反：明示的な文書許可リストではなく、上位ディレクトリ全体を読めた",
+        "方針4違反：上位ディレクトリの list を許可していた",
+        "方針9違反：環境変数 FIGMA_TO_CODE_VAULT_WORKFLOW でルートを差し替えると読める範囲が増えた"
+      ]
+    }
+  },
+
+  "fix": {
+    "operation": "read op に required を追加。path 省略で許可リストとその必読根拠、path 指定でその文書の本文のみを返す",
+    "allowlistLocation": "tools/codex-edit-guard.mjs 内の REQUIRED_READING_DECLARATION（protectedPath 対象のため Codex セッションから変更不可）",
+    "rootDerivation": "workflow-preflight.mjs の LOCAL_WORKFLOW_SOURCES[].defaultPath の dirname。envKey は意図的に無視する",
+    "removed": "feafda4 で入れた root パラメータと、それに伴う上位ディレクトリの read/list を撤去",
+    "perDocumentChecks": [
+      "lstat が存在しない場合は例外（成功扱いにしない）",
+      "シンボリックリンクを拒否",
+      "通常ファイル以外を拒否",
+      "ハードリンク（nlink !== 1）を拒否",
+      "realpath が宣言された絶対パスと一致しない場合は拒否（経路中のジャンクション対策）"
+    ],
+    "notGranted": "読み取り許可は編集・実行の許可へ転用されない。編集は従来どおりリポジトリルート基準で解決され、これらの外部文書はすべて拒否される"
+  },
+
+  "allowlist": {
+    "count": 21,
+    "documents": [
+      { "document": "vault/WORKFLOW.md", "why": "vault WORKFLOW.md「起動時の必読手順」1" },
+      { "document": "vault/Memory.md", "why": "同 必読手順2（【必須】）" },
+      { "document": "vault/rules/corrections.md", "why": "同 必読手順3" },
+      { "document": "vault/rules/mistakes.md", "why": "同 必読手順4" },
+      { "document": "vault/wiki/index.md", "why": "同 必読手順5" },
+      { "document": "vault/Home.md", "why": "vault WORKFLOW.md「Vault の構造」で【必須】、必読手順5の代替導線" },
+      { "document": "vault/rules/naming.md", "why": "vault WORKFLOW.md「整理しすぎない」が正本として指定" },
+      { "document": "vault/rules/lint.md", "why": "vault WORKFLOW.md「週次の手入れ」が正本として指定" },
+      { "document": "web-development/WORKFLOW.md", "why": "web-development AGENTS.md が唯一の規則本文と宣言／同 WORKFLOW.md「開始順」2" },
+      { "document": "web-development/AGENTS.md", "why": "vault WORKFLOW.md がCodexの入口として指定" },
+      { "document": "web-development/README.md", "why": "同 WORKFLOW.md「開始順」2" },
+      { "document": "web-development/rules/implementation-gate.md", "why": "同 WORKFLOW.md「コーディング規則ゲート」" },
+      { "document": "web-development/rules/css-values.md", "why": "同「必読規則」CSS/SCSS変更時" },
+      { "document": "web-development/rules/browser-compatibility.md", "why": "同「必読規則」CSS/SCSS・JS変更時" },
+      { "document": "web-development/rules/safari-known-issues.md", "why": "同「必読規則」CSS/SCSS・JS変更時" },
+      { "document": "web-development/rules/accessibility.md", "why": "同「必読規則」操作UI・HTML意味論の変更時" },
+      { "document": "web-development/rules/html.md", "why": "同「必読規則」PHP/HTMLテンプレート変更時" },
+      { "document": "web-development/rules/w3c-validation.md", "why": "同「必読規則」HTML/ARIA変更時／vault WORKFLOW.md が検証工程の正本として指定" },
+      { "document": "web-development/rules/zap-baseline.md", "why": "同「必読規則」HTML/ARIA変更時／vault WORKFLOW.md が検証工程の正本として指定" },
+      { "document": "web-development/rules/corrections.md", "why": "同 WORKFLOW.md「運用」が記録先かつ正本として指定" },
+      { "document": "web-development/rules/mistakes.md", "why": "同 WORKFLOW.md「運用」が記録先かつ正本として指定" }
+    ],
+    "deliberatelyExcluded": [
+      { "document": "vault/rules/corrections-archive.md", "why": "vault WORKFLOW.md が「退避先は必読にしない」と明記" },
+      { "document": "vault/rules/mistakes-archive.md", "why": "同上" },
+      { "document": "web-development/rules/corrections-archive.md", "why": "web-development WORKFLOW.md が「退避先は必読にしない」と明記" },
+      { "document": "web-development/rules/mistakes-archive.md", "why": "同上" },
+      { "document": "figma-to-code 配下の全文書", "why": "リポジトリ内であり、既存の read/list 経路で取得できる" }
+    ]
+  },
+
+  "verification": {
+    "commands": [
+      { "command": "node tools/codex-edit-guard.mjs selftest", "exitCode": 0, "result": "32検査 / NG 0。許可リスト21件すべて『ok (exact match, N chars)』" },
+      { "command": "node tools/codex-edit-guard.e2e.mjs", "exitCode": 0, "result": "24 groups PASS" },
+      { "command": "node tools/workflow-preflight.e2e.mjs", "exitCode": 0, "result": "PASS" },
+      { "command": "node tools/run-checks.mjs", "exitCode": 0, "result": "19/19 passed" }
+    ],
+    "allowSide": [
+      "許可21文書すべてを固定readerの実プロセスで取得し、readFileSync の内容と完全一致することを確認（切捨てなし）",
+      "リポジトリ内の read / list / preflight は従来どおり許可される"
+    ],
+    "denySide": [
+      "許可外の外部ファイル（corrections-archive.md / mistakes-archive.md）を拒否",
+      "外部ディレクトリの指定（vault/rules/ 、vault）を拒否",
+      "traversal（vault/../vault/rules/lint.md 等）、ADS（:stream）、末尾ドットを拒否",
+      "root無しの read で C:/AI/vault/WORKFLOW.md、C:/Users/tane1/.codex/auth.json を拒否",
+      "外部ディレクトリの list を拒否",
+      "存在しない文書は ENOENT で失敗し成功扱いにしない",
+      "symlink / 通常ファイル以外 / hard link / realpath不一致（経路中のジャンクション）を個別に拒否",
+      "許可文書への apply_patch を拒否（outside repository）",
+      "ガード自身・.codex/edit-guard.json・.codex/hooks.json・scope外の編集を拒否",
+      "任意シェル実行とコマンド連結を拒否"
+    ],
+    "mutationTests": {
+      "method": "検査を1件ずつ無効化し、e2e が exit 1 になることを確認してから復元",
+      "results": [
+        { "mutation": "許可リスト照合を外す", "e2eExitCode": 1 },
+        { "mutation": "symlink 検査を外す", "e2eExitCode": 1 },
+        { "mutation": "通常ファイル検査を外す", "e2eExitCode": 1 },
+        { "mutation": "realpath 一致検査を外す", "e2eExitCode": 1 },
+        { "mutation": "本文一致検査を外す", "e2eExitCode": 1 },
+        { "mutation": "selftest の到達ループを空にする", "e2eExitCode": 1 },
+        { "mutation": "hard link 検査を外す", "e2eExitCode": 1 },
+        { "mutation": "install の関門を外す", "e2eExitCode": 1 }
+      ],
+      "note": "初回は realpath 一致・本文一致・hard link の3件が e2e をすり抜けた。ジャンクション経路の検査、deliveryVerdict の分離と直接検査、ハードリンクの検査を追加してから再度当て、全件で exit 1 を確認した",
+      "restored": true
+    }
+  },
+
+  "changedFiles": [
+    { "path": "tools/codex-edit-guard.mjs", "sha256": "5343e22af9190d05b7877ad9692e1b8afe68a16d66caa78884affd38c01fd75d" },
+    { "path": "tools/codex-edit-guard.e2e.mjs", "sha256": "04da1c7210ef2bdbe8716b20a236c40ab7256f21d17711848e5e557009f52c93" },
+    { "path": "tools/codex-edit-guard.md", "sha256": "f8957985b209eb460f93aacf77e756047ed088f17d0c519a1ca43262a7d85f48" },
+    { "path": "tools/workflow-preflight.mjs", "sha256": "19e88832e2a3e4a57ac4fd398bb82ed250f47ad21dc224ab16a1d9edead8dab4", "change": "feafda4 で追加した env 由来の workflowSourceRoot / WORKFLOW_SOURCE_IDS を削除。方針9が禁じる『環境変数だけで読取り許可が増える』構造の残置を避けるため" }
+  ],
+
+  "notLoosened": [
+    "checkedPath / protectedPath / 編集認可 / scope-lock / Figma編集前検査はいずれも変更していない",
+    ".codex/hooks.json は無変更のため /hooks の信頼ハッシュは維持される",
+    "Codex側のフック無効化・protectedPath の緩和は行っていない"
+  ],
+
+  "codexRetestSteps": [
+    "node \"C:/AI/figma-to-code/tools/codex-edit-guard.mjs\" read-command required で許可リストの固定コマンドを生成し、実行して21件の一覧が返ることを確認する",
+    "node \"C:/AI/figma-to-code/tools/codex-edit-guard.mjs\" read-command required vault/WORKFLOW.md を実行し、本文が返ることを確認する",
+    "同様に vault/rules/corrections.md、vault/rules/mistakes.md、vault/Memory.md、web-development/WORKFLOW.md を取得する",
+    "許可外として vault/rules/corrections-archive.md を要求し、拒否されることを確認する",
+    "許可文書 C:/AI/vault/WORKFLOW.md への apply_patch を試み、拒否されることを確認する",
+    "ガード自身 tools/codex-edit-guard.mjs への apply_patch を試み、拒否されることを確認する",
+    "結果を MyBrain/reports/ に記録する。保存には対象1ファイルのbindが必要"
+  ],
+
+  "unverified": [
+    "Codex実機での再試験は未実施。本報告はフック対象外クライアントでの検証のみであり、Codex実機確認済みとしない",
+    "環境変数 FIGMA_TO_CODE_VAULT_WORKFLOW 等で上位層を既定位置以外へ置いた環境では、preflight は ok を返す一方 required は既定位置を読むため失敗する。方針9（環境変数で読取り許可が増えない）を優先した結果であり、その場合は許可リストの見直しが必要",
+    "許可リストは 2026-09-06 時点の上位 WORKFLOW.md の記述に基づく。上位側が必読を追加した場合、このリストは自動追従しない",
+    "本修正は「必読文書を取得できない不具合」の解消のみを対象とする。規則未取得のまま編集できないことや、取得した規則の理解・遵守は実装・実証していない"
+  ]
+}
