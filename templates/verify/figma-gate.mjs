@@ -1146,6 +1146,51 @@ function validateVisualMask(value, label) {
   return { path, sha256, mode };
 }
 
+// オーナー承認による「旧Figmaラスター比較の除外」。
+//
+// 背景（2026-09-09 実測、rpa-technologies-theme / partners-20260907）: オーナーが
+// 「サービス欄だけ、最新のCSS指定を正として、旧Figma画像との完全一致を配備条件から
+// 外して良い」と承認し、その記録が3か所（decision JSON / spec.ownerApprovedCssSections /
+// gate manifest.scope.servicesDesignApproval）に残された。**しかし検証器はどれも読んで
+// いなかった。**承認を機械へ渡す経路が無いため、実装側が使えるレバーは `painted` だけに
+// なり、描画している要素を `painted: false` と申告する——つまり嘘をつく——以外に前へ
+// 進めなくなっていた。ゲートは正しくそれを拒否し、作業は完全に停止した。
+// **正しく振る舞うと必ず行き止まる**構造だったので、承認の入口をここに作る。
+//
+// 外すのは VISUAL（ラスター差分）だけである。SPEC と LAYOUT の検査は従来どおり走る。
+// 承認は「その時点のCSS」に対して与えられたものなので、承認後にCSSが変われば自動で失効する。
+// これが白紙委任との違いで、`cssSha256` の照合がその境界を機械で守る。
+function validateOwnerVisualExemption(value, label, selector) {
+  const declared = requireObject(value, label);
+  const basisPath = toEvidencePath(declared.basisPath, `${label}.basisPath`);
+  const basis = readExecutionJson(basisPath, `owner visual exemption basis (${label})`);
+  requireObject(basis, `${label} basis document`);
+  if (requireString(basis.approvedBy, `${label} basis.approvedBy`) !== "owner") {
+    fail(`${label}: basis.approvedBy must be "owner". 実装側の判断で描画比較を外せない。`);
+  }
+  requireString(basis.approvedAt, `${label} basis.approvedAt`);
+  const instruction = requireString(basis.instruction, `${label} basis.instruction`);
+  if (instruction.trim().length < 20) {
+    fail(`${label}: basis.instruction must quote what the owner actually approved (>=20 chars).`);
+  }
+  const basisSelector = requireString(basis.selector, `${label} basis.selector`);
+  if (basisSelector !== selector) {
+    fail(`${label}: basis.selector (${basisSelector}) must match the component selector (${selector}). 別の節の承認を流用できない。`);
+  }
+  // 承認時点のCSSと現在が一致するときだけ有効にする。承認後の編集は承認の対象外である。
+  const cssPath = toEvidencePath(basis.cssPath, `${label} basis.cssPath`);
+  const cssSha256 = requireString(basis.cssSha256, `${label} basis.cssSha256`);
+  const currentCssSha256 = hashFile(cssPath);
+  if (currentCssSha256 !== cssSha256) {
+    fail(
+      `${label}: the approved CSS changed after the owner's decision (${basis.cssPath}). `
+        + `approved=${cssSha256} current=${currentCssSha256}. `
+        + `承認は承認時点のCSSに対して与えられている。作り直したなら承認を取り直す。`
+    );
+  }
+  return { basisPath, approvedBy: basis.approvedBy, approvedAt: basis.approvedAt, instruction, selector: basisSelector, cssPath, cssSha256 };
+}
+
 function validateComponentManifest(document) {
   requireObject(document, "component manifest");
   const entries = requireArray(document.components, "components");
@@ -1237,8 +1282,21 @@ function validateComponentManifest(document) {
       return { itemId, figmaNodeIds: { pc: figmaNodeIds.pc, sp: figmaNodeIds.sp }, selectors: { pc: selectors.pc, sp: selectors.sp } };
     });
 
+    // オーナー承認でラスター比較を外した節。painted は true のまま（描画している事実を偽らない）。
+    let ownerVisualExemption = null;
+    if (entry.ownerVisualExemption !== undefined) {
+      if (!entry.painted) {
+        fail(`components[${index}].ownerVisualExemption is only meaningful for painted components: ${elementId}`);
+      }
+      ownerVisualExemption = validateOwnerVisualExemption(
+        entry.ownerVisualExemption,
+        `components[${index}].ownerVisualExemption`,
+        selector
+      );
+    }
+
     let figmaImages = null;
-    if (entry.painted) {
+    if (entry.painted && !ownerVisualExemption) {
       const declaredImages = requireObject(entry.figmaImages, `components[${index}].figmaImages (painted components must register Figma reference images at preflight)`);
       figmaImages = {};
       for (const viewport of viewports) {
@@ -1277,6 +1335,7 @@ function validateComponentManifest(document) {
       visualThresholdBasis,
       viewports,
       figmaImages,
+      ownerVisualExemption,
       spacingOwnership: { rootPadding, interSectionSpacing },
       repeatItems: normalizedRepeatItems,
     };
@@ -2758,7 +2817,18 @@ function checkpoint(manifestPath, elementIdArg, { finalRecheck = false, release 
 
   let visual = null;
   let captureEvidence = null;
-  if (component.painted) {
+  if (component.painted && component.ownerVisualExemption) {
+    // 承認された節は VISUAL だけを飛ばす。SPEC / LAYOUT は上で既に走っている。
+    // 黙って飛ばさない。出力と受領証の両方へ、誰の・いつの・どの指示かを必ず残す。
+    const exemption = component.ownerVisualExemption;
+    pass(
+      `VISUAL SKIPPED (owner approved): ${elementId} — ${exemption.selector} / approvedAt ${exemption.approvedAt} / `
+        + `basis ${exemption.basisPath} / CSS ${exemption.cssPath} @ ${exemption.cssSha256.slice(0, 12)}`
+    );
+    pass(`  承認原文: ${exemption.instruction}`);
+    pass("  外したのはラスター差分だけで、寸法・レイアウト・内容の検査は実行している。");
+    visual = { ownerApprovedSkip: { ...exemption } };
+  } else if (component.painted) {
     visual = {};
     captureEvidence = {
       captureJobsPath,
