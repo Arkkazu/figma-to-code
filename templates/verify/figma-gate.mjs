@@ -3069,7 +3069,28 @@ function assertCheckpointsComplete(state, plan, components, validated, checkpoin
     assertGateVerificationEvidence(elementId, "accessibility", record.accessibilityEvidence, validated, batchEvidence);
     assertGateVerificationEvidence(elementId, "motion", record.motionEvidence, validated, batchEvidence);
     const component = components.find((candidate) => candidate.elementId === elementId);
-    if (component && component.painted) {
+    if (component && component.painted && component.ownerVisualExemption) {
+      // VISUAL をオーナー承認で外した節には撮影証跡が存在しない。checkpoint 側（"VISUAL SKIPPED
+      // (owner approved)"）が captureEvidence を作らないためである。ここで撮影証跡を必須にすると、
+      // 承認経路を通った scope は section-close / close で必ず落ち、承認が機械へ届かない。
+      // 実測（2026-09-10、rpa-technologies-theme / static-resource-download-20260909）:
+      // ownerVisualExemption を宣言した downloads-content が checkpoint は PASS したのに
+      // 「checkpoint record capture evidence (downloads-content) is required.」で閉じられなかった。
+      // 承認の置き場だけ作って読む側を直さないと、経路は存在しないのと同じである。
+      //
+      // 素通りはさせない。「承認どおりに外したこと」を記録から確かめる。
+      const visual = requireObject(record.visual, `checkpoint record visual (${elementId} is painted)`);
+      const skip = requireObject(visual.ownerApprovedSkip, `checkpoint record visual.ownerApprovedSkip (${elementId})`);
+      if (requireString(skip.selector, `checkpoint visual.ownerApprovedSkip.selector (${elementId})`) !== component.ownerVisualExemption.selector) {
+        fail(`Checkpoint owner-approved visual skip does not match the approved selector: ${elementId}`);
+      }
+      if (requireString(skip.cssSha256, `checkpoint visual.ownerApprovedSkip.cssSha256 (${elementId})`) !== component.ownerVisualExemption.cssSha256) {
+        fail(`Checkpoint owner-approved visual skip was recorded against different CSS: ${elementId}`);
+      }
+      if (record.captureEvidence !== null && record.captureEvidence !== undefined) {
+        fail(`Checkpoint recorded capture evidence for an owner-exempted component: ${elementId}`);
+      }
+    } else if (component && component.painted) {
       const captureEvidence = requireObject(record.captureEvidence, `checkpoint record capture evidence (${elementId})`);
       assertRecordedFile(elementId, "capture jobs", captureEvidence.captureJobsPath, captureEvidence.captureJobsSha256);
       assertRecordedFile(elementId, "capture summary", captureEvidence.captureSummaryPath, captureEvidence.captureSummarySha256);
