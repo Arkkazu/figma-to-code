@@ -242,6 +242,8 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 - **手作業のスクリーンショット目視は、崩れの発見補助であり、合否判定には使わない。**
   - ただし、背景・画像のクロップ・アイコン・描画装飾は、Figma参照画像とブラウザ撮影を同一範囲・同一倍率へ正規化した**自動画像差分**で照合する。文字アンチエイリアスやFigma canvas/Chromeの再サンプリング差は、検証ツールが対応するmask、または文字を除いたpaint-onlyのDOM領域で切り分ける。maskを未対応のツールで擬似的に運用してはならない。対象領域・閾値・採用理由はspecまたはevidenceに記録し、理由を特定できない差分はPASSにせずFAILまたは未確認とする。
   - 撮影モードは、CDP実測と同じDOM状態を再現できる案件側の検証済みモードに固定する。`headless=new` 等で描画アーティファクトが出た場合だけ再現済みモードへ切り替え、使用モードとbaseline更新根拠をevidenceに残す。
+  - **旧Figma画像との完全一致をオーナーが配備条件から外した節は、`components[].ownerVisualExemption` で機械へ渡す。**外れるのは VISUAL（ラスター差分）だけで、SPEC と LAYOUT は従来どおり走る。承認は根拠ドキュメント側に `approvedBy: "owner"`・`approvedAt`・`instruction`（20文字以上）・`selector`・`cssPath`・`cssSha256` を揃えて残し、承認時のCSSと一致することを gate が照合する。checkpoint 記録には `visual.ownerApprovedSkip` を残し、撮影証跡は持ち込まない。**`painted: false` と申告して逃げてはならない。**描画している要素をそう申告するのは虚偽であり、gate は正しく拒否する。
+  - 承認経路を使った scope は section-close / close でも撮影証跡を求められない（`figma-gate.mjs`）。承認どおり外したこと（`ownerApprovedSkip` の存在、selector 一致、承認時 `cssSha256` 一致、撮影証跡を持ち込んでいないこと）は close 側でも検査する。素通りはしない。
 
 ## フェーズ3A: 一括照合・修正バッチ（単一実行、2026-07-18追加）
 

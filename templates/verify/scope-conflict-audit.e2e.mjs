@@ -62,10 +62,17 @@ function coordination(scopes) {
 
 // 台帳の行は「予約」であって「進行中の編集」ではない。編集には preflight 受領証が要るため、
 // 受領証を持たない行は1行も編集していない。止める側の証拠として受領証を置く。
-function writeCodingReceipt(id, targets, phase = "preflight") {
+function writeCodingReceipt(id, targets, phase = "preflight", startedAt = new Date().toISOString()) {
   const path = join(repo, ".coding-gate", "active", `${id}.json`);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify({ version: 1, phase, manifestId: id, changeTargets: targets, checkpoints: {} }, null, 2)}\n`, "utf8");
+  writeFileSync(path, `${JSON.stringify({ version: 1, phase, manifestId: id, changeTargets: targets, checkpoints: {}, startedAt }, null, 2)}\n`, "utf8");
+}
+
+function writeProgressingReceipt(id, targets, startedAt) {
+  const path = join(repo, ".coding-gate", "active", `${id}.json`);
+  mkdirSync(dirname(path), { recursive: true });
+  const state = { version: 1, phase: "preflight", manifestId: id, changeTargets: targets, checkpoints: { one: {} }, startedAt };
+  writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
 function clearCodingReceipts() {
@@ -231,6 +238,22 @@ try {
   check("受領証を置けば止まる", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
   check("受領証保持の説明", result.stderr.includes("gate受領証"), `受領証を根拠として示していない: ${result.stderr}`);
   clearCodingReceipts();
+
+  // 滞留した受領証（preflightのまま上限日数を超え、checkpointが0件）は他担当の宣言を止めない。
+  // 表示は必ず残す。2026-09-10 実測: 表示だけの警告では放置が積み上がり、
+  // 後から同じパスを触る担当がオーナーの仲裁なしには進めなくなった。
+  const staleStartedAt = new Date(Date.now() - 30 * 86400000).toISOString();
+  writeCodingReceipt("codex-stale", [target], "preflight", staleStartedAt);
+  result = audit("coding-codex-target.json");
+  check("滞留した受領証は止めない", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
+  check("滞留を黙って無視しない", `${result.stdout}${result.stderr}`.includes("滞留"), `滞留を報告していない: ${result.stdout}${result.stderr}`);
+  clearCodingReceipts();
+
+  // 同じ古さでも、checkpointを1件でも実行していれば滞留ではない。進行中の作業は守る。
+  writeProgressingReceipt("codex-progressing", [target], staleStartedAt);
+  result = audit("coding-codex-target.json");
+  check("進行中の受領証は止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
+  clearCodingReceipts();
 } finally {
   rmSync(repo, { recursive: true, force: true });
 }
@@ -239,4 +262,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`FAIL: ${failure}`);
   process.exit(1);
 }
-console.log(`PASS: scope conflict audit e2e (11 case(s))`);
+console.log(`PASS: scope conflict audit e2e (14 case(s))`);

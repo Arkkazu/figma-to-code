@@ -532,6 +532,198 @@ function preflightFixture(fixture) {
   accept(preflightArgs(fixture), fixture.root);
 }
 
+// オーナー承認でVISUALだけを外した節が、checkpoint から section-close まで通ることを固定する。
+//
+// なぜ要るか（2026-09-10 実測、rpa-technologies-theme / static-resource-download-20260909）:
+// ownerVisualExemption は checkpoint 側だけ実装されており、承認された節は captureEvidence を
+// 作らない。ところが assertCheckpointsComplete は painted な節へ無条件に撮影証跡を要求していた。
+// そのため**承認経路を通った scope はどれも閉じられず、経路は存在しないのと同じだった**。
+// このフィクスチャの唯一の component は painted:false だったため、E2Eはこの経路を一度も通らず
+// 欠陥が出荷された。承認の置き場を作るだけでなく、端から端まで通ることを固定する。
+function paintedExemptionFixture() {
+  const fixture = createFixture("figma-gate-owner-visual-exemption-");
+  const cssPath = join(fixture.root, "site", "app.css");
+  writeFileSync(cssPath, ".fixture-root { color: #363635; }\n", "utf8");
+  const basisRelativePath = "MyBrain/verify/fixture/owner-visual-exemption.json";
+  writeJson(join(fixture.directory, "owner-visual-exemption.json"), {
+    approvedBy: "owner",
+    approvedAt: "2026-09-10",
+    selector: ".fixture-root",
+    cssPath: "site/app.css",
+    cssSha256: sha256(cssPath),
+    instruction: "理由を聞いたうえで、このラスター差分を外して配備するよう指示された（フィクスチャ）。",
+  });
+  mutateJson(fixture.componentsPath, (value) => {
+    const component = value.components[0];
+    component.painted = true;
+    // 0.01 を超える閾値は実測根拠（40文字以上）を要求される。ここで検査したいのは
+    // 承認経路であって閾値ではないので、根拠の要らない既定の下限に置く。
+    component.visualThreshold = 0.01;
+    component.figmaImages = {
+      pc: { path: "MyBrain/verify/fixture/pc.png", sha256: sha256(join(fixture.directory, "pc.png")) },
+      sp: { path: "MyBrain/verify/fixture/sp.png", sha256: sha256(join(fixture.directory, "sp.png")) },
+    };
+    component.ownerVisualExemption = { basisPath: basisRelativePath };
+  });
+  return { fixture, cssPath, basisPath: join(fixture.directory, "owner-visual-exemption.json") };
+}
+
+function checkpointExemptedFixture(fixture) {
+  preflightFixture(fixture);
+  accept(["section-start", fixture.manifestRelativePath, "fixture-section"], fixture.root);
+  const attempt = accept(["checkpoint", fixture.manifestRelativePath, "fixture-component"], fixture.root);
+  assert(
+    attempt.output.includes("VISUAL SKIPPED (owner approved)"),
+    "checkpoint reports the owner-approved visual skip instead of silently passing"
+  );
+  return attempt;
+}
+
+function mutateCheckpointRecord(fixture, mutate) {
+  mutateJson(resolveActiveReceiptPath(fixture.root), (value) => {
+    mutate(value.checkpoints["fixture-component"]);
+  });
+}
+
+// IHDRだけを持つPNG。preflightの寸法検査はヘッダしか読まないので、これで十分に検査できる。
+function writePngHeader(path, width, height) {
+  const header = Buffer.alloc(33);
+  header.writeUInt32BE(0x89504e47, 0);
+  header.writeUInt32BE(0x0d0a1a0a, 4);
+  header.writeUInt32BE(13, 8);
+  header.write("IHDR", 12, "ascii");
+  header.writeUInt32BE(width, 16);
+  header.writeUInt32BE(height, 20);
+  writeFileSync(path, header);
+}
+
+// 比較画像の画素寸法が spec の宣言と食い違ったまま preflight を通らないことを固定する。
+//
+// なぜ要るか（2026-09-10 実測）: カードの比較画像がコンポーネント単体ノードの固有寸法で
+// 書き出され、ページ配置後の寸法と食い違っていた。この食い違いは checkpoint のピクセル差分まで
+// 進んで初めて現れ、そこへ到達するには直前の全チェックポイントを通す必要がある。
+// 寸法は preflight の時点で分かるので、ここで落ちることを固定する。
+function assertFigmaReferenceImageSizeIsCheckedAtPreflight() {
+  const paintedFixture = (imageWidth, imageHeight, maskSize) => {
+    const fixture = createFixture("figma-gate-reference-image-size-");
+    const pcPng = join(fixture.directory, "reference-pc.png");
+    writePngHeader(pcPng, imageWidth, imageHeight);
+    const images = { pc: { path: "MyBrain/verify/fixture/reference-pc.png", sha256: sha256(pcPng) } };
+    if (maskSize) {
+      const maskPng = join(fixture.directory, "reference-pc-mask.png");
+      writePngHeader(maskPng, maskSize.width, maskSize.height);
+      images.pc.mask = { path: "MyBrain/verify/fixture/reference-pc-mask.png", sha256: sha256(maskPng), mode: "exclude" };
+    }
+    mutateJson(fixture.componentsPath, (value) => {
+      const component = value.components[0];
+      component.painted = true;
+      component.visualThreshold = 0.01;
+      component.viewports = ["pc"];
+      component.figmaImages = images;
+    });
+    return fixture;
+  };
+
+  // spec は .fixture-root を width 1 で宣言している。同じ寸法の参照画像は通る。
+  {
+    const fixture = paintedFixture(1, 1, null);
+    accept(preflightArgs(fixture), fixture.root);
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+
+  // 別寸法の参照画像は preflight で落ちる。checkpoint まで持ち越さない。
+  {
+    const fixture = paintedFixture(384, 453, null);
+    reject(preflightArgs(fixture), "but spec declares", fixture.root);
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+
+  // マスクは比較画像と同じ画素寸法でなければ差分計算に使えない。
+  {
+    const fixture = paintedFixture(1, 1, { width: 1, height: 2 });
+    reject(preflightArgs(fixture), "mask is 1x2 but the reference image is 1x1", fixture.root);
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+
+  // PNG以外を比較画像として登録できない（拡張子ではなく実体で判定する）。
+  {
+    const fixture = createFixture("figma-gate-reference-image-not-png-");
+    mutateJson(fixture.componentsPath, (value) => {
+      const component = value.components[0];
+      component.painted = true;
+      component.visualThreshold = 0.01;
+      component.viewports = ["pc"];
+      component.figmaImages = {
+        pc: { path: "MyBrain/verify/fixture/pc.png", sha256: sha256(join(fixture.directory, "pc.png")) },
+      };
+    });
+    reject(preflightArgs(fixture), "must be a PNG with a readable IHDR header", fixture.root);
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+}
+
+function assertOwnerVisualExemptionClosesAndGuards() {
+  // 正の経路: 承認された節は撮影証跡が無いまま section-close まで通る。
+  {
+    const { fixture } = paintedExemptionFixture();
+    checkpointExemptedFixture(fixture);
+    const record = readJson(resolveActiveReceiptPath(fixture.root)).checkpoints["fixture-component"];
+    assert(
+      record.captureEvidence === null || record.captureEvidence === undefined,
+      "an owner-exempted checkpoint records no capture evidence"
+    );
+    assert(
+      record.visual && record.visual.ownerApprovedSkip && record.visual.ownerApprovedSkip.selector === ".fixture-root",
+      "an owner-exempted checkpoint records who approved which selector"
+    );
+    accept(["section-close", fixture.manifestRelativePath, "fixture-section"], fixture.root);
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+
+  // 負の経路: 承認の記録を書き換えたら閉じられない。素通りさせないことを固定する。
+  const tampering = [
+    {
+      label: "selector",
+      mutate: (record) => { record.visual.ownerApprovedSkip.selector = ".tampered"; },
+      expected: "does not match the approved selector",
+    },
+    {
+      label: "cssSha256",
+      mutate: (record) => { record.visual.ownerApprovedSkip.cssSha256 = "0".repeat(64); },
+      expected: "recorded against different CSS",
+    },
+    {
+      label: "smuggled capture evidence",
+      mutate: (record) => { record.captureEvidence = { captureJobsPath: "site/view.txt" }; },
+      expected: "recorded capture evidence for an owner-exempted component",
+    },
+    {
+      label: "missing skip record",
+      mutate: (record) => { delete record.visual.ownerApprovedSkip; },
+      expected: "checkpoint record visual.ownerApprovedSkip",
+    },
+  ];
+  for (const entry of tampering) {
+    const { fixture } = paintedExemptionFixture();
+    checkpointExemptedFixture(fixture);
+    mutateCheckpointRecord(fixture, entry.mutate);
+    reject(
+      ["section-close", fixture.manifestRelativePath, "fixture-section"],
+      entry.expected,
+      fixture.root
+    );
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+
+  // 承認は承認時点のCSSに対して与えられている。あとからCSSを触れば失効する。
+  {
+    const { fixture, cssPath } = paintedExemptionFixture();
+    writeFileSync(cssPath, ".fixture-root { color: #000000; }\n", "utf8");
+    reject(preflightArgs(fixture), "the approved CSS changed after the owner's decision", fixture.root);
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+}
+
 function prepareClosedReleaseFixture(fixture) {
   preflightFixture(fixture);
   const paths = gateArtifactPaths(fixture);
@@ -1585,6 +1777,8 @@ const STEPS = [
   ["preflight draft guards", assertPreflightDraftGuardCases],
   ["later phase draft guards", assertLaterPhaseDraftGuards],
   ["release-check record guards", assertReleaseCheckRecordGuards],
+  ["reference image size at preflight", assertFigmaReferenceImageSizeIsCheckedAtPreflight],
+  ["owner visual exemption end to end", assertOwnerVisualExemptionClosesAndGuards],
 ];
 
 const startedAt = Date.now();

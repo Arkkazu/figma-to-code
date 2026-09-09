@@ -27,6 +27,8 @@ Figmaデザインから画像を書き出して実装へ使うときの恒久ル
 - `get_design_context`またはmetadataのroot名・可視レイヤー・実寸が既存証跡と不一致なら、既存PNGを無効とし、内容照合がPASSするまで比較ランタイムへ登録しない。
 - 登録後は、比較ボタンが実際に読むURLから取得した画像についても、登録PNGとSHA-256を照合する。`currentSrc`・natural size・CSS寸法の確認だけでは完了にしてはならない。
 - gateを自動探索して比較画像を登録する実装は、読めない・内容照合未完・無効化済みの画像を候補から除外する。候補を削除した後に別の過去gate画像へフォールバックしてはならない。
+- **参照画像とmaskの実寸は preflight で検査する**（`figma-gate.mjs` の `assertFigmaReferenceImagesMatchSpec`）。mask のピクセル寸法が参照画像と一致すること、参照画像のピクセル寸法が spec の当該 selector に宣言した width / height と一致すること（配列は範囲として扱う）を、PNG の IHDR から読んで照合する。
+  - 実測（2026-09-10、rpa-technologies-theme / static-resource-download-20260909）: Figma のインスタンスを単体で書き出したため、参照画像が実装上の描画幅 264px ではなくインスタンスの固有幅 384px になっていた。この不一致が checkpoint の画像差分まで発覚せず、1回あたり約10分の全 checkpoint 再実行を4度繰り返す原因になった。**寸法が合わない参照画像は、実装が正しくても必ず落ちる。**着手前に落とす。
 
 ### CSS優先判定
 

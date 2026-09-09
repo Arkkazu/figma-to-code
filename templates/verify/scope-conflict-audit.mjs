@@ -93,19 +93,52 @@ function activeGateClaims(root, gateKind) {
     .map((state) => gateClaimOf(state, gateKind));
 }
 
+// 受領証を preflight のまま保持し続けたときの上限（日数）。
+// 環境変数で延ばせるが、既定は「1営業週」を想定した7日。
+const STALE_PREFLIGHT_DAYS = Number.parseFloat(process.env.GATE_STALE_PREFLIGHT_DAYS ?? "7");
+
+// preflight のまま長期間保持され、checkpoint も close も一度も進んでいない受領証を「滞留」と呼ぶ。
+//
+// なぜ要るか（2026-09-10 実測、rpa-technologies-theme）: 別担当が7ファイルを未commitのまま
+// 受領証を preflight で保持し、checkpoint を1件も実行していない状態が続いた。
+// report-readiness-audit は毎回 NG として**表示していた**が、表示するだけで誰も止まらないため
+// そのまま積み上がり、後から同じパスを触る担当が宣言できなくなった。解除にオーナーの仲裁が要り、
+// 引き取り側は検査をやり直す羽目になる。
+//
+// 滞留した受領証は**他人の宣言を止める力を失う**。保持者自身の作業が消えるわけではない。
+// 続けるなら再preflightで引き直せばよく、やめるなら abort すればよい。
+// 「放置したまま他人を止め続けられる」状態だけを取り除く。
+function stalePreflightAgeDays(state) {
+  if (state?.phase !== "preflight") return null;
+  const startedAt = Date.parse(state.startedAt ?? "");
+  if (!Number.isFinite(startedAt)) return null;
+  const counts = [state.checkpoints, state.sections, state.components]
+    .filter((value) => value && typeof value === "object")
+    .map((value) => (Array.isArray(value) ? value.length : Object.keys(value).length));
+  if (counts.some((count) => count > 0)) return null;
+  const ageDays = (Date.now() - startedAt) / 86400000;
+  return ageDays > STALE_PREFLIGHT_DAYS ? ageDays : null;
+}
+
 function gateClaimOf(state, gateKind) {
   let targets = Array.isArray(state.changeTargets) ? state.changeTargets.map(normalizePath) : null;
   if (!targets && typeof state.manifestPath === "string") {
     targets = operationTargets(readJson(state.manifestPath, `${gateKind} gate manifest`), `${gateKind} gate manifest`);
   }
   if (!targets) throw new Error(`${gateKind} gateのactive受領証にchangeTargetsがありません。`);
+  const staleDays = stalePreflightAgeDays(state);
   return {
     id: String(state.manifestId ?? "unknown"),
-    source: `${gateKind} gate receipt:${state.phase ?? "phase不明"}`,
+    source: `${gateKind} gate receipt:${state.phase ?? "phase不明"}${staleDays === null ? "" : "（滞留）"}`,
     targets,
     state,
+    stale: staleDays === null ? null : { days: staleDays, limitDays: STALE_PREFLIGHT_DAYS },
     actor: typeof state.actor === "string" ? state.actor : undefined,
-    hint: `${gateKind} gate の受領証が ${state.phase ?? "phase不明"} のまま保持されています。close / abort で解放されます。`,
+    hint: staleDays === null
+      ? `${gateKind} gate の受領証が ${state.phase ?? "phase不明"} のまま保持されています。close / abort で解放されます。`
+      : `${gateKind} gate の受領証が preflight のまま ${staleDays.toFixed(1)} 日（上限 ${STALE_PREFLIGHT_DAYS} 日）保持され、`
+        + "checkpoint を1件も実行していません。滞留として扱い、他担当の宣言は止めません。"
+        + "保持者が続けるなら再preflightで引き直し、やめるなら abort します。",
   };
 }
 
@@ -418,7 +451,12 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
         notes.push(`${label} gate受領証 ${claim.id} が保持中ですが、宣言パスが交差しないため並行して進めます。`);
         continue;
       }
-      violations.push(`${label} gate受領証は ${claim.id} が保持中で、次の宣言パスが交差します: ${overlap.join("、")}。`);
+      const message = `${label} gate受領証は ${claim.id} が保持中で、次の宣言パスが交差します: ${overlap.join("、")}。`
+        + (claim.hint ? `
+      ${claim.hint}` : "");
+      // 滞留した受領証は他人の宣言を止めない。黙って無視もしない — noteとして必ず出す。
+      if (claim.stale) notes.push(message);
+      else violations.push(message);
       continue;
     }
     // 同一scopeが既に受領証を持っている場合。引き直しは明示フラグを要求する。
@@ -545,10 +583,11 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
       // 所有台帳の枝には「貼れば直る差分まで出す」規則があるのに、交差判定の枝には
       // 適用されていなかった。担当者も受領証の状態も出ないため、止められた側は
       // 何を待てばよいのか分からない（2026-09-04 実測）。
-      violations.push(
-        `${target} は ${claim.id}（${claim.source}${claim.actor ? ` / ${claim.actor}` : ""}）と競合します。`
-        + (claim.hint ? `\n      ${claim.hint}` : ""),
-      );
+      const message = `${target} は ${claim.id}（${claim.source}${claim.actor ? ` / ${claim.actor}` : ""}）と競合します。`
+        + (claim.hint ? `\n      ${claim.hint}` : "");
+      // 滞留した受領証は他人の宣言を止めない。黙って無視もしない — noteとして必ず出す。
+      if (claim.stale) notes.push(message);
+      else violations.push(message);
     }
     if (dirty.has(target) && !permittedDirty.has(target) && !(operation === "amend" && frozenAmendTargets.has(target))) {
       violations.push(

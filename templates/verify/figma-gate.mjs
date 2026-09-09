@@ -987,6 +987,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   const specDocument = readExecutionJson(specPath.absolutePath, "Spec");
   const nodeMapDocument = readExecutionJson(nodeMapPath.absolutePath, "Node map");
   assertSpecCoversComponents(specDocument, components);
+  assertFigmaReferenceImagesMatchSpec(specDocument, components);
   assertSpecCoversRepeatItems(specDocument, components, nodeMapDocument);
   assertSpecProvenance(specDocument);
   assertVariableTextHeight(specDocument);
@@ -1189,6 +1190,75 @@ function validateOwnerVisualExemption(value, label, selector) {
     );
   }
   return { basisPath, approvedBy: basis.approvedBy, approvedAt: basis.approvedAt, instruction, selector: basisSelector, cssPath, cssSha256 };
+}
+
+// PNGのIHDRから画素寸法を読む。比較画像はPNGに限る（登録時に拡張子ではなく実体で判定する）。
+function pngPixelSize(absolutePath, label) {
+  const header = readFileSync(absolutePath).subarray(0, 33);
+  const isPng = header.length >= 33
+    && header.readUInt32BE(0) === 0x89504e47
+    && header.readUInt32BE(4) === 0x0d0a1a0a
+    && header.toString("ascii", 12, 16) === "IHDR";
+  if (!isPng) fail(`${label} must be a PNG with a readable IHDR header: ${absolutePath}`);
+  return { width: header.readUInt32BE(16), height: header.readUInt32BE(20) };
+}
+
+// 登録した比較画像の画素寸法が、specの同じセレクターの寸法と一致することをpreflightで確かめる。
+//
+// なぜ要るか（2026-09-10 実測、rpa-technologies-theme / static-resource-download-20260909）:
+// カードの比較画像がコンポーネント単体ノードの固有寸法 384x453 で書き出されており、
+// ページ配置後の 264x453（specの宣言値）と食い違っていた。**Figmaはインスタンスを固有寸法で
+// 描画する**ため、get_screenshot でも配置後の寸法は得られない。この食い違いは checkpoint の
+// ピクセル差分まで進んで初めて "Image dimensions differ" として現れる。そこへ到達するには
+// 直前の全チェックポイントを通す必要があり、1周10分前後を捨ててから気づくことになる。
+// 寸法はpreflightの時点で分かるので、ここで落とす。
+//
+// spec側が範囲（[min, max]）で宣言している高さは、可変テキストの意図的な宣言なので範囲で判定する。
+function assertFigmaReferenceImagesMatchSpec(specDocument, components) {
+  const viewportWidthByName = { pc: 1440, sp: 375 };
+  const specByViewportWidth = new Map();
+  for (const viewport of Array.isArray(specDocument?.viewports) ? specDocument.viewports : []) {
+    if (!viewport || typeof viewport !== "object") continue;
+    specByViewportWidth.set(Number(viewport.width), Array.isArray(viewport.elements) ? viewport.elements : []);
+  }
+
+  const withinRange = (declared, actual) => {
+    if (Array.isArray(declared)) {
+      const [min, max] = declared;
+      return Number.isFinite(min) && Number.isFinite(max) && actual >= Math.floor(min) && actual <= Math.ceil(max);
+    }
+    return !Number.isFinite(declared) || Math.round(declared) === actual;
+  };
+
+  for (const component of components) {
+    if (!component.figmaImages) continue;
+    for (const [viewport, image] of Object.entries(component.figmaImages)) {
+      const label = `components[${component.elementId}].figmaImages.${viewport}`;
+      const size = pngPixelSize(image.path, label);
+      if (image.mask) {
+        const maskSize = pngPixelSize(image.mask.path, `${label}.mask`);
+        if (maskSize.width !== size.width || maskSize.height !== size.height) {
+          fail(
+            `SPEC FAIL: ${label}.mask is ${maskSize.width}x${maskSize.height} but the reference image is `
+              + `${size.width}x${size.height}. マスクは比較画像と同じ画素寸法でなければ差分計算に使えない。`
+          );
+        }
+      }
+      const elements = specByViewportWidth.get(viewportWidthByName[viewport]);
+      if (!elements) continue;
+      const declared = elements.find((element) => element && element.sel === component.selector);
+      if (!declared) continue;
+      if (!withinRange(declared.width, size.width) || !withinRange(declared.height, size.height)) {
+        fail(
+          `SPEC FAIL: ${label} is ${size.width}x${size.height} but spec declares `
+            + `${JSON.stringify(declared.width)}x${JSON.stringify(declared.height)} for "${component.selector}". `
+            + "比較画像とspecが同じ要素の別の寸法を指している。"
+            + "コンポーネント単体ノードを書き出すとページ配置後の寸法と食い違う（Figmaはインスタンスを固有寸法で描画する）。"
+            + "配置後の寸法で切り出し直すか、specの宣言値を実測し直す。"
+        );
+      }
+    }
+  }
 }
 
 function validateComponentManifest(document) {
@@ -2729,7 +2799,10 @@ function checkpoint(manifestPath, elementIdArg, { finalRecheck = false, release 
     "utf8"
   );
 
-  const captureJobs = component.painted
+  // オーナー承認でVISUALを外した節は、撮影しても比較に使わない。撮っておいて捨てると、
+  // 受領証に「使っていない撮影証跡」が残り、section-close 側の「撮影証跡を持ち込んでいない」
+  // 検査とも食い違う。要求しないことで、承認された節の経路を一本にする。
+  const captureJobs = component.painted && !component.ownerVisualExemption
     ? component.viewports.map((viewport) => {
         const browserImagePath = resolve(checkpointDirectory, `${elementId}-browser-${viewport}.png`);
         return {
