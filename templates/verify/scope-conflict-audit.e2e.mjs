@@ -62,10 +62,10 @@ function coordination(scopes) {
 
 // 台帳の行は「予約」であって「進行中の編集」ではない。編集には preflight 受領証が要るため、
 // 受領証を持たない行は1行も編集していない。止める側の証拠として受領証を置く。
-function writeCodingReceipt(id, targets, phase = "preflight", startedAt = new Date().toISOString()) {
+function writeCodingReceipt(id, targets, phase = "preflight", startedAt = new Date().toISOString(), preflightAt = null) {
   const path = join(repo, ".coding-gate", "active", `${id}.json`);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify({ version: 1, phase, manifestId: id, changeTargets: targets, checkpoints: {}, startedAt }, null, 2)}\n`, "utf8");
+  writeFileSync(path, `${JSON.stringify({ version: 1, phase, manifestId: id, changeTargets: targets, checkpoints: {}, ...(startedAt === null ? {} : { startedAt }), ...(preflightAt === null ? {} : { preflightAt }) }, null, 2)}\n`, "utf8");
 }
 
 function writeProgressingReceipt(id, targets, startedAt) {
@@ -254,6 +254,14 @@ try {
   result = audit("coding-codex-target.json");
   check("進行中の受領証は止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
   clearCodingReceipts();
+
+  // 開始時刻のキーは gate ごとに違う。figma gate は startedAt ではなく preflightAt を書く。
+  // 2026-09-10 実測: startedAt だけを見ていたため、案件の figma 受領証18件すべてで
+  // 滞留判定が素通りしていた。実データのキー名で1件固定する。
+  writeCodingReceipt("codex-preflightat", [target], "preflight", null, staleStartedAt);
+  result = audit("coding-codex-target.json");
+  check("preflightAt でも滞留と判定する", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
+  clearCodingReceipts();
 } finally {
   rmSync(repo, { recursive: true, force: true });
 }
@@ -262,4 +270,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`FAIL: ${failure}`);
   process.exit(1);
 }
-console.log(`PASS: scope conflict audit e2e (14 case(s))`);
+console.log(`PASS: scope conflict audit e2e (15 case(s))`);

@@ -110,7 +110,10 @@ const STALE_PREFLIGHT_DAYS = Number.parseFloat(process.env.GATE_STALE_PREFLIGHT_
 // 「放置したまま他人を止め続けられる」状態だけを取り除く。
 function stalePreflightAgeDays(state) {
   if (state?.phase !== "preflight") return null;
-  const startedAt = Date.parse(state.startedAt ?? "");
+  // 開始時刻のキーは gate ごとに違う。coding gate は startedAt、figma gate は preflightAt を書く。
+  // 2026-09-10: startedAt だけを見ていたため、案件の figma 受領証18件すべてで滞留判定が
+  // 素通りしていた。合成fixtureだけで検査し、実データへ当てていなかったのが原因である。
+  const startedAt = Date.parse(state.startedAt ?? state.preflightAt ?? "");
   if (!Number.isFinite(startedAt)) return null;
   const counts = [state.checkpoints, state.sections, state.components]
     .filter((value) => value && typeof value === "object")
