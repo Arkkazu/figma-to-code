@@ -312,7 +312,7 @@ function createFixture(prefix) {
   // 焼き込まずに済む（scope-conflict-audit.mjs の actors 既定を上書きする）。
   writeJson(join(verifierDirectory, "shared-component-ownership.json"), {
     version: 2,
-    exclusivePathOwnership: [{ pattern: "**", owner: "fixture-implementation" }],
+    exclusivePathOwnership: [{ pattern: "**", owner: "fixture-implementation", grantedForScope: "fixture-gate" }],
   });
   writeJson(join(verifierDirectory, "scope-coordination.json"), {
     version: 2,

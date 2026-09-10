@@ -1,6 +1,7 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { gateReceipts } from "./gate-lease.mjs";
 
 export function coordinationPath(root = process.cwd()) {
   return resolve(root, "MyBrain/verify/scope-coordination.json");
@@ -206,17 +207,6 @@ export function markCoordinationGateAborted({ root = process.cwd(), scopeId, gat
 // 実行済みcheckpointを持つ受領証を捨てるときだけ明示フラグを要求する。
 // これは上の「中断lockの回収」（持ち主のプロセスが居ないlockは奪ってよい）と同じ方針である。
 
-function gateStateDir(root, gateKind) {
-  if (gateKind === "coding") {
-    const configured = process.env.CODING_GATE_STATE_DIR?.trim();
-    if (configured) {
-      if (!isAbsolute(configured)) throw new Error("CODING_GATE_STATE_DIR は絶対パスである必要があります。");
-      return configured;
-    }
-  }
-  return resolve(root, `.${gateKind}-gate`);
-}
-
 function executedCount(state) {
   return [state?.checkpoints, state?.sections, state?.components]
     .filter((value) => value && typeof value === "object")
@@ -229,23 +219,7 @@ function executedCount(state) {
 export function liveReceiptsOf(root, scopeId) {
   const found = [];
   for (const gateKind of ["figma", "coding"]) {
-    const base = gateStateDir(root, gateKind);
-    const candidates = [];
-    const activeDir = resolve(base, "active");
-    if (existsSync(activeDir)) {
-      for (const name of readdirSync(activeDir)) {
-        if (name.endsWith(".json")) candidates.push(resolve(activeDir, name));
-      }
-    }
-    const legacy = resolve(base, "active.json");
-    if (existsSync(legacy)) candidates.push(legacy);
-    for (const path of candidates) {
-      let state;
-      try {
-        state = JSON.parse(readFileSync(path, "utf8"));
-      } catch {
-        continue;
-      }
+    for (const { path, state } of gateReceipts(root, gateKind)) {
       if (String(state?.manifestId ?? "") !== scopeId) continue;
       if (["closed", "aborted"].includes(state?.phase)) continue;
       found.push({ gateKind, path, phase: state?.phase ?? "phase不明", executed: executedCount(state) });

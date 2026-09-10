@@ -68,10 +68,10 @@ function writeCodingReceipt(id, targets, phase = "preflight", startedAt = new Da
   writeFileSync(path, `${JSON.stringify({ version: 1, phase, manifestId: id, changeTargets: targets, checkpoints: {}, ...(startedAt === null ? {} : { startedAt }), ...(preflightAt === null ? {} : { preflightAt }) }, null, 2)}\n`, "utf8");
 }
 
-function writeProgressingReceipt(id, targets, startedAt) {
+function writeProgressingReceipt(id, targets, startedAt, passedAt) {
   const path = join(repo, ".coding-gate", "active", `${id}.json`);
   mkdirSync(dirname(path), { recursive: true });
-  const state = { version: 1, phase: "preflight", manifestId: id, changeTargets: targets, checkpoints: { one: {} }, startedAt };
+  const state = { version: 1, phase: "preflight", manifestId: id, changeTargets: targets, checkpoints: { one: { passedAt } }, startedAt };
   writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
@@ -241,18 +241,24 @@ try {
   check("受領証保持の説明", result.stderr.includes("gate受領証"), `受領証を根拠として示していない: ${result.stderr}`);
   clearCodingReceipts();
 
-  // 滞留した受領証（preflightのまま上限日数を超え、checkpointが0件）は他担当の宣言を止めない。
+  // 最終活動がリース期限を超えた受領証は他担当の宣言を止めない。
   // 表示は必ず残す。2026-09-10 実測: 表示だけの警告では放置が積み上がり、
   // 後から同じパスを触る担当がオーナーの仲裁なしには進めなくなった。
   const staleStartedAt = new Date(Date.now() - 30 * 86400000).toISOString();
   writeCodingReceipt("codex-stale", [target], "preflight", staleStartedAt);
   result = audit("coding-codex-target.json");
   check("滞留した受領証は止めない", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
-  check("滞留を黙って無視しない", `${result.stdout}${result.stderr}`.includes("滞留"), `滞留を報告していない: ${result.stdout}${result.stderr}`);
+  check("失効を黙って無視しない", `${result.stdout}${result.stderr}`.includes("リース失効"), `失効を報告していない: ${result.stdout}${result.stderr}`);
   clearCodingReceipts();
 
-  // 同じ古さでも、checkpointを1件でも実行していれば滞留ではない。進行中の作業は守る。
-  writeProgressingReceipt("codex-progressing", [target], staleStartedAt);
+  // checkpointも期限切れなら失効する。存在だけでは永久保持にしない。
+  writeProgressingReceipt("codex-expired-checkpoint", [target], staleStartedAt, staleStartedAt);
+  result = audit("coding-codex-target.json");
+  check("古いcheckpointも失効する", result.status === 0, `exit ${result.status} / ${result.stderr}`);
+  clearCodingReceipts();
+
+  // 開始が古くても直近のcheckpointはリースを延ばす。進行中の作業は守る。
+  writeProgressingReceipt("codex-progressing", [target], staleStartedAt, new Date().toISOString());
   result = audit("coding-codex-target.json");
   check("進行中の受領証は止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
   clearCodingReceipts();
@@ -264,6 +270,10 @@ try {
   result = audit("coding-codex-target.json");
   check("preflightAt でも滞留と判定する", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
   clearCodingReceipts();
+  writeCodingReceipt("unknown-activity", [target], "preflight", null, null);
+  result = audit("coding-codex-target.json");
+  check("活動時刻不明は失効にしない", result.status === 1, `exit ${result.status} / ${result.stdout}`);
+  clearCodingReceipts();
 } finally {
   rmSync(repo, { recursive: true, force: true });
 }
@@ -272,4 +282,4 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`FAIL: ${failure}`);
   process.exit(1);
 }
-console.log(`PASS: scope conflict audit e2e (15 case(s))`);
+console.log(`PASS: scope conflict audit e2e (17 case(s))`);

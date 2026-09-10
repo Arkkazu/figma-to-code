@@ -78,6 +78,7 @@ function seed({ checkpoints = {} } = {}) {
 try {
   mkdirSync(verifyDirectory, { recursive: true });
   writeFileSync(modulePath, readFileSync(resolve(templateDirectory, "scope-coordination.mjs"), "utf8"), "utf8");
+  writeFileSync(join(verifyDirectory, "gate-lease.mjs"), readFileSync(resolve(templateDirectory, "gate-lease.mjs")));
 
   // (a)(b)(c) 別actor（claude）が codex の放置予約を解放できる。台帳と受領証の両方が動き、
   //           誰がどのactorの予約をなぜ解放したかが追記で残る。
