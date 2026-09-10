@@ -29,6 +29,7 @@ export const DEFAULT_UPSTREAM_DIR = "C:/AI/web-development/verify";
 // 追加するときは、なぜ同梱が要るのかを templates/verify/README.md にも書く。
 export const VENDORED_FILES = Object.freeze([
   "scope-conflict-audit.mjs",
+  "gate-lease.mjs",
   "scope-coordination.mjs",
   "responsive-html-guard.mjs",
   "lint-units.mjs",

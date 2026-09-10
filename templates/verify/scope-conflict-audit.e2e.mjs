@@ -95,7 +95,9 @@ const ownScope = entry("codex-target", { manifest: "coding-codex-target.json" })
 
 try {
   mkdirSync(verifyDirectory, { recursive: true });
-  copyFileSync(resolve(templateDirectory, "scope-conflict-audit.mjs"), join(verifyDirectory, "scope-conflict-audit.mjs"));
+  for (const name of ["scope-conflict-audit.mjs", "gate-lease.mjs"]) {
+    copyFileSync(resolve(templateDirectory, name), join(verifyDirectory, name));
+  }
   git("init", "--quiet");
   write("coding-codex-target.json", manifestFor("codex-target", [target]));
 

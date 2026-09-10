@@ -305,7 +305,7 @@ function createFixture(prefix) {
   // preflight は scope conflict audit を別プロセスで起動する。実体と両台帳が無いと、
   // このe2eが検証したい内容へ到達する前に落ちる。
   const verifierDirectory = join(root, "MyBrain", "verify");
-  for (const name of ["scope-coordination.mjs", "scope-conflict-audit.mjs"]) {
+  for (const name of ["scope-coordination.mjs", "scope-conflict-audit.mjs", "gate-lease.mjs"]) {
     cpSync(join(dirname(fixturePath), name), join(verifierDirectory, name));
   }
   // 担当者名はこのフィクスチャ固有。台帳で宣言することで、正本に案件の担当者名を

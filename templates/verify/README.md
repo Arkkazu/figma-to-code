@@ -16,18 +16,19 @@ tags: [Figma, verify, CDP, lint, template, Codex, Claude]
 
 ## 正本が web-development にある同梱ファイル
 
-次の4ファイルは、このディレクトリにあるが**正本ではない**。正本は `C:\AI\web-development\verify\` にある。
+次の5ファイルは、このディレクトリにあるが**正本ではない**。正本は `C:\AI\web-development\verify\` にある。
 
 | ファイル | 役割 |
 |---|---|
 | `scope-conflict-audit.mjs` | gate受領証・担当台帳・共有所有権の衝突検査 |
+| `gate-lease.mjs` | scope-conflict-auditが相対importするリース判定。クラウドと案件配布にも必要 |
 | `scope-coordination.mjs` | scope予約台帳の読み書きとpreflight lock |
 | `responsive-html-guard.mjs` | PC/SPの同一本文重複検査 |
 | `lint-units.mjs` | SCSS単位規約lint |
 
 **ここで独自に編集しない。**直すときは web-development の正本を直し、こちらへ同期する。
 
-同梱している理由は、`figma-gate.e2e.mjs` がこのうち2件をフィクスチャへコピーして使うためである。
+同梱している理由は、`figma-gate.e2e.mjs` がscope管理の2件とその依存である `gate-lease.mjs` をフィクスチャへコピーして使い、各プレイブックを単独で案件へ配布できるようにするためである。
 絶対パスで web-development を参照すると、上位層を持たないクラウドセッションで
 「このリポジトリ内で完結するE2E」が回らなくなる（`WORKFLOW.md`「クラウドセッションでの実行範囲」）。
 

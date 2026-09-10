@@ -258,8 +258,8 @@ export function liveReceiptsOf(root, scopeId) {
 //
 // gate種別ごとに manifest が分かれる scope があるため、1本だけ見ると
 // 「片方が存在しない」を「活動が不明」に丸めてしまう。実測（2026-09-05）:
-// `service-detail-fixed-cta-20260826` の `gateManifestPaths.coding` は実在しないファイルを
-// 指しており、放置9.4日の scope が一覧で「manifest不明」になっていた。存在しない宣言は
+// ある scope の `gateManifestPaths.coding` が実在しないファイルを指しており、
+// 放置9.4日の scope が一覧で「manifest不明」になっていた。存在しない宣言は
 // 隠さず missing として返す。scope-conflict-audit も同じ宣言を読むため、これは
 // その scope が preflight できない状態でもある。
 function manifestActivity(root, entry) {
