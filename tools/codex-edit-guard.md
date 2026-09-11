@@ -58,6 +58,8 @@ node <playbook>/tools/codex-edit-guard.mjs read-command list .
 
 `read` と `list` はリポジトリ内に限定されます。`CLAUDE.md` と上位 `WORKFLOW.md` が必読とする規則本文はリポジトリ外にあるため、`required` op で読みます。**読める外部ファイルは、ガード内に定義した許可リストの文書だけです。**ディレクトリの読み取り・列挙はできず、任意の絶対パスも解決しません。許可リストのルートは `workflow-preflight.mjs` の `defaultPath` から導き、**環境変数の上書きは意図的に無視**します。環境変数を書き換えても読める範囲は増えません。
 
+`read` に許可リスト文書の絶対パス（例 `C:/AI/vault/WORKFLOW.md`）を渡した場合だけは、`required` と同じ文書を同じ検査で返します。2026-09-11、Codex がこの形で必読文書を要求し、「Edit path is outside repository.」で拒否されて、オーナーが指示した作業を止めたためです。読める範囲は増えません。それ以外のリポジトリ外パスは従来どおり拒否し、拒否メッセージで `read-command required` の使い方を示します。
+
 ~~~powershell
 node tools/codex-edit-guard.mjs read-command required                          # 許可リスト全件と必読根拠
 node tools/codex-edit-guard.mjs read-command required vault/rules/corrections.md

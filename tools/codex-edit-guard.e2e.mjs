@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { deliveryVerdict, evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, readRequiredDocument, REQUIRED_READING, selftest, TOOL } from "./codex-edit-guard.mjs";
+import { deliveryVerdict, evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, readRequiredDocument, REQUIRED_READING, requiredKeyForPath, selftest, TOOL } from "./codex-edit-guard.mjs";
 
 const self = fileURLToPath(import.meta.url);
 const root = mkdtempSync(join(tmpdir(), "codex-edit-guard-test-"));
@@ -217,10 +217,11 @@ try {
         "C:/AI/vault/WORKFLOW.md", "vault/WORKFLOW.md:stream", "vault/WORKFLOW.md."]) {
         assert.equal(admitted({ op: "required", path: key }), false, key);
       }
-      // The old repository-scoped reader still refuses everything outside the repository,
-      // including the very documents the approved list delivers, and every external directory.
-      for (const path of ["C:/AI/vault/WORKFLOW.md", "C:/AI/vault/rules/corrections.md", "../vault/WORKFLOW.md",
-        "C:/Users/tane1/.codex/auth.json"]) {
+      // The repository-scoped reader refuses everything outside the repository except the exact
+      // absolute path of an approved document (served by the approved-list reader; next group):
+      // an unapproved neighbour, ADS/trailing-dot aliases, traversal and every external directory.
+      for (const path of ["C:/AI/vault/rules/corrections-archive.md", "C:/AI/vault/WORKFLOW.md:stream", "C:/AI/vault/WORKFLOW.md.",
+        "../vault/WORKFLOW.md", "C:/Users/tane1/.codex/auth.json"]) {
         assert.notEqual(run({ op: "read", path }).status, 0, path);
       }
       for (const path of ["C:/AI/vault", "C:/AI/vault/rules", "../vault"]) {
@@ -259,6 +260,32 @@ try {
         { id: "vault", relativePath: "hard.md", why: "fixture", absolute: join(outside, "hard-link.md") }]]);
       assert.equal(lstatSync(join(outside, "hard-link.md")).isSymbolicLink(), false);
       assert.throws(() => readRequiredDocument("vault/hard.md", hardLinked), /Hard-linked required-reading document denied/);
+    });
+    test("an approved document asked for by its absolute path arrives whole; a refusal names the working route", () => {
+      const run = (request) => spawnSync(process.execPath, [TOOL, "read", readCommand(request).split(" ").at(-1)],
+        { cwd: root, encoding: "utf8" });
+      // 2026-09-11: Codex asked for C:/AI/vault/WORKFLOW.md this way and was refused as an "Edit path".
+      for (const [, entry] of REQUIRED_READING) {
+        if (!existsSync(entry.absolute)) continue;
+        for (const path of [entry.absolute, entry.absolute.replaceAll("\\", "/")]) {
+          const result = run({ op: "read", path });
+          assert.equal(result.status, 0, `${path}: ${result.stderr}`);
+          assert.equal(result.stdout, readFileSync(entry.absolute, "utf8"), path);
+        }
+      }
+      // The mapping itself, independent of whether the upper layers exist here (CI has none).
+      const fixture = new Map([["vault/present.md", { id: "vault", relativePath: "present.md", why: "fixture", absolute: join(outside, "present.md") }]]);
+      assert.equal(requiredKeyForPath(join(outside, "present.md"), fixture), "vault/present.md");
+      assert.equal(requiredKeyForPath(join(outside, "present.md").replaceAll("\\", "/"), fixture), "vault/present.md");
+      for (const value of [join(outside, "target.md"), `${join(outside, "present.md")}:stream`, "present.md", "vault/present.md", 42, undefined]) {
+        assert.equal(requiredKeyForPath(value, fixture), undefined, String(value));
+      }
+      // A refused read says how to reach upper-layer rules instead of calling itself an edit.
+      const refused = run({ op: "read", path: join(outside, "target.md") });
+      assert.notEqual(refused.status, 0);
+      assert.match(refused.stderr, /Read path is outside repository/);
+      assert.match(refused.stderr, /read-command required/);
+      assert.doesNotMatch(refused.stderr, /Edit path/);
     });
     test("delivery is judged on content, not on the exit code alone", () => {
       assert.equal(deliveryVerdict("d", { status: 0, stdout: "abcdef" }, "abcdef").ok, true);

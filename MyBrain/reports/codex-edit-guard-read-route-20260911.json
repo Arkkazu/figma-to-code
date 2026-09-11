@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "kind": "codex-edit-guard-repair",
+  "date": "2026-09-11",
+  "environment": "local",
+  "repairRoute": "A: a client outside the Codex PreToolUse hook (Claude Code), per rules/codex-edit-guard-repair.md P4",
+  "detection": "The owner instructed a Codex session in this repository to change the viewport rules. Codex stopped without editing and reported that required reading was refused by the guard. The owner reported it as a problem: owner-directed Codex work was blocked by a Claude-built control.",
+  "evidence": {
+    "codexSession": "019f5b25-de31-73b1-9b06-29565de721c8",
+    "call": "node tools/codex-edit-guard.mjs read <base64url of {\"op\":\"read\",\"path\":\"C:/AI/vault/WORKFLOW.md\"}>",
+    "output": "EDIT GUARD: Edit path is outside repository.",
+    "attempts": 2,
+    "selftestBeforeFix": "passed: true. The approved route {op:\"required\", path:\"vault/WORKFLOW.md\"} delivered every document; it was never used."
+  },
+  "cause": [
+    "The guard served upper-layer documents only through op \"required\" with a list key. An agent asking with op \"read\" and the document's absolute path was refused, although the document is on the approved list.",
+    "The refusal reused the edit-path validator, so a read was reported as \"Edit path is outside repository.\" and named no working route. The agent could not recover from the message."
+  ],
+  "fix": [
+    "op \"read\" with the exact absolute path of an approved document returns the same document through readRequiredDocument (same link/hard-link/realpath checks). The readable set is unchanged.",
+    "Any other read outside the repository is still refused, now as \"Read path is outside repository\" with the read-command required usage.",
+    "selftest checks absolute-path delivery for every approved document; the e2e adds a group for delivery, the mapping and the refusal text."
+  ],
+  "p5": {
+    "selftest": "exit 0; 53 ok, 0 failed; absolute path arrives for 21/21 approved documents",
+    "e2e": "node tools/codex-edit-guard.e2e.mjs exit 0 (25 groups)",
+    "mutation": [
+      "absolute-path mapping disabled on a copy: e2e exit 1 (killed)",
+      "refusal message reverted to the edit-path validator on a copy: e2e exit 1 (killed)"
+    ]
+  },
+  "notChanged": [
+    "Edit admission. The Codex session is bound only to one report file, so editing rules/ would still be refused as out of scope, and builds, tests and git remain operator-terminal work. Whether this guard should stay armed for maintenance of this repository is an owner decision and was reported, not changed.",
+    ".codex/hooks.json and the /hooks trust state were not touched; the hook definition is unchanged, so no re-trust is needed."
+  ]
+}

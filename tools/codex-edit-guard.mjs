@@ -244,6 +244,29 @@ export function readRequiredDocument(key, entries = REQUIRED_READING) {
   return readFileSync(entry.absolute, "utf8");
 }
 
+// Agents ask for an upper-layer document by its absolute path. 2026-09-11: a Codex session sent
+// `read C:/AI/vault/WORKFLOW.md`, got "Edit path is outside repository.", and stopped work the
+// owner had ordered. Map exactly an approved document's own path onto the approved-list reader.
+// Nothing new becomes readable: the key comes from the approved list, and readRequiredDocument
+// still reads only the declared path with its link checks.
+export function requiredKeyForPath(value, entries = REQUIRED_READING) {
+  if (typeof value !== "string" || !isAbsolute(value)) return undefined;
+  const absolute = resolve(value);
+  for (const [key, entry] of entries) if (same(absolute, entry.absolute)) return key;
+  return undefined;
+}
+
+// A refused read must name the route that works; calling a read an "Edit path" sent the agent nowhere.
+function repositoryReadPath(base, cwd, value) {
+  try { return checkedPath(base, cwd, value); }
+  catch (error) {
+    if (!/outside repository/.test(error.message)) throw error;
+    const tool = TOOL.replaceAll("\\", "/");
+    throw new Error(`Read path is outside repository: ${value}. Upper-layer rules are read only from the approved list. ` +
+      `List it with: node "${tool}" read-command required — then run the command printed by: node "${tool}" read-command required <document>`);
+  }
+}
+
 export function evaluateHook(event, deps = {}) {
   try {
     check(event?.hook_event_name === "PreToolUse", "Unsupported hook event.");
@@ -369,6 +392,12 @@ export function selftest({ cwd = PLAYBOOK_ROOT, evaluate = evaluateHook } = {}) 
       continue;
     }
     execute(name, { op: "required", path: key }, expected);
+    // Agents also ask by absolute path; it must reach the same approved document (2026-09-11).
+    const byPath = { op: "read", path: entry.absolute.replaceAll("\\", "/") };
+    const pathName = `absolute path arrives: ${key}`;
+    const pathVerdict = evaluate(shell(reader(byPath)));
+    if (!pathVerdict.allowed) results.push({ name: pathName, expected: "allow", actual: "deny", ok: false, reason: pathVerdict.reason });
+    else execute(pathName, byPath, expected);
   }
   return { passed: results.every((entry) => entry.ok), results };
 }
@@ -451,7 +480,9 @@ function main(argv) {
       return void process.stdout.write(readRequiredDocument(request.path));
     }
     const base = repositoryRoot(process.cwd());
-    const file = request.path === "." ? { absolute: base } : checkedPath(base, process.cwd(), request.path);
+    const approved = request.op === "read" ? requiredKeyForPath(request.path) : undefined;
+    if (approved) return void process.stdout.write(readRequiredDocument(approved));
+    const file = request.path === "." ? { absolute: base } : repositoryReadPath(base, process.cwd(), request.path);
     if (request.op === "read") process.stdout.write(readFileSync(file.absolute, "utf8"));
     else console.log(JSON.stringify(readdirSync(file.absolute), null, 2));
   } else throw new Error("Usage: codex-edit-guard.mjs hook | selftest | install <repo> | bind <repo> <session-id> <scope-state> [figma-manifest] | unbind <repo> <session-id> | read-command <read|list> <path> | read-command preflight");
