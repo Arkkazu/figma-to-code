@@ -59,7 +59,7 @@ npm run figma:gate -- start
 報告した5点は `MyBrain/verify/start-<scope-id>.json`（着手宣言）へ記録し、gate manifestの `scope.startDeclarationPath` へ登録する。`preflight` が内容をmanifestと突き合わせて凍結する。詳細は `rules/figma-spec-pipeline.md`「着手時の工程出力と着手宣言の受領証」。
 
 1. 環境判定 `workflow-preflight` の結果（`local` / `cloud-restricted`）
-2. 対象のFigma fileKey と、PC/SP それぞれの node-id（同定は「対象nodeの同定ゲート」に従う）
+2. 対象のFigma fileKey と、PC/SP それぞれの node-id（同定は「対象nodeの同定ゲート」に従う）。対象viewportは `rules/figma-spec-pipeline.md`「対象viewportの確定」に従う
 3. spec（期待値と取得元）とFigma↔DOM対応表の所在。取得していない値を推測で埋めていないこと
 4. D-012スコープロック（`rules/figma-scope-lock.md`）の開始と、今回のscope外パス
 5. 次の2つがどちらも通ったこと。環境判定は編集前ゲートの代わりにならない。
