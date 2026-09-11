@@ -24,6 +24,16 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [205] 2026-09-12 / Claude（R5 証跡検証器の修理と、spike 除外理由の訂正）
+
+- owner指示: 「不具合を修正しろ」（[204] で報告した既存の不具合2件）。
+- 原因（実測）: `55e91a6`（2026-08-31）が `p3-role-return.{mjs,e2e.mjs}` を `templates/verify/` から `research/p3/` へ移した際、承認済みの候補設計 JSON、2026-08-14 の観測記録（`r5-return-helper-e2e-evidence-d9723895.json`）、起動記録スクリプト、provenance manifest の中のパス文字列を書き換えた。移したファイルの中身の hash は変わっていないが、これらを固定していた pin が13件壊れ、以後 R5 の検査は全部落ちていた。設計 JSON の旧 hash はオーナー stage-1 承認済みの correction draft が固定しているため、固定値を今の値へ合わせる修理はできなかった。
+- 修正: 承認・観測で固定されたファイル（設計 JSON `4c56ecb4…` / 観測記録 `22584e4f…` / 起動記録スクリプト `b8a430af…`）を `55e91a6` 直前のバイトへ戻した。移動前のパスを読む箇所（候補生成器の `assertHelperPins`、closure-audit の `auditPointer`）に移動先への明示的な読み替え表を足し、hash 照合はそのまま残した。closure-audit で移動前パスを許すのはヘルパー照合の2箇所だけに限った。これに合わせて manifest の生成器 pin（→ `7185a291…`）と、検証器・closure-audit の manifest pin（→ `f7e7d28e…`）を更新した。承認記録（stage-1 承認・correction draft・acceptance candidate）は1バイトも変えていない。
+- 検証: provenance verifier `--check` / `--self-test` PASS。候補生成器の決定的出力 `canonicalCandidateSha256` `e29b9791…` は、最初の commit `56f4e75` の worktree で当時の検証器を実行した結果と一致した。`contract-coherence-check` coherent。`audit-v2` pass（投影連鎖 30/30、レガシーの既知不一致2件は設計どおり保持）。固定の地図で古い hash のままの固定は0件（コメント中の旧値を除く）。
+- 変えなかったもの: closure-audit `--check` の `r5-ordinal3 JSON root inventory changed.` は、`56f4e75` の worktree で当時の closure-audit を実行しても同じく落ちる。stage-2 の acceptance candidate 3件が `ROOTS` に無いためで、その3件は `audit-v2` が検査する。最初からの設計どおりの停止と判断した。`--self-test` は27件 PASS。
+- spike e2e: `KNOWN_FAILING` の理由を実測に合わせて書き直した（常時赤ではなく、version-tree 検査の taskkill 後始末が 1000ms の予算を超えて揺れる）。timeout対策は [170] と本ファイル305行目付近のオーナー判断で停止中のため、spike のコードは変えていない。
+- ローカル専用: 設計 JSON・候補生成器・起動記録スクリプトは [204] で追跡から外したので、この修正はローカルにだけある。追跡される manifest・検証器・closure-audit・観測記録はクローン先にも届くが、そこでは入力が揃わないため R5 の検査はローカルでだけ動く。
+
 ## [204] 2026-09-11 / Claude（PUBLIC リポジトリから案件情報を除去する）
 
 - owner指示: 「おすすめの方法で対応しろ」。[203] で報告した「PUBLIC リポジトリに案件名・実 node-id が残っている」件で、推奨は「まず最新の状態から除去し、履歴の書き換え・非公開化は別途判断」だった。

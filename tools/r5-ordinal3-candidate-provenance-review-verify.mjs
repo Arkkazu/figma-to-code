@@ -13,7 +13,10 @@ const VERIFIER_PATH = fileURLToPath(import.meta.url);
 const VERIFIER_WORKSPACE_PATH = "tools/r5-ordinal3-candidate-provenance-review-verify.mjs";
 const MANIFEST_WORKSPACE_PATH = "tools/r5-ordinal3-candidate-provenance-review-manifest.json";
 const MANIFEST_PATH = resolve(WORKSPACE_ROOT, MANIFEST_WORKSPACE_PATH);
-const EXPECTED_MANIFEST_SHA256 = "e273cbc8838d859a2236ecb2999305333859e70223a60e3217c599d427dd96dd";
+// 2026-09-12: 55e91a6 が p3-role-return.{mjs,e2e.mjs} を templates/verify/ から research/p3/ へ移し、
+// manifest の workspacePath 2行を書き換えたのにこの固定値を旧値 e273cbc8…dd96dd のまま残したため、
+// --check が常に落ちていた。あわせて候補生成器へ移動先への読み替えを足し、manifest の生成器 pin を更新した。
+const EXPECTED_MANIFEST_SHA256 = "f7e7d28e6f25a359880a33659c64039bd17f8e3802d49fce322c286d536ce4dc";
 const CANDIDATE_DESIGN_WORKSPACE_PATH = "tools/r5-baseline-reissue-3-candidate-design.json";
 const CANDIDATE_GENERATOR_WORKSPACE_PATH = "tools/r5-baseline-reissue-3-candidate-dry-run.mjs";
 const RESULT_SCHEMA = "p3-r5-ordinal3-candidate-provenance-review-verify/v1";

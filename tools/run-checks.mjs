@@ -60,7 +60,10 @@ export const KNOWN_FAILING = Object.freeze([
   { since: "2026-08-22", path: "templates/verify/fidelity-benchmark.e2e.mjs", reason: "検証基準と同一の描画環境（フォント・ブラウザ版）を要する。2026-08-21時点で本変更以前から赤。" },
   // p3-* の3件は 2026-09-11 まで templates/verify/ を指しており、実在しないパスだった。実体は research/p3/。
   { since: "2026-08-22", path: "research/p3/p3-role-packet.e2e.mjs", reason: "P-3 clean-room の未解決（cleanRoomAuthorization のハッシュ不一致）。本変更以前から赤。" },
-  { since: "2026-08-22", path: "research/p3/p3-p11-app-server-spike.e2e.mjs", reason: "P-11 のプロセスツリー確認が現行環境で成立しない。本変更以前から赤。" },
+  // 2026-09-11 実測: 常に赤ではなく結果が揺れる（1回 PASS、以後3回 FAIL）。落ちるのは393行目の version-tree
+  // 検査で、taskkill による後始末が予算 1000ms（min(max(200,1000),10000)）に収まらず SPIKE_PROCESS_TREE_CLEANUP_FAILED
+  // になる。spike の timeout対策と追加回帰は STATE.md [170] のオーナー判断で停止中なので、ここでは直さない。
+  { since: "2026-08-22", path: "research/p3/p3-p11-app-server-spike.e2e.mjs", reason: "時間依存で結果が揺れる（version-tree 検査の taskkill 後始末が1秒の予算を超える）。timeout対策はオーナー判断で停止中（STATE.md [170]）。" },
   { since: "2026-08-22", path: "templates/verify/accessibility-verify.e2e.mjs", reason: "実ブラウザを要する。" },
   { since: "2026-08-22", path: "templates/verify/asset-verify.e2e.mjs", reason: "実ブラウザを要する。" },
   { since: "2026-08-22", path: "templates/verify/motion-verify.e2e.mjs", reason: "実ブラウザを要する。" },

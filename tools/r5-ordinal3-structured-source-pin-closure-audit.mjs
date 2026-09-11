@@ -26,9 +26,11 @@ const ROOTS = Object.freeze({
     path: "tools/r5-baseline-reissue-3-candidate-design.json",
     sha256: "4c56ecb4a75f12b9fedf2e5b1ac676fdc60dad877c4eead15e76a630eff05955"
   }),
+  // 2026-09-12: 55e91a6 の research/p3/ への移動で manifest の workspacePath 2行が変わり、さらに候補生成器の
+  // pin を更新した。旧値 e273cbc8838d859a2236ecb2999305333859e70223a60e3217c599d427dd96dd。
   provenanceManifest: Object.freeze({
     path: "tools/r5-ordinal3-candidate-provenance-review-manifest.json",
-    sha256: "e273cbc8838d859a2236ecb2999305333859e70223a60e3217c599d427dd96dd"
+    sha256: "f7e7d28e6f25a359880a33659c64039bd17f8e3802d49fce322c286d536ce4dc"
   }),
   ownerZeroCostV1: Object.freeze({
     path: "tools/r5-ordinal3-owner-zero-cost-constraint.json",
@@ -101,7 +103,8 @@ const EXECUTION_ROOT_PATHS = Object.freeze([
   "tools/r5-baseline-reissue-3-candidate-dry-run.mjs"
 ]);
 
-const CANDIDATE_DRY_RUN_GENERATOR_SHA256 = "18287ba29f74dee61963cbd9eace696b64bf9d3d6c0725ea9a5fb331a821c87d";
+// 2026-09-12: helper の移動先への読み替え（currentWorkspacePath）を足したため更新。旧値 18287ba29f74dee61963cbd9eace696b64bf9d3d6c0725ea9a5fb331a821c87d。
+const CANDIDATE_DRY_RUN_GENERATOR_SHA256 = "7185a291f2c5cc1904d5641f9446ee73e1c1f3dc15c601b0568a42c2d0cd35aa";
 
 const EXECUTION_DEPENDENCY_PATHS = Object.freeze([
   "research/p3/p3-role-return.mjs",
@@ -255,11 +258,21 @@ const READ_BOUNDARY_RELEASE_SOURCE_FILE_NAMES = Object.freeze([
   "r5-ordinal3-ambient-input-provenance-synthetic-validator.e2e.mjs"
 ]);
 
+// 承認済みの候補設計は移動前（55e91a6 以前）のパスを宣言する。書き換えると承認の hash が壊れるため、
+// 宣言パスはそのまま照合し、読むときだけ現在地へ付け替える（2026-09-12）。
 const CANDIDATE_HELPER_PATHS = Object.freeze([
-  "research/p3/p3-role-return.mjs",
-  "research/p3/p3-role-return.e2e.mjs",
+  "templates/verify/p3-role-return.mjs",
+  "templates/verify/p3-role-return.e2e.mjs",
   "tools/r5-return-helper-e2e-evidence-d9723895.json"
 ]);
+const CANDIDATE_HELPER_ALLOWED_PATHS = new Set(CANDIDATE_HELPER_PATHS);
+const RELOCATED_WORKSPACE_PATHS = Object.freeze({
+  "templates/verify/p3-role-return.mjs": "research/p3/p3-role-return.mjs",
+  "templates/verify/p3-role-return.e2e.mjs": "research/p3/p3-role-return.e2e.mjs"
+});
+function currentWorkspacePath(logicalPath) {
+  return Object.hasOwn(RELOCATED_WORKSPACE_PATHS, logicalPath) ? RELOCATED_WORKSPACE_PATHS[logicalPath] : logicalPath;
+}
 
 const CANDIDATE_TOPOLOGY_POINTERS = Object.freeze([
   Object.freeze({ path: ROOTS.osIsolationProofSchema.path, location: ["osIsolationProofSchema"] }),
@@ -544,7 +557,7 @@ function auditPointer(pointer, label, {
   assertAllowedPath(logicalPath, allowedPaths, `${label}.${pathKey}`);
   if (expectedPath !== undefined) assert(logicalPath === expectedPath, `${label}.${pathKey} changed.`);
   assertHex(pointer.sha256, `${label}.sha256`);
-  const actualSha256 = sha256(readRegular(workspacePath(logicalPath, `${label}.${pathKey}`), label));
+  const actualSha256 = sha256(readRegular(workspacePath(currentWorkspacePath(logicalPath), `${label}.${pathKey}`), label));
   return Object.freeze({
     label,
     path: logicalPath,
@@ -616,10 +629,12 @@ function auditCandidateContext(candidate) {
   const helperRecords = [
     auditPointer(candidate.bytePinnedHelperRelease.returnHelper, "candidate return helper pin", {
       pathKey: "workspacePath",
+      allowedPaths: CANDIDATE_HELPER_ALLOWED_PATHS,
       expectedPath: CANDIDATE_HELPER_PATHS[0]
     }),
     auditPointer(candidate.bytePinnedHelperRelease.returnHelperE2E, "candidate return helper E2E pin", {
       pathKey: "workspacePath",
+      allowedPaths: CANDIDATE_HELPER_ALLOWED_PATHS,
       expectedPath: CANDIDATE_HELPER_PATHS[1]
     }),
     auditPointer(candidate.bytePinnedHelperRelease.e2eEvidence, "candidate helper E2E evidence pin", {
