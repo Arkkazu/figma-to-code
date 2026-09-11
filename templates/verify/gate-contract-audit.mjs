@@ -15,6 +15,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { FIGMA_GATE_CONTRACT_VERSION } from "./figma-page-coverage.mjs";
+import { resolveViewportContract } from "./viewport-contract.mjs";
 
 const verifyDir = resolve(process.argv[2] || "MyBrain/verify");
 const repoRoot = resolve(verifyDir, "..", "..");
@@ -62,6 +63,8 @@ function contractGaps(manifest, manifestPath) {
       gaps.push("spec file missing");
     } else {
       const spec = readJson(specPath, `spec of ${basename(manifestPath)}`);
+      try { resolveViewportContract(manifest, spec); }
+      catch (error) { gaps.push(`viewport contract: ${error.message}`); }
       if (!spec.viewportPolicy || typeof spec.viewportPolicy.scrollbars !== "string") {
         gaps.push("viewportPolicy.scrollbars");
       }

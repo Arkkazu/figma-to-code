@@ -119,7 +119,7 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 - **URL分解**：`/design/<fileKey>/...?node-id=XXXX-YYYY` から fileKey と nodeId（`XXXX:YYYY`）を抽出する。**nodeIdを推測しない。** URLに node-id が無い場合は「対象node未特定」として停止し、オーナーに確認する。
 - **取得コマンド**：`get_metadata` / `get_design_context` / `get_variable_defs` / `get_screenshot`（個別）。貼られたnode単体では不足する場合が多い。実装に影響するなら必ず併せて取得する：**親フレーム、同階層の兄弟、PC/SP対応node、hover・open・active等のvariant、instanceの元component**。
 - **対象viewportの確定（2026-09-11 オーナー指示）**：PCデザインのみ提供されている場合、PC表示はそのデザインに合わせる。SP表示は同一案件の他ページのSPレイアウトを参考に実装し、参照元（ページとnode-id）を案件側の対応表へ記録する。参考にできるページがない場合は、オーナーに確認する。PC・SPに加え、1024px・768pxなどのデザインが提供されている場合は、提供されたすべてのデザインを実装・検証対象とする。PC/SPの2種類に限定しない。本ファイルと `WORKFLOW.md` の「PC/SP」は、提供された全viewportを指す。
-  - 2026-09-11 実測：`templates/verify/figma-gate.mjs` はviewportを `pc` / `sp` に固定し、SP nodeの無いmanifestと第3のviewportを拒否する。gateが対応するまで、gateで照合していないviewportを「検証済み」「Figmaどおり」と報告せず、未確認リストへ入れる。
+  - 可変幅の実行契約は `templates/verify/viewport-contract.md` に従い、提供デザイン全件とPCのみの場合の参照SPを `manifest.figma.designs` へ登録する。spec・画像・node map・coverage・着手宣言を同じviewport識別子へ束縛する。旧PC/SP契約へ追加幅を混ぜない。実行していないviewportを「検証済み」「Figmaどおり」と報告しない。
 - **着手宣言（開始ゲート）**：SCSS/PHP/JSを1行でも編集する前に、最初の報告で次の3点を宣言する。**宣言の無いままコード編集を始めない。**
   1. 使用する fileKey / nodeId
   2. 作成・更新するspecファイルのパス（`MyBrain/verify/spec-*.json`）

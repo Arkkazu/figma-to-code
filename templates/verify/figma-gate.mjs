@@ -4,6 +4,8 @@ import { validateCorrectionReceipt } from "./correction-receipt.mjs";
 import { assertResponsiveHtmlSingleDom, corroborateExceptions } from "./responsive-html-guard.mjs";
 import { markCoordinationGateActive, markCoordinationGateClosed, withScopePreflightLock } from "./scope-coordination.mjs";
 import { collectScopeLockStateFindings } from "./scope-lock-state.mjs";
+import { resolveViewportContract, viewportName, assertViewportKeys } from "./viewport-contract.mjs";
+import { validateViewportNodeMap } from "./viewport-node-map.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -145,6 +147,8 @@ function hashBuffer(buffer) {
 // どこにも出ていなかったため、レビュー要件の問題と誤認された。
 // エントリのハッシュだけでは、gate が読み込む他モジュールの差し替えを検出できない。
 const VERIFIER_MODULES = Object.freeze([
+  "viewport-contract.mjs",
+  "viewport-node-map.mjs",
   "figma-page-coverage.mjs",
   "correction-receipt.mjs",
   "responsive-html-guard.mjs",
@@ -628,9 +632,11 @@ function validateStartDeclaration(scope, context) {
     fail(`${label}.figma.fileKey must match manifest.figma.fileKey (${context.fileKey}); got ${fileKey}.`);
   }
   const declaredNodeIds = requireObject(figma.nodeIds, `${label}.figma.nodeIds`);
-  for (const viewport of ["pc", "sp"]) {
+  if (context.viewportPlan.explicit) assertViewportKeys(declaredNodeIds, context.viewportPlan.names, `${label}.figma.nodeIds`);
+  for (const viewport of context.viewportPlan.names) {
     const ids = requireArray(declaredNodeIds[viewport], `${label}.figma.nodeIds.${viewport}`);
     const known = context.nodeIdsByViewport.get(viewport) ?? new Set();
+    if (context.viewportPlan.explicit && (ids.length !== known.size || new Set(ids).size !== ids.length)) fail(`${label}.figma.nodeIds.${viewport} must cover its design exactly once.`);
     for (const [index, value] of ids.entries()) {
       const nodeId = requireString(value, `${label}.figma.nodeIds.${viewport}[${index}]`);
       if (!known.has(nodeId)) {
@@ -756,6 +762,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   requireObject(manifest.scope, "manifest.scope");
 
   const scope = manifest.scope;
+  const viewportPlan = resolveViewportContract(manifest);
   rejectManifestImplementationIdentity(scope);
   const implementationIdentity = requireImplementationIdentity(implementationIdentityInput, "implementation identity");
   const scopeKind = scope.kind === undefined ? "new" : requireString(scope.kind, "manifest.scope.kind");
@@ -863,7 +870,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
 
   const componentsPath = inputRepoPath(scope.componentsPath, "manifest.scope.componentsPath");
   toEvidencePath(componentsPath.absolutePath, "manifest.scope.componentsPath");
-  const components = validateComponentManifest(readExecutionJson(componentsPath.absolutePath, "Component manifest"));
+  const components = validateComponentManifest(readExecutionJson(componentsPath.absolutePath, "Component manifest"), viewportPlan);
   const componentDecisionPath = inputRepoPath(scope.componentDecisionPath, "manifest.scope.componentDecisionPath");
   toEvidencePath(componentDecisionPath.absolutePath, "manifest.scope.componentDecisionPath");
   validateComponentDecisionManifest(componentDecisionPath.absolutePath, components, changeTargets);
@@ -985,10 +992,20 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   assertNoDraftPageCoverageInputs(scope);
 
   const specDocument = readExecutionJson(specPath.absolutePath, "Spec");
+  resolveViewportContract(manifest, specDocument);
+  if (viewportPlan.explicit) {
+    for (const component of components) for (const viewport of specDocument.viewports) {
+      const own = viewport.elements?.filter((element) => selectorCoveredBy(element.sel, component.selector)) ?? [];
+      if (!own.length) fail(`Component ${component.elementId} has no expectations in ${viewport.id}.`);
+      if (!component.viewports.includes(viewport.id) && !own.some((element) => element.sel === component.selector && (element.display === "none" || element.visibility === "hidden"))) {
+        fail(`Omitted component viewport ${viewport.id} requires an explicit hidden root expectation.`);
+      }
+    }
+  }
   const nodeMapDocument = readExecutionJson(nodeMapPath.absolutePath, "Node map");
   assertSpecCoversComponents(specDocument, components);
-  assertFigmaReferenceImagesMatchSpec(specDocument, components);
-  assertSpecCoversRepeatItems(specDocument, components, nodeMapDocument);
+  assertFigmaReferenceImagesMatchSpec(specDocument, components, viewportPlan);
+  assertSpecCoversRepeatItems(specDocument, components, nodeMapDocument, viewportPlan);
   assertSpecProvenance(specDocument);
   assertVariableTextHeight(specDocument);
   if (specDocument.viewportPolicy?.scrollbars !== "hidden" && specDocument.viewportPolicy?.scrollbars !== "visible") {
@@ -1015,7 +1032,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
     if (!nodeIdsByViewport.has(declaredViewport)) nodeIdsByViewport.set(declaredViewport, new Set());
     nodeIdsByViewport.get(declaredViewport).add(declaredNodeId);
   }
-  for (const viewport of ["pc", "sp"]) {
+  for (const viewport of viewportPlan.names) {
     if (!nodeViewports.has(viewport)) {
       fail(`manifest.figma.viewportNodes must include the ${viewport} node.`);
     }
@@ -1024,6 +1041,7 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   // 着手宣言はmanifest・spec・Figma nodeが揃ってからでないと突き合わせられないため、
   // ここで検査する。宣言そのものは編集前に書かれている必要がある。
   const startDeclaration = validateStartDeclaration(scope, {
+    viewportPlan,
     scopeId: manifest.id,
     fileKey: figma.fileKey,
     specRelativePath: specPath.relativePath,
@@ -1055,7 +1073,8 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
     components,
     nodeEvidenceDocument,
     nodeEvidencePath,
-    figma.fileKey
+    figma.fileKey,
+    viewportPlan
   );
 
   // Pages without exported Figma assets must not invent a dummy asset.
@@ -1214,8 +1233,8 @@ function pngPixelSize(absolutePath, label) {
 // 寸法はpreflightの時点で分かるので、ここで落とす。
 //
 // spec側が範囲（[min, max]）で宣言している高さは、可変テキストの意図的な宣言なので範囲で判定する。
-function assertFigmaReferenceImagesMatchSpec(specDocument, components) {
-  const viewportWidthByName = { pc: 1440, sp: 375 };
+function assertFigmaReferenceImagesMatchSpec(specDocument, components, viewportPlan) {
+  const viewportWidthByName = viewportPlan.explicit ? viewportPlan.widths : { pc: 1440, sp: 375 };
   const specByViewportWidth = new Map();
   for (const viewport of Array.isArray(specDocument?.viewports) ? specDocument.viewports : []) {
     if (!viewport || typeof viewport !== "object") continue;
@@ -1261,7 +1280,7 @@ function assertFigmaReferenceImagesMatchSpec(specDocument, components) {
   }
 }
 
-function validateComponentManifest(document) {
+function validateComponentManifest(document, viewportPlan) {
   requireObject(document, "component manifest");
   const entries = requireArray(document.components, "components");
   const seenIds = new Set();
@@ -1291,7 +1310,7 @@ function validateComponentManifest(document) {
       const declared = requireObject(entry.visualThresholds, `components[${index}].visualThresholds`);
       visualThresholds = {};
       for (const [viewport, value] of Object.entries(declared)) {
-        if (!["pc", "sp"].includes(viewport)) {
+        if (!viewportPlan.names.includes(viewport)) {
           fail(`components[${index}].visualThresholds has an unknown viewport: ${viewport}`);
         }
         if (!Number.isFinite(value) || value <= 0 || value > CHECKPOINT_VISUAL_THRESHOLD_MAX) {
@@ -1313,13 +1332,13 @@ function validateComponentManifest(document) {
         }
       }
     }
-    let viewports = ["pc", "sp"];
+    let viewports = [...viewportPlan.names];
     if (entry.viewports !== undefined) {
       viewports = requireArray(entry.viewports, `components[${index}].viewports`).map((viewport, viewportIndex) =>
         requireString(viewport, `components[${index}].viewports[${viewportIndex}]`)
       );
-      if (viewports.some((viewport) => !["pc", "sp"].includes(viewport)) || new Set(viewports).size !== viewports.length) {
-        fail(`components[${index}].viewports must be a unique subset of ["pc", "sp"].`);
+      if (viewports.some((viewport) => !viewportPlan.names.includes(viewport)) || new Set(viewports).size !== viewports.length) {
+        fail(`components[${index}].viewports must be a unique subset of ${JSON.stringify(viewportPlan.names)}.`);
       }
     }
     const spacingOwnership = requireObject(entry.spacingOwnership, `components[${index}].spacingOwnership`);
@@ -1345,11 +1364,11 @@ function validateComponentManifest(document) {
       repeatIds.add(itemId);
       const figmaNodeIds = requireObject(item.figmaNodeIds, `${label}.figmaNodeIds`);
       const selectors = requireObject(item.selectors, `${label}.selectors`);
-      for (const viewport of ["pc", "sp"]) {
+      for (const viewport of viewportPlan.names) {
         requireString(figmaNodeIds[viewport], `${label}.figmaNodeIds.${viewport}`);
         requireString(selectors[viewport], `${label}.selectors.${viewport}`);
       }
-      return { itemId, figmaNodeIds: { pc: figmaNodeIds.pc, sp: figmaNodeIds.sp }, selectors: { pc: selectors.pc, sp: selectors.sp } };
+      return { itemId, figmaNodeIds: Object.fromEntries(viewportPlan.names.map((id) => [id, figmaNodeIds[id]])), selectors: Object.fromEntries(viewportPlan.names.map((id) => [id, selectors[id]])) };
     });
 
     // オーナー承認でラスター比較を外した節。painted は true のまま（描画している事実を偽らない）。
@@ -1530,10 +1549,6 @@ function validateComponentDecisionManifest(decisionPath, components, changeTarge
     fail(`component decision manifest must cover every component exactly once.${missing.length > 0 ? ` Missing: ${missing.join(", ")}.` : ""}`);
   }
 }
-function widthClass(width) {
-  return width <= 767 ? "sp" : "pc";
-}
-
 function selectorCoveredBy(specSelector, componentSelector) {
   if (specSelector === componentSelector) {
     return true;
@@ -1703,20 +1718,20 @@ function assertSpecProvenance(spec) {
   }
 }
 
-function assertSpecCoversRepeatItems(spec, components, nodeMap) {
+function assertSpecCoversRepeatItems(spec, components, nodeMap, viewportPlan) {
   const repeated = components.filter((component) => component.repeatItems.length > 0);
   if (!repeated.length) return;
   const byViewport = new Map();
   for (const viewport of requireArray(spec.viewports, "spec.viewports")) {
-    const key = requireString(viewport.repeatViewport, "spec.viewports[].repeatViewport (pc or sp when repeatItems are declared)");
-    if (!["pc", "sp"].includes(key)) fail("spec.viewports[].repeatViewport must be pc or sp.");
+    const key = requireString(viewportPlan.explicit ? viewport.id : viewport.repeatViewport, "spec viewport identity for repeatItems");
+    if (!viewportPlan.names.includes(key)) fail("spec repeat viewport is not declared.");
     if (!byViewport.has(key)) byViewport.set(key, new Set());
     for (const element of requireArray(viewport.elements, "spec.viewports[].elements")) byViewport.get(key).add(requireString(element.sel, "spec.viewports[].elements[].sel"));
   }
-  for (const key of ["pc", "sp"]) if (!byViewport.has(key)) fail(`SPEC FAIL: repeatItems require at least one ${key} spec viewport.`);
+  for (const key of viewportPlan.names) if (!byViewport.has(key)) fail(`SPEC FAIL: repeatItems require at least one ${key} spec viewport.`);
   const nodes = new Set(requireArray(requireObject(nodeMap.inventory, "node map.inventory").nodes, "node map.inventory.nodes").map((entry) => `${entry.viewport}::${entry.figmaNodeId}`));
   const missingSelectors=[]; const unknownNodes=[];
-  for (const component of repeated) for (const item of component.repeatItems) for (const key of ["pc", "sp"]) {
+  for (const component of repeated) for (const item of component.repeatItems) for (const key of viewportPlan.names) {
     if (!byViewport.get(key).has(item.selectors[key])) missingSelectors.push(`${component.elementId}/${item.itemId}/${key}: ${item.selectors[key]}`);
     if (!nodes.has(`${key}::${item.figmaNodeIds[key]}`)) unknownNodes.push(`${component.elementId}/${item.itemId}/${key}: ${item.figmaNodeIds[key]}`);
   }
@@ -1975,8 +1990,14 @@ function validateScopedNodeMapTopology(nodeMap, nodeEvidence, nodeEvidencePath, 
 // Figma子ノード単位のカバレッジ検査。
 // component単位の検査（assertSpecCoversComponents）では、親のgapや中間wrapperのように
 // componentに昇格していないFigmaノードの測定漏れを検出できないため、node mapで補う。
-function assertNodeMapCoverage(nodeMap, spec, components, nodeEvidence, nodeEvidencePath, expectedFigmaFileKey) {
-  const topology = validateScopedNodeMapTopology(nodeMap, nodeEvidence, nodeEvidencePath, expectedFigmaFileKey);
+function assertNodeMapCoverage(nodeMap, spec, components, nodeEvidence, nodeEvidencePath, expectedFigmaFileKey, viewportPlan) {
+  const topology = viewportPlan.explicit
+    ? validateViewportNodeMap(nodeMap, nodeEvidence, viewportPlan, expectedFigmaFileKey,
+      relative(repoRoot, nodeEvidencePath).replaceAll("\\", "/"), hashFile(nodeEvidencePath), (path) => {
+        const absolute = toEvidencePath(path, "viewport metadata");
+        return { document: readExecutionJson(absolute, "viewport metadata"), hash: hashFile(absolute) };
+      }, spec)
+    : validateScopedNodeMapTopology(nodeMap, nodeEvidence, nodeEvidencePath, expectedFigmaFileKey);
 
   // node-inventory: four scoped roots配下に実在するノードの全件。page-inventory と同じ考え方を1階層下へ適用する。
   // これが無いと「登録したノードが測られているか」しか検査できず、
@@ -1990,7 +2011,7 @@ function assertNodeMapCoverage(nodeMap, spec, components, nodeEvidence, nodeEvid
     requireObject(entry, label);
     const figmaNodeId = requireString(entry.figmaNodeId, `${label}.figmaNodeId`);
     const viewport = requireString(entry.viewport, `${label}.viewport`);
-    if (!["pc", "sp"].includes(viewport)) fail(`${label}.viewport must be "pc" or "sp".`);
+    if (!viewportPlan.names.includes(viewport)) fail(`${label}.viewport must be declared in the viewport contract.`);
     const scopeRootNodeId = requireString(entry.scopeRootNodeId, `${label}.scopeRootNodeId`);
     const scopeRoot = topology.scopeRootByViewportAndNode.get(`${viewport}::${scopeRootNodeId}`);
     if (!scopeRoot) {
@@ -2019,7 +2040,7 @@ function assertNodeMapCoverage(nodeMap, spec, components, nodeEvidence, nodeEvid
     requireObject(entry, label);
     const figmaNodeId = requireString(entry.figmaNodeId, `${label}.figmaNodeId`);
     const viewport = requireString(entry.viewport, `${label}.viewport`);
-    if (!["pc", "sp"].includes(viewport)) fail(`${label}.viewport must be "pc" or "sp".`);
+    if (!viewportPlan.names.includes(viewport)) fail(`${label}.viewport must be declared in the viewport contract.`);
     const scopeRootNodeId = requireString(entry.scopeRootNodeId, `${label}.scopeRootNodeId`);
     if (!topology.scopeRootByViewportAndNode.has(`${viewport}::${scopeRootNodeId}`)) {
       fail(`${label}.scopeRootNodeId must identify a declared ${viewport.toUpperCase()} scope root: ${scopeRootNodeId}.`);
@@ -2056,7 +2077,7 @@ function assertNodeMapCoverage(nodeMap, spec, components, nodeEvidence, nodeEvid
     }
   }
 
-  for (const viewport of ["pc", "sp"]) {
+  for (const viewport of viewportPlan.names) {
     if (!entries.some((entry) => entry.viewport === viewport)) {
       fail(`node map must cover both viewports independently. Missing: ${viewport}`);
     }
@@ -2777,8 +2798,8 @@ function checkpoint(manifestPath, elementIdArg, { finalRecheck = false, release 
       selectorCoveredBy(requireString(element.sel, "spec.viewports[].elements[].sel"), component.selector)
     );
     if (elements.length > 0) {
-      filteredViewports.push({ width: viewport.width, elements });
-      const cls = widthClass(viewport.width);
+      filteredViewports.push({ ...viewport, elements });
+      const cls = viewportName(viewport);
       coveredClasses.add(cls);
       if (!(cls in viewportWidths)) viewportWidths[cls] = viewport.width;
     }

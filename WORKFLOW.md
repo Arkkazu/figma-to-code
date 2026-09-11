@@ -59,7 +59,7 @@ npm run figma:gate -- start
 報告した5点は `MyBrain/verify/start-<scope-id>.json`（着手宣言）へ記録し、gate manifestの `scope.startDeclarationPath` へ登録する。`preflight` が内容をmanifestと突き合わせて凍結する。詳細は `rules/figma-spec-pipeline.md`「着手時の工程出力と着手宣言の受領証」。
 
 1. 環境判定 `workflow-preflight` の結果（`local` / `cloud-restricted`）
-2. 対象のFigma fileKey と、PC/SP それぞれの node-id（同定は「対象nodeの同定ゲート」に従う）。対象viewportは `rules/figma-spec-pipeline.md`「対象viewportの確定」に従う
+2. 対象のFigma fileKey と、全対象幅の node-id（同定は「対象nodeの同定ゲート」に従う）。対象viewportは `rules/figma-spec-pipeline.md`「対象viewportの確定」に従う
 3. spec（期待値と取得元）とFigma↔DOM対応表の所在。取得していない値を推測で埋めていないこと
 4. D-012スコープロック（`rules/figma-scope-lock.md`）の開始と、今回のscope外パス
 5. 次の2つがどちらも通ったこと。環境判定は編集前ゲートの代わりにならない。
@@ -161,7 +161,7 @@ Figmaの実装・修正scopeでは、編集前に D-012スコープロックと�
 ソースを編集する前に、オーナーが示したDOMとFigma nodeを次の全項目で照合し、案件側の対応表へ記録する。
 
 1. 対象DOMのセレクター、親要素、ページ内の前後セクション、配置順
-2. PC/SPそれぞれのFigma fileKey・node-id・座標・外接寸法
+2. 全対象幅それぞれのFigma fileKey・node-id・座標・外接寸法
 3. 直前・直後のFigmaセクション、および見出し・本文・ロゴ・CTA・注記などの主要構成
 
 Figma上で同じ表示名のノード、同種CTA、同じ文言のボタンが複数ある場合、名称・文言・過去scopeのnode-idだけを根拠に選んではならない。提示DOMの前後関係と主要構成が一致しない候補は対象外とする。PC/SPのいずれかで一致しない、または候補が一意に定まらない場合は、実装・画像書き出し・比較画像登録を開始せず、オーナーへ不足情報を一つだけ確認する。

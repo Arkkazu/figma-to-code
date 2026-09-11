@@ -51,6 +51,8 @@ node C:/AI/figma-to-code/tools/vendored-verifier-audit.mjs
 <!-- executable-figma-gate -->
 ## figma-gate.mjs — コーディング反復中の強制ゲート
 
+可変数の提供デザイン、およびPCのみの場合の参照SPは [可変デザイン数の検証契約](viewport-contract.md) に従う。新しい必須依存 `viewport-contract.mjs`・`viewport-node-map.mjs` も同じ版で配布する。配布は `tools/verifier-distribute.mjs` を使い、下記のコピー対象一覧だけで依存を省かない。
+
 `figma-gate.mjs`、`figma-gate-template.json`、`loop-learn.mjs`、`loop-learning-policy.json`、および同ディレクトリの `cdp-browser.mjs` / `checkpoint-capture.mjs` / `checkpoint-diff.mjs` / `verify-layout.mjs` / `gate-browser-batch.mjs` を案件側 `MyBrain/verify/` にコピーする。実装を始める前にpreflightを行い、コンポーネントごとのcheckpointとsection-closeを経て、当該scopeのcloseを行う。
 
 マニフェストには少なくとも、実装actor/context、対象Figma PC/SP node、取得した可視/非表示レイヤー、採用アセットのFigma MCP export URLとSHA-256、spec、DOM対応表、機械可読なnode map（`scope.nodeMapPath`）、component decision manifestを記録する。

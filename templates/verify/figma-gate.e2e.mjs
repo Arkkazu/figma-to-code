@@ -1757,7 +1757,128 @@ function assertEditHookIntegration() {
 // このE2Eは毎回100秒前後かかる（1ケースごとに使い捨てGitリポジトリを作り、実gateを起動するため）。
 // 従来は完了行まで一切出力が無く、2026-08-29 の独立検証は90秒で打ち切って「未合格・未確認」と報告した。
 // 実際には101秒でPASSしていた。無反応に見える時間を作らないよう、所要目安と各段の進捗を出す。
-const STEPS = [
+function multiDesignFixture(names, referenceSp = false) {
+  const fixture = createFixture("figma-gate-designs-");
+  for (const name of ["loop-learn.mjs", "loop-learning-policy.json"]) cpSync(join(dirname(fixturePath), name), join(fixture.root, "MyBrain/verify", name));
+  const widths = { pc: 1440, sp: 375, tablet: 1024, narrow: 768, wide: 1920 };
+  const manifest = readJson(fixture.manifestPath);
+  manifest.figma.designs = names.map((viewport) => ({ viewport, width: widths[viewport], nodeId: `fixture-${viewport}-page-root`,
+    source: referenceSp && viewport === "sp" ? "reference-page" : "provided",
+    ...(referenceSp && viewport === "sp" ? { referencePage: "fixture-other-page", referenceReason: "Use the other page's verified mobile layout, not an invented target-page design." } : {}) }));
+  manifest.figma.viewportNodes = manifest.figma.designs.map((design) => ({ viewport: design.viewport, nodeId: design.nodeId, screenshotPath: `MyBrain/verify/fixture/${design.viewport}.png` }));
+  writeJson(fixture.manifestPath, manifest);
+  const evidence = { schema: "figma-node-evidence/v2", fileKey: "fixture-file", evidence: [] };
+  const roots = [];
+  for (const viewport of names) {
+    writePngHeader(join(fixture.directory, `${viewport}.png`), 1, 1);
+    // Distinguishable fixture bytes: using another viewport's reference must fail.
+    const bytes = readFileSync(join(fixture.directory, `${viewport}.png`));
+    writeFileSync(join(fixture.directory, `${viewport}.png`), Buffer.concat([bytes, Buffer.from(viewport)]));
+    for (const role of ["page-root", "first-view", "header"]) {
+      const nodeId = `fixture-${viewport}-${role}`;
+      const metadataPath = `MyBrain/verify/fixture/metadata-${viewport}-${role}.json`;
+      const children = role === "page-root" ? `<frame id="fixture-${viewport}-first-view" /><frame id="fixture-${viewport}-header" />` : "";
+      writeJson(join(fixture.root, metadataPath), { raw: `<frame id="${nodeId}">${children}</frame>` });
+      const metadataSha256 = sha256(join(fixture.root, metadataPath));
+      evidence.evidence.push({ viewport, role, nodeId, metadataPath, metadataSha256 });
+      if (role !== "page-root") roots.push({ scopeId: role, viewport, figmaNodeId: nodeId, pageRootNodeId: `fixture-${viewport}-page-root`, metadataPath, metadataSha256 });
+    }
+  }
+  writeJson(fixture.nodeEvidencePath, evidence);
+  const inventory = roots.map((root) => ({ viewport: root.viewport, figmaNodeId: root.figmaNodeId, scopeRootNodeId: root.figmaNodeId }));
+  writeJson(fixture.nodeMapPath, {
+    version: 3, schema: "viewport-scoped-roots/v1",
+    figma: { fileKey: "fixture-file", source: "fixture metadata", viewportRoots: Object.fromEntries(manifest.figma.designs.map((design) => [design.viewport, design.nodeId])) },
+    sourceEvidence: { nodeEvidencePath: "MyBrain/verify/fixture/node-evidence.json", nodeEvidenceSha256: sha256(fixture.nodeEvidencePath) },
+    scopeRoots: roots, inventory: { source: "fixture metadata", nodes: inventory },
+    nodes: inventory.map((entry) => ({ ...entry, status: "mapped", selector: ".fixture-root", figmaNodeType: "FRAME" })),
+  });
+  const nodeIds = Object.fromEntries(names.map((name) => [name, `fixture-${name}-first-view`]));
+  const headerIds = Object.fromEntries(names.map((name) => [name, `fixture-${name}-header`]));
+  writeJson(join(fixture.directory, "page-coverage.json"), {
+    version: 1, scopeId: "fixture-gate", viewports: names,
+    pages: Object.fromEntries(names.map((name) => [name, { url: "http://fixture.invalid", nodeId: `fixture-${name}-page-root`, metadataPath: `metadata-${name}-page-root.json`, metadataSha256: sha256(join(fixture.directory, `metadata-${name}-page-root.json`)) }])),
+    sections: [{ sectionId: "fixture-section", role: "target", componentIds: ["fixture-component"], figmaNodeIds: nodeIds },
+      { sectionId: "fixture-header", role: "context", contextKind: "shared-header", componentIds: [], figmaNodeIds: headerIds }],
+    inventory: { source: "fixture metadata", sections: [{ sectionId: "fixture-section", figmaNodeIds: nodeIds }, { sectionId: "fixture-header", figmaNodeIds: headerIds }] },
+  });
+  mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.figma.nodeIds = Object.fromEntries(manifest.figma.designs.map((design) => [design.viewport, [design.nodeId]])); });
+  mutateJson(fixture.specPath, (value) => { value.viewports = manifest.figma.designs.map((design) => ({ id: design.viewport, width: design.width, elements: [{ sel: ".fixture-root", width: 1, height: 1, provenance: { width: "metadata", height: "metadata" } }] })); });
+  mutateJson(fixture.componentsPath, (value) => {
+    const component = value.components[0]; component.viewports = names; component.painted = true; component.visualThreshold = 0.01;
+    component.figmaImages = Object.fromEntries(names.map((name) => [name, { path: `MyBrain/verify/fixture/${name}.png`, sha256: sha256(join(fixture.directory, `${name}.png`)) }]));
+  });
+  // Browser and pixel comparison are deterministic doubles in this CLI E2E.
+  // They verify routing/receipts; they do not claim a real browser/Figma match.
+  const batchPath = join(fixture.root, "MyBrain/verify/gate-browser-batch.mjs");
+  let batch = readFileSync(batchPath, "utf8");
+  batch = batch.replace("  captures: [],", `  captures: job.capture.jobs.map((capture) => {
+    mkdirSync(dirname(capture.outputPath), { recursive: true });
+    writeFileSync(capture.outputPath, readFileSync(resolve("MyBrain/verify/fixture/" + capture.viewport + ".png")));
+    return { ...capture, browserSessionId, browserPid, chromeMode: "fixture" };
+  }),
+  measuredViewports: JSON.parse(readFileSync(resolve(job.layout.specPath), "utf8")).viewports.map(({ id, width }) => ({ id, width })),`);
+  writeFileSync(batchPath, batch);
+  writeFileSync(join(fixture.root, "MyBrain/verify/checkpoint-diff.mjs"), `import { readFileSync, writeFileSync } from "node:fs";
+const [a,b,out] = process.argv.slice(2); const first=readFileSync(a); const second=readFileSync(b);
+writeFileSync(out, first); console.log(JSON.stringify({ratio:first.equals(second)?0:1, comparedPixels:1, mask:null}));`);
+  return fixture;
+}
+
+function assertMultipleDesignViewports() {
+  for (const [names, referenceSp] of [[["pc", "sp"], false], [["pc", "sp"], true], [["pc", "tablet", "narrow", "sp"], false], [["pc", "tablet", "narrow", "sp", "wide"], false]]) {
+    const fixture = multiDesignFixture(names, referenceSp);
+    try {
+      preflightFixture(fixture);
+      accept(["section-start", fixture.manifestRelativePath, "fixture-section"], fixture.root);
+      accept(["checkpoint", fixture.manifestRelativePath, "fixture-component"], fixture.root);
+      const checkpoint = readJson(resolveActiveReceiptPath(fixture.root)).checkpoints["fixture-component"];
+      assert(JSON.stringify(Object.keys(checkpoint.visual)) === JSON.stringify(names), "all design images were compared independently");
+      const summary = readJson(checkpoint.captureEvidence.captureSummaryPath);
+      assert(JSON.stringify(summary.measuredViewports.map((item) => item.id)) === JSON.stringify(names), "layout batch preserves all viewport identities");
+      assert(JSON.stringify(summary.captures.map((item) => item.viewportWidth)) === JSON.stringify(readJson(fixture.specPath).viewports.map((item) => item.width)), "capture widths are not collapsed to PC/SP");
+      if (names.includes("tablet")) {
+        const activePath = resolveActiveReceiptPath(fixture.root); const bytes = readFileSync(activePath);
+        mutateJson(activePath, (state) => { delete state.checkpoints["fixture-component"].visual.tablet; });
+        reject(["section-close", fixture.manifestRelativePath, "fixture-section"], "visual.tablet", fixture.root);
+        writeFileSync(activePath, bytes);
+      }
+      accept(["section-close", fixture.manifestRelativePath, "fixture-section"], fixture.root);
+      accept(["close", fixture.manifestRelativePath], fixture.root);
+      assert(readJson(resolveActiveReceiptPath(fixture.root)).phase === "closed", "multi-design scope closes after final remeasurement");
+    } finally { assert(dirname(fixture.root) === resolve(tmpdir()), "fixture cleanup is within tmpdir"); rmSync(fixture.root, { recursive: true, force: true }); }
+  }
+  const negatives = [
+    ["missing spec viewport", (f) => mutateJson(f.specPath, (v) => v.viewports.splice(1, 1)), "spec must cover every design"],
+    ["wrong spec width", (f) => mutateJson(f.specPath, (v) => { v.viewports[1].width = 999; }), "id/width mismatch"],
+    ["duplicate identity", (f) => mutateJson(f.manifestPath, (v) => { v.figma.designs[1].viewport = "pc"; }), "Duplicate design viewport"],
+    ["missing design image", (f) => mutateJson(f.componentsPath, (v) => { delete v.components[0].figmaImages.tablet; }), "figmaImages.tablet"],
+    ["omitted visible viewport", (f) => mutateJson(f.componentsPath, (v) => { v.components[0].viewports = ["pc", "sp"]; }), "explicit hidden root expectation"],
+    ["missing page coverage", (f) => mutateJson(join(f.directory, "page-coverage.json"), (v) => { delete v.pages.tablet; }), "page coverage.pages"],
+    ["missing node inventory", (f) => mutateJson(f.nodeMapPath, (v) => { v.inventory.nodes.splice(2, 1); }), "all frozen metadata nodes"],
+    ["node measured only in another viewport", (f) => mutateJson(f.nodeMapPath, (v) => { v.nodes.find((n) => n.viewport === "tablet").selector = ".other-viewport"; }), "not measured in its own viewport"],
+    ["additional viewport text is not measured", (f) => mutateJson(f.nodeMapPath, (v) => { v.nodes.find((n) => n.viewport === "tablet").figmaNodeType = "TEXT"; }), "no text assertion in its own viewport"],
+    ["missing start declaration", (f) => mutateJson(join(f.directory, "start-declaration.json"), (v) => { delete v.figma.nodeIds.tablet; }), "Start declaration.figma.nodeIds must contain exactly"],
+    ["missing SP reference", (f) => mutateJson(f.manifestPath, (v) => { delete v.figma.designs.find((d) => d.viewport === "sp").referencePage; }), "referencePage"],
+  ];
+  for (const [label, mutate, expected] of negatives) {
+    const fixture = multiDesignFixture(label === "missing SP reference" ? ["pc", "sp"] : ["pc", "tablet", "narrow", "sp"], label === "missing SP reference");
+    try { mutate(fixture); reject(preflightArgs(fixture), expected, fixture.root); assertNoGateArtifacts(fixture, label); }
+    finally { assert(dirname(fixture.root) === resolve(tmpdir()), "fixture cleanup is within tmpdir"); rmSync(fixture.root, { recursive: true, force: true }); }
+  }
+  const mismatch = multiDesignFixture(["pc", "tablet", "narrow", "sp"]);
+  try {
+    const batchPath = join(mismatch.root, "MyBrain/verify/gate-browser-batch.mjs");
+    const batch = readFileSync(batchPath, "utf8");
+    writeFileSync(batchPath, batch.replace('capture.viewport + ".png"', '(capture.viewport === "tablet" ? "pc" : capture.viewport) + ".png"'));
+    preflightFixture(mismatch);
+    accept(["section-start", mismatch.manifestRelativePath, "fixture-section"], mismatch.root);
+    reject(["checkpoint", mismatch.manifestRelativePath, "fixture-component"], "fixture-component / tablet recomputed diff ratio", mismatch.root);
+  } finally { assert(dirname(mismatch.root) === resolve(tmpdir()), "fixture cleanup is within tmpdir"); rmSync(mismatch.root, { recursive: true, force: true }); }
+}
+
+const ALL_STEPS = [
+  ["variable design viewports + reference SP", assertMultipleDesignViewports],
   ["edit hook + real verifier integration (protocol replay)", assertEditHookIntegration],
   ["workflow preflight guards", assertWorkflowPreflightGuards],
   ["start declaration guards", assertStartDeclarationGuards],
@@ -1780,6 +1901,8 @@ const STEPS = [
   ["reference image size at preflight", assertFigmaReferenceImageSizeIsCheckedAtPreflight],
   ["owner visual exemption end to end", assertOwnerVisualExemptionClosesAndGuards],
 ];
+
+const STEPS = process.argv.includes("--viewports-only") ? ALL_STEPS.slice(0, 1) : ALL_STEPS;
 
 const startedAt = Date.now();
 const elapsed = () => `${((Date.now() - startedAt) / 1000).toFixed(0)}s`;

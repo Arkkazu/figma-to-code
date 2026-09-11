@@ -2,6 +2,10 @@
 
 ## Current
 
+- 2026-09-11: Added the explicit variable-design viewport contract to the gate,
+  coverage checks and contract audit. Verification and limitations are recorded
+  in `reports/variable-design-viewport-verification-20260911.json`.
+
 - 2026-08-22: Created a repository-local `MyBrain/` so cloud agents can read
   public development context for `figma-to-code`.
 - Purpose: support future cloud-agent development of this repository without

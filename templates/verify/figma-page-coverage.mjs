@@ -1,5 +1,6 @@
 
 import { createHash } from "node:crypto";
+import { resolveViewportContract, assertViewportKeys } from "./viewport-contract.mjs";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 
@@ -17,7 +18,8 @@ import { basename, dirname, relative, resolve } from "node:path";
 // 5: P-3 v12. Explicit responsiveHtml.deferredSourceFiles is frozen in the
 //    active gate state; preflight may defer only those planned new sources and
 //    every later phase requires the full responsive source set.
-export const FIGMA_GATE_CONTRACT_VERSION = 5;
+// 6: explicit arbitrary-width designs, reference-page SP, and full viewport coverage.
+export const FIGMA_GATE_CONTRACT_VERSION = 6;
 
 function fail(message) {
   throw new Error(message);
@@ -63,19 +65,15 @@ function requireString(value, label) {
 const COVERAGE_DIGEST_VERSION = "v2";
 
 export function canonicalCoverageDigest(coverage) {
+  const viewports = coverage.viewports ?? ["pc", "sp"];
+  const byViewport = (fn) => Object.fromEntries(viewports.map((viewport) => [viewport, fn(viewport)]));
   const canonicalSection = (section) => ({
     sectionId: section.sectionId ?? null,
     role: section.role ?? null,
     contextKind: section.contextKind ?? null,
     componentIds: Array.isArray(section.componentIds) ? [...section.componentIds] : null,
-    figmaNodeIds: {
-      pc: section.figmaNodeIds?.pc ?? null,
-      sp: section.figmaNodeIds?.sp ?? null,
-    },
-    measurementFigmaNodeIds: {
-      pc: Array.isArray(section.measurementFigmaNodeIds?.pc) ? [...section.measurementFigmaNodeIds.pc] : null,
-      sp: Array.isArray(section.measurementFigmaNodeIds?.sp) ? [...section.measurementFigmaNodeIds.sp] : null,
-    },
+    figmaNodeIds: byViewport((viewport) => section.figmaNodeIds?.[viewport] ?? null),
+    measurementFigmaNodeIds: byViewport((viewport) => Array.isArray(section.measurementFigmaNodeIds?.[viewport]) ? [...section.measurementFigmaNodeIds[viewport]] : null),
     followUpScope: section.followUpScope ?? null,
     completedByScope: section.completedByScope ?? null,
     // 説明文は digest に含める。レビュー役が判定しているのは
@@ -93,15 +91,12 @@ export function canonicalCoverageDigest(coverage) {
     scopeId: coverage.scopeId ?? null,
     pageKind: coverage.pageKind ?? "page-design",
     pages: coverage.pages
-      ? {
-        pc: { nodeId: coverage.pages.pc?.nodeId ?? null, metadataSha256: coverage.pages.pc?.metadataSha256 ?? null },
-        sp: { nodeId: coverage.pages.sp?.nodeId ?? null, metadataSha256: coverage.pages.sp?.metadataSha256 ?? null },
-      }
+      ? byViewport((viewport) => ({ nodeId: coverage.pages[viewport]?.nodeId ?? null, metadataSha256: coverage.pages[viewport]?.metadataSha256 ?? null }))
       : null,
     inventorySource: coverage.inventory?.source ?? null,
     inventory: (coverage.inventory?.sections ?? []).map((entry) => ({
       sectionId: entry.sectionId ?? null,
-      figmaNodeIds: { pc: entry.figmaNodeIds?.pc ?? null, sp: entry.figmaNodeIds?.sp ?? null },
+      figmaNodeIds: byViewport((viewport) => entry.figmaNodeIds?.[viewport] ?? null),
       note: entry.note ?? null,
     })),
     sections: (coverage.sections ?? []).map(canonicalSection),
@@ -114,7 +109,7 @@ export function canonicalCoverageDigest(coverage) {
   // digest にアルゴリズム版を刻む。算出対象を変えると同じ coverage でも値が変わるため、
   // 版を持たないと「分類が変わった」と誤検出する（2026-08-26 に v1→v2 で実際に発生）。
   // 版が異なる過去の digest は比較対象にしない。
-  return COVERAGE_DIGEST_VERSION + "-" + createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+  return (coverage.viewports ? "v3" : COVERAGE_DIGEST_VERSION) + "-" + createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
 // page coverage の独立レビューゲートは 2026-09-02 (714f23c) に廃止した。
@@ -133,7 +128,7 @@ export function canonicalCoverageDigest(coverage) {
 const FROZEN_METADATA_TAG = /<([\w-]+)\s+([^>]*?)(\/?)>|<\/([\w-]+)>/g;
 const FROZEN_METADATA_ATTR = /(\w+)="([^"]*)"/g;
 
-function parseFrozenMetadata(raw, label) {
+export function parseFrozenMetadata(raw, label) {
   if (typeof raw !== "string" || raw.trim() === "") {
     fail(label + " has no raw metadata tree to parse");
   }
@@ -214,11 +209,11 @@ function descendantsOf(nodes, id) {
 // componentのfigmaNodeIdは意図的に対象外にしている。coverage契約はcomponentの
 // figmaNodeIdとsectionノードの一致を要求しておらず、ページroot基準の座標specを持つ
 // componentがrootをanchorにする運用が実在する（painted:false のため画像差分の基準にもならない）。
-export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionById, repoRoot) {
+export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionById, repoRoot, viewports = coverage.viewports ?? ["pc", "sp"]) {
   if ((coverage.pageKind ?? "page-design") !== "page-design") return;
 
   const trees = {};
-  for (const viewport of ["pc", "sp"]) {
+  for (const viewport of viewports) {
     const page = coverage.pages[viewport];
     const metadataPath = resolve(dirname(coveragePath), page.metadataPath);
     const metadata = readJson(metadataPath);
@@ -255,7 +250,7 @@ export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionB
   // (4) hidden継承: 非表示を継承したノードを対象にしていないこと
   const registered = [];
   for (const section of coverage.sections) {
-    for (const viewport of ["pc", "sp"]) {
+    for (const viewport of viewports) {
       const nodeId = section.figmaNodeIds?.[viewport] ?? null;
       if (nodeId) registered.push({ label: "section " + section.sectionId, viewport, nodeId });
       for (const measurement of section.measurementFigmaNodeIds?.[viewport] ?? []) {
@@ -276,7 +271,7 @@ export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionB
 
   // (2) 包含: measurement は自 section ノードの子孫であること
   for (const section of coverage.sections) {
-    for (const viewport of ["pc", "sp"]) {
+    for (const viewport of viewports) {
       const own = section.figmaNodeIds?.[viewport] ?? null;
       if (!own) continue;
       const tree = trees[viewport];
@@ -294,7 +289,7 @@ export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionB
   // (3) 二重計上: 同じ測定ノードを複数の section が宣言していないこと
   const measurementOwners = new Map();
   for (const section of coverage.sections) {
-    for (const viewport of ["pc", "sp"]) {
+    for (const viewport of viewports) {
       for (const measurement of section.measurementFigmaNodeIds?.[viewport] ?? []) {
         const key = viewport + ":" + measurement;
         if (!measurementOwners.has(key)) measurementOwners.set(key, []);
@@ -311,7 +306,7 @@ export function assertFrozenMetadataConsistency(coverage, coveragePath, sectionB
   // (5) 被覆: page root 直下の子が inventory で被覆されていること
   // hidden の子は表示されないため対象外にする。
   const inventorySections = coverage.inventory?.sections ?? [];
-  for (const viewport of ["pc", "sp"]) {
+  for (const viewport of viewports) {
     const tree = trees[viewport];
     const rootId = coverage.pages[viewport].nodeId;
     if (!tree.nodes.has(rootId)) {
@@ -371,17 +366,17 @@ function rejectManifestImplementationIdentity(scope) {
 
 // PC/SP対の検査。片方にしか存在しないUI（PC専用の追従ボタン等）を
 // 「存在しない側」を明示して登録できるようにする。null は理由の宣言を必須にする。
-function requireViewportNodes(nodes, label, owner) {
+function requireViewportNodes(nodes, label, owner, viewports = ["pc", "sp"]) {
   if (!nodes || typeof nodes !== "object") {
     fail(label + " must declare figmaNodeIds.pc and figmaNodeIds.sp (null is allowed for one side)");
   }
-  for (const viewport of ["pc", "sp"]) {
+  for (const viewport of viewports) {
     if (!(viewport in nodes)) fail(label + " must declare figmaNodeIds." + viewport);
     const value = nodes[viewport];
     if (value === null) continue;
     requireString(value, label + " figmaNodeIds." + viewport);
   }
-  if (nodes.pc === null && nodes.sp === null) {
+  if (viewports.every((viewport) => nodes[viewport] === null)) {
     // 両方nullは「Figma対応が無い」か「まだ特定していない」のどちらか。
     // どちらなのかを書かせる。書かせないと、埋められない欄を空にして先へ進むのが常態化し、
     // 逆に埋めさせようとすると存在しないIDの捏造を招く。
@@ -394,7 +389,7 @@ function requireViewportNodes(nodes, label, owner) {
     }
     return;
   }
-  if (nodes.pc === null || nodes.sp === null) {
+  if (viewports.some((viewport) => nodes[viewport] === null)) {
     requireString(owner.singleViewportReason, label + " singleViewportReason (required when one viewport has no node)");
   }
 }
@@ -402,6 +397,8 @@ function requireViewportNodes(nodes, label, owner) {
 function manifestContext(manifestPath, implementationIdentityInput) {
   const absoluteManifestPath = resolve(manifestPath);
   const manifest = readJson(absoluteManifestPath);
+  const viewportPlan = resolveViewportContract(manifest);
+  const viewports = viewportPlan.names;
   const scope = manifest.scope || {};
   rejectManifestImplementationIdentity(scope);
   const implementationIdentity = requireImplementationIdentity(implementationIdentityInput, "implementation identity");
@@ -434,6 +431,9 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   }
 
   const coverage = readJson(coveragePath);
+  if (viewportPlan.explicit && JSON.stringify(coverage.viewports) !== JSON.stringify(viewports)) {
+    fail("page coverage.viewports must match manifest.figma.designs in order.");
+  }
   if (coverage.version !== 1 || !Array.isArray(coverage.sections) || coverage.sections.length === 0) {
     fail("page coverage must use version 1 with non-empty sections");
   }
@@ -455,13 +455,17 @@ function manifestContext(manifestPath, implementationIdentityInput) {
     }
   } else {
     if (!coverage.pages) fail("page coverage must declare pages");
-    for (const viewport of ["pc", "sp"]) {
+    assertViewportKeys(coverage.pages, viewports, "page coverage.pages");
+    for (const viewport of viewports) {
       const page = coverage.pages[viewport];
       if (!page || typeof page !== "object") fail("page coverage lacks " + viewport);
       for (const field of ["url", "nodeId", "metadataPath", "metadataSha256"]) {
         requireString(page[field], "page coverage " + viewport + "." + field);
       }
       const metadataPath = resolve(dirname(coveragePath), page.metadataPath);
+      if (viewportPlan.explicit && page.nodeId !== viewportPlan.designs.find((design) => design.viewport === viewport).nodeId) {
+        fail("page coverage node differs from declared design: " + viewport);
+      }
       if (!existsSync(metadataPath)) fail("Figma page metadata is missing: " + metadataPath);
       if (sha256File(metadataPath) !== page.metadataSha256) {
         fail("Figma page metadata hash mismatch: " + metadataPath);
@@ -476,6 +480,10 @@ function manifestContext(manifestPath, implementationIdentityInput) {
   const sectionById = new Map();
   for (const section of coverage.sections) {
     if (!section || typeof section !== "object") fail("page coverage section must be an object");
+    if (viewportPlan.explicit) {
+      assertViewportKeys(section.figmaNodeIds, viewports, "section.figmaNodeIds");
+      requireViewportNodes(section.figmaNodeIds, "section", section, viewports);
+    }
     requireString(section.sectionId, "page coverage sectionId");
     if (sectionById.has(section.sectionId)) fail("duplicate sectionId: " + section.sectionId);
     if (!["target", "context", "deferred", "completed"].includes(section.role)) {
@@ -490,7 +498,7 @@ function manifestContext(manifestPath, implementationIdentityInput) {
       if (section.componentIds.length !== 0) {
         fail("deferred cannot have checkpoint components: " + section.sectionId);
       }
-      requireViewportNodes(section.figmaNodeIds, "deferred " + section.sectionId, section);
+      requireViewportNodes(section.figmaNodeIds, "deferred " + section.sectionId, section, viewports);
       requireString(section.reason, "deferred reason for " + section.sectionId);
       requireString(section.followUpScope, "deferred followUpScope for " + section.sectionId);
       sectionById.set(section.sectionId, section);
@@ -503,7 +511,7 @@ function manifestContext(manifestPath, implementationIdentityInput) {
       if (section.componentIds.length !== 0) {
         fail("completed cannot have checkpoint components in this scope: " + section.sectionId);
       }
-      requireViewportNodes(section.figmaNodeIds, "completed " + section.sectionId, section);
+      requireViewportNodes(section.figmaNodeIds, "completed " + section.sectionId, section, viewports);
       requireString(section.completedByScope, "completed completedByScope for " + section.sectionId);
       const closeReport = requireString(section.closeReportPath, "completed closeReportPath for " + section.sectionId);
       const closeReportFile = resolve(repoRoot, closeReport);
@@ -584,10 +592,11 @@ function manifestContext(manifestPath, implementationIdentityInput) {
     if (!entry || typeof entry !== "object") fail("inventory section must be an object");
     const sectionId = requireString(entry.sectionId, "inventory sectionId");
     if (inventoryIds.has(sectionId)) fail("duplicate inventory sectionId: " + sectionId);
-    requireViewportNodes(entry.figmaNodeIds, "inventory section " + sectionId, entry);
+    requireViewportNodes(entry.figmaNodeIds, "inventory section " + sectionId, entry, viewports);
+    if (viewportPlan.explicit) assertViewportKeys(entry.figmaNodeIds, viewports, "inventory.figmaNodeIds");
     inventoryIds.add(sectionId);
   }
-  assertFrozenMetadataConsistency(coverage, coveragePath, sectionById, repoRoot);
+  assertFrozenMetadataConsistency(coverage, coveragePath, sectionById, repoRoot, viewports);
 
   const unclassified = [...inventoryIds].filter((sectionId) => !sectionById.has(sectionId));
   if (unclassified.length > 0) {

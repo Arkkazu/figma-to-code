@@ -1,0 +1,132 @@
+{
+  "schema": "variable-design-viewport-verification/v1",
+  "date": "2026-09-11",
+  "baseCommit": "9498b9e1147140a7e559dabfa19603a5435af280",
+  "scope": "Generic variable-design-count gate, node coverage, page coverage, contract audit and documentation.",
+  "status": "verified",
+  "contractVersion": 6,
+  "cases": [
+    "Two supplied designs",
+    "PC-only supplied design with reference-page SP",
+    "Four supplied designs",
+    "Five supplied designs",
+    "Missing viewport, wrong width, duplicate identity, missing image, omitted visible component, missing page/node coverage, missing start declaration, missing SP reference, own-viewport measurement and text assertions",
+    "Missing additional-viewport visual receipt at section-close",
+    "Additional viewport receives another viewport's capture and checkpoint rejects it"
+  ],
+  "executionEvidence": [
+    {
+      "command": "node templates/verify/figma-gate.e2e.mjs --viewports-only",
+      "exitCode": 0,
+      "stdoutTail": "[ 1/1]  34s variable design viewports + reference SP\nfigma-gate.e2e: PASS (152 assertions, 34s)"
+    },
+    {
+      "command": "node templates/verify/figma-page-coverage.e2e.mjs",
+      "exitCode": 0,
+      "stdoutTail": "figma-page-coverage.e2e: PASS (22 passed / 0 failed)"
+    },
+    {
+      "command": "node templates/verify/gate-contract-audit.e2e.mjs",
+      "exitCode": 0,
+      "stdoutTail": "gate-contract-audit E2E PASS (legacy + variable viewport contract)"
+    },
+    {
+      "command": "node tools/run-checks.mjs",
+      "exitCode": 0,
+      "stdout": "PASS tools/workflow-preflight.e2e.mjs\nPASS tools/project-entry-install.e2e.mjs\nPASS tools/entry-trigger-audit.e2e.mjs\nPASS tools/doc-command-audit.e2e.mjs\nPASS tools/public-memory-scan.e2e.mjs\nPASS tools/figma-log-promote.e2e.mjs\nPASS tools/figma-scope-lock.e2e.mjs\nPASS tools/codex-edit-guard.e2e.mjs\nPASS tools/verifier-distribution-log.e2e.mjs\nPASS tools/vendored-verifier-audit.e2e.mjs\nPASS tools/rule-size-guard.e2e.mjs\nPASS templates/verify/scope-conflict-audit.e2e.mjs\nPASS templates/verify/scope-coordination.e2e.mjs\nPASS templates/verify/responsive-html-guard.e2e.mjs\nPASS templates/verify/figma-gate.e2e.mjs\nPASS templates/verify/gate-contract-audit.e2e.mjs\nPASS templates/verify/figma-feature-coverage.e2e.mjs\nPASS tools/doc-command-audit.mjs\nPASS tools/public-memory-scan.mjs\n\n19/19 passed\nskipped (known failing): 9",
+      "excludedTests": "Unchanged KNOWN_FAILING collection in tools/run-checks.mjs; not claimed passed."
+    },
+    {
+      "command": "node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-audit.config.json",
+      "exitCode": 0,
+      "stdoutTail": "RULE SIZE AUDIT: OK   Figma実装の必読合計: 143105 bytes（上限 143360 bytes）\nRULE SIZE AUDIT: PASS 10 file(s)"
+    },
+    {
+      "command": "node tools/entry-trigger-audit.mjs",
+      "exitCode": 0,
+      "stdoutTail": "ENTRY TRIGGER AUDIT: PASS 5 document(s)"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "stdout": ""
+    }
+  ],
+  "mutationTest": {
+    "temporaryChange": "Removed the spec width equality condition from resolveViewportContract.",
+    "command": "node templates/verify/figma-gate.e2e.mjs --viewports-only",
+    "exitCode": 1,
+    "stderrExcerpt": "Error: fixture failed: preflight rejects invalid invocation",
+    "conclusion": "The wrong-width fixture was accepted by the mutant and the negative E2E failed. The width condition was restored before the final passing runs.",
+    "restored": true
+  },
+  "limitations": [
+    "CLI E2E uses deterministic browser and pixel-comparison doubles. It proves routing, validation, receipts, section-close and final remeasurement flow, not actual client rendering fidelity.",
+    "Only declared designs can be checked; the verifier cannot establish that an operator listed every design in an external Figma file.",
+    "Reference-page SP requires recorded provenance and frozen evidence. Same-project reference identity is declared, not independently authenticated by an external project registry.",
+    "Accessibility and motion use their existing scenario configurations; they are not automatically multiplied across all design widths.",
+    "No client-side distribution, live Figma retrieval, client source changes, old authorization-record migration or external publication was performed."
+  ],
+  "preservedUnrelatedChanges": [
+    "templates/verify/cdp-browser.mjs",
+    "templates/verify/cdp-browser.e2e.mjs"
+  ],
+  "hashBasis": "Worktree bytes after verification; lines count LF-delimited lines excluding a trailing empty split. The report itself is excluded to avoid a self-hash.",
+  "files": [
+    {
+      "path": "WORKFLOW.md",
+      "sha256": "c95199a8483cb1fbb47768ee61d0b66b6baae20ec62a2a1d7888453406954824",
+      "lines": 221
+    },
+    {
+      "path": "rules/figma-spec-pipeline.md",
+      "sha256": "ef4891b0c41a5a26a0de9022f855d1e425f11dc78ae467623878de11e1f8e1b3",
+      "lines": 540
+    },
+    {
+      "path": "templates/verify/README.md",
+      "sha256": "aa62b6053c2e97698a85d3adb3bf951fb26f5713839a05952213ca0c8f8d15e9",
+      "lines": 345
+    },
+    {
+      "path": "templates/verify/figma-gate.mjs",
+      "sha256": "d2388769447a401c40ba3572775c744e2c7be55ba11b1e2630091c50f144aa61",
+      "lines": 3746
+    },
+    {
+      "path": "templates/verify/figma-gate.e2e.mjs",
+      "sha256": "629bda1578282ac67da3afc72eb80945dadaa97096c546e3c367e931510a7635",
+      "lines": 1923
+    },
+    {
+      "path": "templates/verify/figma-page-coverage.mjs",
+      "sha256": "110366c3d6f47f4dca8ace45959fca119c7e9299062db1a23c83c2c10ee623b5",
+      "lines": 858
+    },
+    {
+      "path": "templates/verify/gate-contract-audit.mjs",
+      "sha256": "65564ac1f8cc03666c0f36f550c33d2ba5934cca12100bd5c9abe3f6509c448e",
+      "lines": 237
+    },
+    {
+      "path": "templates/verify/gate-contract-audit.e2e.mjs",
+      "sha256": "f7cf976992d8e9e4de1065d159637eeaacf50d5905d300b77070d694d7f8f88f",
+      "lines": 84
+    },
+    {
+      "path": "templates/verify/viewport-contract.mjs",
+      "sha256": "8d096cd717f38cce07edca1e4d859dc830f8b966e041e1df0f8ecabad17a5ee0",
+      "lines": 68
+    },
+    {
+      "path": "templates/verify/viewport-node-map.mjs",
+      "sha256": "e664725a85ceac09c1004eb6774473679c508da7949b836068140b45891ac1f5",
+      "lines": 78
+    },
+    {
+      "path": "templates/verify/viewport-contract.md",
+      "sha256": "25655726f1a59b8ad499314f5ffe937dbe9b153c47e5ffd3d28dcb5cafe11a70",
+      "lines": 50
+    }
+  ]
+}
