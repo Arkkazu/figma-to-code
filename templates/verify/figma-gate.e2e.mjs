@@ -534,7 +534,7 @@ function preflightFixture(fixture) {
 
 // オーナー承認でVISUALだけを外した節が、checkpoint から section-close まで通ることを固定する。
 //
-// なぜ要るか（2026-09-10 実測、rpa-technologies-theme / static-resource-download-20260909）:
+// なぜ要るか（2026-09-10 実測、案件側 / static-resource-download-20260909）:
 // ownerVisualExemption は checkpoint 側だけ実装されており、承認された節は captureEvidence を
 // 作らない。ところが assertCheckpointsComplete は painted な節へ無条件に撮影証跡を要求していた。
 // そのため**承認経路を通った scope はどれも閉じられず、経路は存在しないのと同じだった**。
@@ -816,7 +816,7 @@ function assertPreflightDraftGuardCases() {
       label: "Figma nodeを引くのに位置を検査していない要素",
       expected: "寸法だけを検査して位置を検査していません",
       mutate: (fixture) => mutateJson(fixture.specPath, (value) => {
-        value.viewports[0].elements[0].note = "Figma 2585:30280 Breadcrumbs_pc";
+        value.viewports[0].elements[0].note = "Figma 1111:22222 Breadcrumbs_pc";
       }),
     },
     // 位置を1つでも検査していれば通る。過剰な要求にしない。
@@ -824,7 +824,7 @@ function assertPreflightDraftGuardCases() {
       label: "位置を検査していれば通る（negativeの対称確認）",
       expected: null,
       mutate: (fixture) => mutateJson(fixture.specPath, (value) => {
-        value.viewports[0].elements[0].note = "Figma 2585:30280 Breadcrumbs_pc";
+        value.viewports[0].elements[0].note = "Figma 1111:22222 Breadcrumbs_pc";
         value.viewports[0].elements[0].topInSection = 64;
         value.viewports[0].elements[0].provenance.topInSection = "design_context";
       }),
@@ -1552,7 +1552,7 @@ function assertStartDeclarationGuards() {
       mutate: (fixture) => mutateJson(join(fixture.directory, "start-declaration.json"), (value) => { value.declaredAt = "きのう"; }),
     },
     // 2026-08-29 追加。着手宣言を「ゲートを通す書類」として使い回す経路を塞ぐ。
-    // 実測（rpa-technologies-theme）: 新しい依頼に対し、3日前の依頼文と3日前の日付を書いた
+    // 実測（案件側）: 新しい依頼に対し、3日前の依頼文と3日前の日付を書いた
     // 宣言が作られた。形式はすべて満たすが、目の前の依頼を表していない。
     {
       label: "declaredAtが24時間より古い（前回の宣言の使い回し）",

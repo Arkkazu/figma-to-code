@@ -41,12 +41,12 @@
       "cases": [
         { "id": "baseline", "case": "無改変", "expect": "落ちない", "result": "PASS" },
         { "id": "1", "case": "実在しないノードIDを section に入れる", "expect": "落ちる", "result": "PASS", "message": "section blog-detail-article の pc ノード 9999:99999 が凍結metadataに存在しません。" },
-        { "id": "2", "case": "measurement を自section外のノード（2592:27100 Header_pc）にする", "expect": "落ちる", "result": "PASS", "message": "blog-detail-first-view の pc measurement 2592:27100 が、自section のノード 2592:26933 の子孫ではありません。" },
-        { "id": "3b", "case": "両sectionの子孫である節点を共有させ、二重計上検査だけを起こす", "expect": "落ちる", "result": "PASS", "message": "測定ノード pc:2592:26973 を複数の section が宣言しています（blog-detail-first-view / blog-detail-article）。" },
-        { "id": "4", "case": "hidden継承のノード（2592:27099）を section に入れる", "expect": "落ちる", "result": "PASS", "message": "hidden を継承しています。非表示要素を検証対象にできません。" },
-        { "id": "5", "case": "page root 直下の可視ノードを担当する section を両リストから外す", "expect": "落ちる", "result": "PASS", "message": "page root 直下の pc ノード 2592:26926 が inventory で被覆されていません。" }
+        { "id": "2", "case": "measurement を自section外のノード（100:5 Header_pc）にする", "expect": "落ちる", "result": "PASS", "message": "blog-detail-first-view の pc measurement 100:5 が、自section のノード 100:2 の子孫ではありません。" },
+        { "id": "3b", "case": "両sectionの子孫である節点を共有させ、二重計上検査だけを起こす", "expect": "落ちる", "result": "PASS", "message": "測定ノード pc:100:3 を複数の section が宣言しています（blog-detail-first-view / blog-detail-article）。" },
+        { "id": "4", "case": "hidden継承のノード（100:4）を section に入れる", "expect": "落ちる", "result": "PASS", "message": "hidden を継承しています。非表示要素を検証対象にできません。" },
+        { "id": "5", "case": "page root 直下の可視ノードを担当する section を両リストから外す", "expect": "落ちる", "result": "PASS", "message": "page root 直下の pc ノード 100:1 が inventory で被覆されていません。" }
       ],
-      "note": "初回は (2) と (5) が落ちなかったが、原因は検査ではなくテスト側の誤りだった。(2) は PC first-view 2592:26933 が article を内包するため差し替え先が実際に子孫であり、(5) は差し替え先が root 直下の子の subtree 内にあり被覆条件を満たしていた。テストを修正して再実行した。検査の欠陥ではないことを確認済み。"
+      "note": "初回は (2) と (5) が落ちなかったが、原因は検査ではなくテスト側の誤りだった。(2) は PC first-view 100:2 が article を内包するため差し替え先が実際に子孫であり、(5) は差し替え先が root 直下の子の subtree 内にあり被覆条件を満たしていた。テストを修正して再実行した。検査の欠陥ではないことを確認済み。"
     },
     "regression": {
       "method": "案件側 figma-gate.e2e.mjs を実行。",
@@ -62,7 +62,7 @@
 
   "observations": [
     "component の figmaNodeId は包含検査の対象外にしてある。coverage 契約は component の figmaNodeId と section ノードの一致を要求しておらず、ページroot基準の座標specを持つ component が root を anchor にする運用が実在する（blog-detail-first-view-tag-and-typography、painted:false）。対象に含めると、既に2回承認された構成を新検査が否定することになる。この判断は round 4・5 の observation と一致する。",
-    "(5) の被覆判定は hidden の子を対象外にしている。PC 2592:27099 `Link/Header_旧ヘッダー` が hidden かつ未被覆であり、これは round 1〜5 で一貫して「被覆不要」と判定されてきた。検査をこの実績に合わせた。",
+    "(5) の被覆判定は hidden の子を対象外にしている。PC 100:4 `Link/Header_旧ヘッダー` が hidden かつ未被覆であり、これは round 1〜5 で一貫して「被覆不要」と判定されてきた。検査をこの実績に合わせた。",
     "assertCoverageExpansionIsDeclared は禁止ではなく宣言の強制である。オーナーが対象を追加する運用は正当であり、止めたいのは実装役が気づいた順に足していく形だけである。宣言を必須にすることで、拡張が意図的なものか惰性かを後から区別できる。",
     "二重計上検査は、包含検査と独立に効くことを (3b) で確認した。最初の (3) は包含検査が先に落としており、二重計上検査自体の証拠になっていなかった。"
   ],

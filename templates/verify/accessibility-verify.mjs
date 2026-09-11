@@ -103,12 +103,12 @@ async function dispatchKey(browser, key, shiftKey = false) {
 //   2. その座標で実際に受け取るのが対象自身か。固定ヘッダーやオーバーレイが覆っていると
 //      クリックは別要素へ入り、対象の状態は変わらないまま待ちだけがタイムアウトする。
 //
-// 実測（2026-08-30、rpa-technologies-theme）: Q-13 が同じ実装に対して通ったり落ちたりし、
+// 実測（2026-08-30、案件側）: Q-13 が同じ実装に対して通ったり落ちたりし、
 // 「検証器の状態遷移が不安定」と報告された。原因はページ側ではなく、この座標クリックである。
 // 覆われている場合は何が覆っているかを名指しする。原因を推測させない。
 // スクロールは即時に完了しない。案件のCSSに `scroll-behavior: smooth` があると
 // scrollIntoView はアニメーションし、直後に読む矩形は**スクロール前の位置**になる。
-// 実測（2026-08-30、rpa-technologies-theme）: assets/scss/layout/_first-view-common.scss が
+// 実測（2026-08-30、案件側）: assets/scss/layout/_first-view-common.scss が
 // `scroll-behavior: smooth` を指定しており、Q-09後のQ-13で outside-viewport になった。
 //
 // behavior: "instant" でCSSの指定を上書きし、それでも落ち着かない場合に備えて
@@ -591,7 +591,7 @@ async function scanKeyboard(browser, label) {
 
 // aria-expanded が切り替わっても、制御対象はまだ動いている。
 //
-// 実測（2026-08-30、rpa-technologies-theme）: 検索アコーディオンは click 時に
+// 実測（2026-08-30、案件側）: 検索アコーディオンは click 時に
 // aria-expanded を同期で "false" にするが、パネルが hidden / display:none になるのは
 // 折りたたみアニメーション完了後の約300ms後である。
 //
@@ -744,7 +744,7 @@ async function ensureDialogCoverage(browser, dialogs) {
 // を踏んでいた。そのため**初期展開済み（aria-expanded="true"）の要素を検証できない**。
 // 最初のclickで閉じるので、"true" を待つ側がタイムアウトする。
 //
-// 実測（2026-08-29、rpa-technologies-theme）: 共有検索アコーディオンの先頭グループは
+// 実測（2026-08-29、案件側）: 共有検索アコーディオンの先頭グループは
 // `search-controls.php` が `aria-expanded="true"` と `is-open` を出力する**意図的な初期展開**で、
 // ページ側は正しい。それでもQ-13がここで停止し、実装側を直す理由が無いまま作業が止まった。
 // 検証器が実装の正当な設計を検証できないのは、検証器の欠陥である。

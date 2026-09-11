@@ -68,7 +68,7 @@ surfaceは少なくとも次のorigin classごとに個別に記録します。
 | --- | --- |
 | MCP server | `GitKraken`、`node_repl`、`figma`、`openaiDeveloperDocs` |
 | plugin/app | `documents`、`spreadsheets`、`presentations`、`browser-use`、`pdf`、`chrome`、`template-creator`、`sites`、`visualize`、`browser` |
-| project state | `p3-open-service-top-hero-pilot` の trusted state |
+| project state | `p3-pilot-top-hero-pilot` の trusted state |
 
 このcatalogはcoordinatorが実profileを読み取って作る検査対象一覧であり、config上のenabled/disabled又はtrusted記述だけで`present`/`absent`を決めません。各候補は同一candidate launchのinventoryから個別に扱います。
 

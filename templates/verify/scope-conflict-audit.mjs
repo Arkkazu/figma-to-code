@@ -449,7 +449,7 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
   // いない。守るべき編集が存在しないのに、その行が他担当の宣言を止める理由は無い。
   // 並行編集の排他は、受領証claimの交差判定（この下）が担う。
   //
-  // 2026-09-04 実測（rpa-technologies-theme）。台帳の live scope 10件が42パスを保持し、
+  // 2026-09-04 実測（案件側）。台帳の live scope 10件が42パスを保持し、
   // うち5件は受領証を1件も持たず、5件は7日以上更新が無かった。受領証を持たない scope が
   // あるページテンプレートを押さえ、別担当の実装7ファイルが commit まで到達できなかった。しかもその行自身の
   // `changeTargets` と note は「2026-09-02に対象外とした」と書いており、manifest だけが

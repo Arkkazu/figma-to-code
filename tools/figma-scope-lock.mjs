@@ -390,7 +390,7 @@ function verify(stateInputPath) {
   // 旧実装は baseline にリポジトリ全体の dirty 集合を取り、宣言パス以外の変更を
   // すべて違反としていた。そのため**別scopeが自分の宣言パスを正しく編集しただけで、
   // 宣言パスが1つも交差しない無関係なscopeが blocked になった**。実測（案件
-  // rpa-technologies-theme, 2026-08-26）では why-choose-us scope が、blog-detail scope の
+  // 案件側, 2026-08-26）では why-choose-us scope が、blog-detail scope の
   // 正当な編集5件で停止し、begin も amend も拒否されて復帰不能になった。
   // 衝突判定は scope-conflict-audit のパス交差に委ねる方針と食い違っていた。
   //

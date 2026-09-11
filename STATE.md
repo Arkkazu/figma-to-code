@@ -4,7 +4,7 @@
 
 ## 現在地（Current）
 - [2026-08-12 / P-3 R4現行] owner承認済みv4 allocation designから、開始済みpair lifecycleとは別のappend-only v2 return-allocation sidecarを最終化した。A/B同一protocol v2とbaseline/currentの非runtime condition-local authorityをcoordinator-only rootへ固定し、28 targetは2/10/12/0/4/0、hero-laurelはsequence 3のみとした。既存R3 v1 protocol/registry、contract、ledger、pair lock、active state、P11は不変である。role packet、delivery／launch、implementation、browser/Figma測定、P-11解除は依然未承認・未実施である。
-- ステータス: waiting-owner-input（P-6 / P-7 / P-1a / 固定高さ検査は独立批評まで完了。P-4はowner判断H/Fの適用と[107]のterra ultra代替最終再批評を経て、figma-gate統合まで合格。P-5は判断Iのowner承認により[118]で最終閉鎖。P-3 Open Service pilotはFigma scope・clean A/B snapshot・共有証跡・current B改善を起草済みであり、[144]で後発の評価器CJS互換/loader hardeningも別ベンダー独立批評に合格した。[147]でClaude（Anthropic）がcomparison contract v10を合格と判定し、[148]で配列placeholder拒否・LOW-1文書・A/B v10再配備とdraft再生成を是正した。[149]で別ベンダー追補独立批評がMEDIUM-1とLOW-2の解消を確認した。local `unelevated` sandboxはA/B sibling worktreeを遮断できず、P-3実装・review contextには使わない（[150]）。[152]のClaude全文独立批評は、coordinator／role分離アーキテクチャを維持しつつ、実装loop、role配布物、返却適用順序、probe証跡のBLOCKER-1〜3により条件付きFAILと判定した。[153]でP-3実行器を変えずにBLOCKER-1〜3とP-7/P-9/P-10/P-12の手順・draft証跡を起草内で是正し、[154]のClaude（Anthropic）別ベンダー独立追補批評が当該是正とP-11 fail-closedをPASSと判定した。P-11は`NOT_AUTHORIZED`のままfail-closedであり、owner承認では解除できない。fresh gate sidecarの最終入力、実効性を確認した4 context、pair固有owner recordとowner承認は未完了。4段根拠監査の10/10/0は実Figma忠実度・P-3に読み替えない）
+- ステータス: waiting-owner-input（P-6 / P-7 / P-1a / 固定高さ検査は独立批評まで完了。P-4はowner判断H/Fの適用と[107]のterra ultra代替最終再批評を経て、figma-gate統合まで合格。P-5は判断Iのowner承認により[118]で最終閉鎖。P-3 パイロット案件 pilotはFigma scope・clean A/B snapshot・共有証跡・current B改善を起草済みであり、[144]で後発の評価器CJS互換/loader hardeningも別ベンダー独立批評に合格した。[147]でClaude（Anthropic）がcomparison contract v10を合格と判定し、[148]で配列placeholder拒否・LOW-1文書・A/B v10再配備とdraft再生成を是正した。[149]で別ベンダー追補独立批評がMEDIUM-1とLOW-2の解消を確認した。local `unelevated` sandboxはA/B sibling worktreeを遮断できず、P-3実装・review contextには使わない（[150]）。[152]のClaude全文独立批評は、coordinator／role分離アーキテクチャを維持しつつ、実装loop、role配布物、返却適用順序、probe証跡のBLOCKER-1〜3により条件付きFAILと判定した。[153]でP-3実行器を変えずにBLOCKER-1〜3とP-7/P-9/P-10/P-12の手順・draft証跡を起草内で是正し、[154]のClaude（Anthropic）別ベンダー独立追補批評が当該是正とP-11 fail-closedをPASSと判定した。P-11は`NOT_AUTHORIZED`のままfail-closedであり、owner承認では解除できない。fresh gate sidecarの最終入力、実効性を確認した4 context、pair固有owner recordとowner承認は未完了。4段根拠監査の10/10/0は実Figma忠実度・P-3に読み替えない）
 - P-11 feasibility spike: [161]でClaude（Anthropic）は[160]のLOW-1/LOW-2記録・証跡保全差分をPASSと判定し、新規HIGH/MEDIUMはなかった。[162]で23件の保全artifactを機械可読manifestへ固定した。[163]の新しい一回限り許可付き実観測で、`read-only`は実App Serverへ送信され、`thread/start`は受理されthread IDを返した。しかし最初のinventory前に`CAPTURE_CHILD_EXIT_TIMEOUT`となり、P-11は`NOT_AUTHORIZED`のままである。[164]で原因をchild生存期間とRPC deadlineの混同と確定し、終了deadlineを`stdin.end()`後だけに局所是正した。[165]の新しい一回限り許可付き実行はouter wrapperの420秒timeoutまでにreportを生成できず、当該runに属する4 processだけを停止した。[166]でraw stdout artifactの共有書込み列が後続stdin RPCを止めることを使い捨てfixtureで再現し、channel別書込み列へ局所是正した。[167]で公開CLIをdeadline付きsupervisor／workerへ分離し、freeze plan、PID限定tree cleanup、timeout receiptを追加した。[168]と[169]のユーザー一回限り許可付き実 `CODEX_HOME` candidate観測は、ともに360秒でtimeout receiptへfail-closedした。完成reportは不在であり、partial rawは未読・未解釈である。P-11認可、owner承認、pair lifecycleは依然不許可である。
 - [2026-08-11 / [170] P-11停止判断による現行補正] Claude（Anthropic）の独立批評は **BLOCKED（現行公開APIでは到達不能）** と判定した。P-11を認可へ変換せず、`--require-p11-authorization`のfail-closedを維持し、同一方式のreal `CODEX_HOME`観測、timeout対策、追加回帰試験は停止する。P-11はP-3の技術的必須条件ではない。P-3を進めるには、roleをattachment-onlyに限定し、MCP／connector／pluginの無効化と他condition artifactを提供・参照させないことを、機械証明ではないowner運用申告として残存リスク付きで記録するかをownerが判断する。P-11未認可のまま`ownerApproved:true`／pair-beginへ自動では進めない。
 - [2026-08-11 / [171] attachment-only移行条件のdraft反映] Claude（Anthropic）のattachment-only移行判定はPASSであり、条件1〜6をdraftへ反映した。P-11 FAIL逐語証跡、role packetでの`STATE.md`禁止、attachment manifest／packet check、A/B同一の残存リスク付き`isolationMechanism`、owner承認packetを準備した。post-changeの別ベンダー独立確認が未完了であり、owner承認、pair lifecycle、role配布、実装、実Figma測定は開始しない。
@@ -13,7 +13,7 @@
   - Q-09（実装とデザインの一致の自動検証）: **確定**。[79] P-6 で §6「合否基準との対応」を復元し、ゴール条件2の欠落を解消
   - Q-10（検出した差分の修正順序）: **確定**。[79] の独立批評で不合格だった指摘は [81] で是正起草し、[82] の再批評で **合格**（P-7 解消）
   - Q-09/Q-01 の実行強制（P-1a）: `unverified-figma-value` に対する provenance 検査を `figma-gate.mjs` へ実装し、負のE2E3件を追加（[83]）。[84] の独立批評で **合格**。低優先指摘（被代替ガードの回帰試験）も反映済み
-  - 忠実度ベンチマーク（P-3）: 初期計測器（`figma-gate.mjs` の checkpoint 試行記録・`preflight` の対象集合凍結、および `templates/verify/fidelity-benchmark.mjs` の集計器）は [85]〜[87] の独立批評で合格した。**比較契約v9は別物であり、[139]のbundle scope負E2E欠落を[140]で是正し、[141]でClaude（Anthropic）の別ベンダー独立批評に合格した。改訂判断J-v9はownerが採用し、その着手前条件1〜3も[142]で回帰合格した。後発のCJS直接property互換も[144]でClaude（Anthropic）の別ベンダー独立批評に合格した。** [146]で、draft runtime拒否とJ v2／condition別clean-room evidence v2のowner承認束縛をcomparison contract **v10**へ追加し、[147]でClaude（Anthropic）はv10本体を合格と判定した。検出された配列placeholderのMEDIUM-1は[148]で是正し、P-3全E2E・figma-gate E2E、A/B `npm ci`／`p3-evaluator-plan`、v10 draft再生成まで完了した。[149]の別ベンダー追補独立批評はMEDIUM-1とLOW-2の解消、新たなHIGH/MEDIUMなしを確認した。[150]で、local `unelevated` sandboxのfresh contextが相手worktreeを読めたため、同方式を4 contextの根拠に使わないと確定した。[152]のClaude全文独立批評は、actual linked worktreeとcommon Gitをcoordinatorが維持し、roleをside-only stagingへ分けるアーキテクチャ自体はPASSとしつつ、BLOCKER-1（component単位実装loop）、BLOCKER-2（contract/J/evidenceのrole配布除外とidentity検査）、BLOCKER-3（pair-preflight成功後の返却適用）を是正するまで条件付きFAILとした。[153]は、packet v3 authority-bound scan、return v4 progress/checkpoint/feedback順序、probe v5のP-7/P-9/P-10/P-12有限観測を起草内E2Eで是正した記録であり、[154]のClaude（Anthropic）別ベンダー独立追補批評は当該是正をPASSと判定した。LOW-1のrecovery journal診断手順も`P3-CLEAN-ROOM-PROTOCOL.md`へ追記済みである。P-11は現行公開APIでは`NOT_AUTHORIZED`／BLOCKEDのままである。ただし[170]・[171]のattachment-only運用境界では、P-11 FAILをPASS又は技術的隔離へ読み替えず、post-change別ベンダー独立確認とownerによる残存リスクの採否を経ることを条件に、`ownerApproved:true`・pair-beginへ進む余地がある。Open Service top hero pilotではFigma URL/node、専用clean static source/A-B worktree、PC/SP viewport、scope、B改善ID、最新evaluator baseline draftが準備済みである。
+  - 忠実度ベンチマーク（P-3）: 初期計測器（`figma-gate.mjs` の checkpoint 試行記録・`preflight` の対象集合凍結、および `templates/verify/fidelity-benchmark.mjs` の集計器）は [85]〜[87] の独立批評で合格した。**比較契約v9は別物であり、[139]のbundle scope負E2E欠落を[140]で是正し、[141]でClaude（Anthropic）の別ベンダー独立批評に合格した。改訂判断J-v9はownerが採用し、その着手前条件1〜3も[142]で回帰合格した。後発のCJS直接property互換も[144]でClaude（Anthropic）の別ベンダー独立批評に合格した。** [146]で、draft runtime拒否とJ v2／condition別clean-room evidence v2のowner承認束縛をcomparison contract **v10**へ追加し、[147]でClaude（Anthropic）はv10本体を合格と判定した。検出された配列placeholderのMEDIUM-1は[148]で是正し、P-3全E2E・figma-gate E2E、A/B `npm ci`／`p3-evaluator-plan`、v10 draft再生成まで完了した。[149]の別ベンダー追補独立批評はMEDIUM-1とLOW-2の解消、新たなHIGH/MEDIUMなしを確認した。[150]で、local `unelevated` sandboxのfresh contextが相手worktreeを読めたため、同方式を4 contextの根拠に使わないと確定した。[152]のClaude全文独立批評は、actual linked worktreeとcommon Gitをcoordinatorが維持し、roleをside-only stagingへ分けるアーキテクチャ自体はPASSとしつつ、BLOCKER-1（component単位実装loop）、BLOCKER-2（contract/J/evidenceのrole配布除外とidentity検査）、BLOCKER-3（pair-preflight成功後の返却適用）を是正するまで条件付きFAILとした。[153]は、packet v3 authority-bound scan、return v4 progress/checkpoint/feedback順序、probe v5のP-7/P-9/P-10/P-12有限観測を起草内E2Eで是正した記録であり、[154]のClaude（Anthropic）別ベンダー独立追補批評は当該是正をPASSと判定した。LOW-1のrecovery journal診断手順も`P3-CLEAN-ROOM-PROTOCOL.md`へ追記済みである。P-11は現行公開APIでは`NOT_AUTHORIZED`／BLOCKEDのままである。ただし[170]・[171]のattachment-only運用境界では、P-11 FAILをPASS又は技術的隔離へ読み替えず、post-change別ベンダー独立確認とownerによる残存リスクの採否を経ることを条件に、`ownerApproved:true`・pair-beginへ進む余地がある。パイロット案件 top hero pilotではFigma URL/node、専用clean static source/A-B worktree、PC/SP viewport、scope、B改善ID、最新evaluator baseline draftが準備済みである。
   - ゴール条件（`LOOP.md`）: 条件1（全設問 `確定`）✅ / 条件2（各回答に検証可能な合否基準）✅ 13/13にアンカー付与 / 条件3（TODO・FIXME 0件）✅。**3条件は満たした。原因4（検証器の穴＝P-4）は[107]でfigma-gate統合まで完了した。原因1（効果測定の不在＝P-3）は、comparison contract v9の独立批評・設計採用・着手前条件を通過したが、実Figma入力指定と実測値が0件のため未解消である。**
   - 次にやること: ①attachment-onlyを採るowner判断をpair固有draftへ記録し、owner操作によるMCP／connector／plugin無効化と他condition artifactを提供・参照させない運用申告を最終化する ②fresh Figma asset URL、reference crop、mask/threshold、gate sidecar、4 context、pair別recordを最終入力としてhash固定する ③owner本人が判断J record・baseline record・preImplementationProof・current改善承認record・baseline/current clean-room evidenceの`ownerApproved: true`を承認する ④承認済みpair固有recordを凍結後、read-only `pair-readiness <baseline-contract> pre-begin`を実行する
   - ブロッカー: (1) fresh gate sidecar最終入力、4 context、mask/thresholdとpair固有owner recordの承認が未完了。P-11は現行公開APIではBLOCKEDのままであり、同一方式の再観測・timeout対策・追加回帰では解消しない (2) 判断KでQ-03 §5-1 / §5-2のGrid/Hug＋min-width実測対象を指定するまで採取不能
@@ -24,6 +24,20 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [204] 2026-09-11 / Claude（PUBLIC リポジトリから案件情報を除去する）
+
+- owner指示: 「おすすめの方法で対応しろ」。[203] で報告した「PUBLIC リポジトリに案件名・実 node-id が残っている」件で、推奨は「まず最新の状態から除去し、履歴の書き換え・非公開化は別途判断」だった。
+- 範囲（実測）: 案件名（表記ゆれ・サイト名を含む）が追跡ファイル53件にあり、調べ直すと実 Figma fileKey が本ファイルに3箇所、実 node-id が本ファイル・`rules/corrections.md`・`rules/figma-spec-pipeline.md`・AUDIT・`learning/`・`figma-gate.e2e`・`public-memory-scan.e2e` にもあった。案件ドメインの URL は無かった。
+- 方法（1）文章・コメント: 案件名を「案件側」「`<案件>`」「パイロット案件」へ、実 fileKey を `<fileKey>` へ、実 node-id を役割名のプレースホルダか同じ形の架空値へ置換した。
+- 方法（2）テスト・テンプレートの fixture にある案件由来の ID（パイロット ID と所有権キー）は中立名 `pilot-` / `p3PilotTopHeroOwnership` へ一律に置換した。
+- 方法（3）パイロット実行専用のスクリプト・設計 JSON（`tools/r4-*` 23件、r5 のパイロット実行4件、`research/p3/p3-role-return.e2e.mjs`）は、案件のローカルパス・pair ID を実データとして持ち、`r5-ordinal3-*` のオーナー承認記録から sha256 で固定されている。書き換えると承認済みの証跡が壊れるため、中身は変えずに追跡から外してローカルに残し、`.gitignore` へ入れた。
+- 方法（4）同梱コピー3本（`lint-units` / `scope-conflict-audit` / `scope-coordination`）は、web-development 正本（PRIVATE）も同じ置換にそろえ、バイト一致を保った。
+- 固定への影響: 書き換えた `rules/corrections.md` の2節は、取込記録（intake）の過去の写しからだけ参照され、再発提案（`proposals/`）の根拠には入っていない。提案の根拠照合は壊れない。
+- 検証: 置換は一回限りのスクリプトで全30ファイルを先に検査し（UTF-8 往復一致・U+FFFD 件数不変・残存0）、全件が条件を満たしたときだけ書いた。追跡ファイル全体の再検索で案件名・実 fileKey・実 node-id は0件。`vendored-verifier-audit` ok、`rule-size-audit` PASS（必読合計 143,073）、`entry-trigger-audit` / `doc-command-audit` / `public-memory-scan(.e2e)` / `correction-receipt.e2e` / web-development `scope-coordination.e2e` PASS、変更 JSON 4本の構文 OK、編集した `.mjs` の構文検査 OK。ローカル `run-checks` 19/19 PASS。
+- spike e2e（`KNOWN_FAILING`）: 置換前に1回 PASS、置換後は2回とも393行目の version command tree timeout 検査で `SPIKE_PROCESS_TREE_CLEANUP_FAILED`。置換前 commit（`b90d6c5`）の worktree でも同じ系統（`PROCESS_TREE_TASKKILL_TIMEOUT`）で落ちたため、fixture ID の置換ではなく、200ms 予算で taskkill の完了を待つ検査の時間依存と判断した（比較による 🔶）。
+- 既存の欠陥（本変更と無関係）: `node tools/r5-ordinal3-candidate-provenance-review-verify.mjs --check` は `provenance review manifest byte pin changed.` で落ちる。manifest と検証器はセッション開始時の HEAD（`f547511`）から変わっておらず、manifest を最後に変えたのは 2026-08-31 の `55e91a6`（2行差分）。R5 の証跡の固定はその時点から切れていた。今回の追跡解除はファイルの中身を変えていない。
+- ⚠️ 残り（オーナー判断）: (a) git 履歴には残る。履歴の書き換えか非公開化かは別途判断 (b) 案件へ配布済みの検証器は、コメント差分で正本と不一致に見える（再配布で解消） (c) 追跡から外した r4/r5 ファイルはクローン先に存在しないので、`r5-ordinal3-*` の検証器はローカルでだけ動く (d) ユーザーのホームパス（`C:/Users/…`）は案件情報ではないため残した。
+
 ## [203] 2026-09-11 / Claude（点検: CI の audit が 09-06 から赤のまま放置され、master へ反映されていなかった）
 
 - owner指示: 「このプロジェクトfigma-to-codeに問題がないか確認しろ」
@@ -128,7 +142,7 @@
 ## [194] 2026-08-12 / Codex（P-3 R4 return allocation v2 authorityのowner承認最終化）
 
 - owner承認: v4 design SHA-256 `8c4fb215a0a3ead792fc3742eb336d45c9517501b40fcb5e59f1d807993d2313`を採用し、2/10/12/0/4/0の28 target完全分割、hero-laurelのsequence 3単独所有、v5 return plan／protocol v2／journal v2束縛だけを最終化する権限を受けた。role packet、delivery／launch、implementation、browser/Figma測定、P-11解除は承認範囲外である。
-- 記録: coordinator-only append-only root `C:/docker-project/rpa-technologies/p3-open-service-top-hero-pilot/.git/p3-coordinator/open-service-top-hero-v1-20260809/return-authority/v4/c5ec0969c8e5882d51b4d966124f87557138bf1725315fa8b42cd368e1131cad/`へA/B byte-identical `p3-role-handoff-protocol/v2` 2件（SHA-256 `a4c0202ee603ea63c4a5d05f35bdda0944305a20ab756358740ba692a8499919`）と、baseline/current非runtime authority 2件、finalization reportを生成した。`ownerApproved:true`の記録時刻は`2026-08-12T17:10:13.094Z`である。
+- 記録: coordinator-only append-only root `C:/docker-project/<案件>/p3-pilot-top-hero-pilot/.git/p3-coordinator/pilot-top-hero-v1-20260809/return-authority/v4/c5ec0969c8e5882d51b4d966124f87557138bf1725315fa8b42cd368e1131cad/`へA/B byte-identical `p3-role-handoff-protocol/v2` 2件（SHA-256 `a4c0202ee603ea63c4a5d05f35bdda0944305a20ab756358740ba692a8499919`）と、baseline/current非runtime authority 2件、finalization reportを生成した。`ownerApproved:true`の記録時刻は`2026-08-12T17:10:13.094Z`である。
 - 境界: 新recordは`runtimeEligible:false`、packet status `NOT_CREATED`、delivery status `NOT_AUTHORIZED`であり、opaque handoff ID、packet manifest、attachment hash、identityLeakScan、concrete return planを持たない。既存R3 v1 protocol／registryは凍結hash鎖を守るため置換せず、historical recordのまま保持した。
 - 検証: 28 targetの完全分割・laurelのseq3一意・protocolのA/B byte一致・全execution boundary falseを検証した。既存v1 protocol `a42c289…`、registry `138f235…`、ledger `2986f5b…`、pair lock `fd5ba36…`、A/B active state、P11 `f86935…`はいずれも不変であり、A/B `site/`、packet manifest／stagingは未作成である。
 
@@ -139,13 +153,13 @@
 
 ## [177] 2026-08-11 / Codex（attachment-only最終入力のsource-only Figma照合）
 
-- 読取: Figma file `KkBHUa1mNd6CiOKXNpSqAS` のPC first view `2153:21934`、SP first view `2153:22335`、PC header `2153:21981` のdesign contextを取得した。SP first view内のheaderは `2585:30331` として同時に確認した。
+- 読取: Figma file `<fileKey>` のPC first view `<PC first view>`、SP first view `<SP first view>`、PC header `<PC header>` のdesign contextを取得した。SP first view内のheaderは `<SP header>` として同時に確認した。
 - 境界: 取得はsource metadata／design contextと短命asset URLの照合だけである。reference cropのexport、asset bytesの保存、mask／thresholdの実測、figma-gate、browser、pair lifecycle、role配布、実装は行っていない。
 - 状態: URLとasset byte hashはowner承認済みpreflightの直前に再取得・固定する必要があるため、今回の読取をfinal evidence又はowner承認へ読み替えない。残る最終入力はfresh crop／asset／mask・threshold、11入力sidecar、独立component／page coverage review、4 contextとowner運用申告、各pair固有recordである。
 
 ## [178] 2026-08-11 / Codex（PC HeaderのFigma source-only node ID更新）
 
-- 更新: baseline/currentの`nodemap-open-service-top-hero-v1.draft.json`で、旧`0:*`だったPC Header子ノード12件を、fresh design context由来の`I2153:21981;1836:*` INSTANCE IDへA/B同一で置換した。対象はtitle、container、navigation、3 nav button、CTA、2 CTA button、logo set、ellipse、logo本体である。
+- 更新: baseline/currentの`nodemap-pilot-top-hero-v1.draft.json`で、旧`0:*`だったPC Header子ノード12件を、fresh design context由来の`<PC headerのINSTANCE子ID>` INSTANCE IDへA/B同一で置換した。対象はtitle、container、navigation、3 nav button、CTA、2 CTA button、logo set、ellipse、logo本体である。
 - 不変: 各子ノードの`status: "figma-only"`と独立Header INSTANCE review待ちの理由、全draft status、selector、asset binding、gate／record／lifecycle状態は変更していない。SP node IDとmapping Markdownには変更不要だった。
 - 検証: 両JSON parse PASS、inventory 12件・nodes 12件、旧ID 0件、`figma-only`以外 0件、A/B byte-identical、SHA-256 `e937dc5cb07009e9cdbaa7570c8853f2e8ab146d081562fb6f8edbbf6d72b864`。Figma測定、owner承認、pair lifecycle、role配布、実装は未実行。
 
@@ -156,13 +170,13 @@
 
 ## [180] 2026-08-11 / Codex（PC Header reference cropのsource export寸法を確定）
 
-- 読取: Figma source exportの`2153:21981`は、natural size `1440x121`を返した。draftにあった1440x121 exportと一致し、metadata boundの1440x64はexported reference cropの寸法を決めないことを確認した。
+- 読取: Figma source exportの`<PC header>`は、natural size `1440x121`を返した。draftにあった1440x121 exportと一致し、metadata boundの1440x64はexported reference cropの寸法を決めないことを確認した。
 - 更新: A/Bの`reference-crops` draftの注記をsource exportの事実とpreflight直前の再export／再hash要件へ置換し、A/B byte-identical SHA-256 `5f66d06744074b1ec97d7a9aa406dc27ca4398a6d6beef9f875ba89f42d269e6`を得た。A/Bの`p3-decision-j-input`のreferenceCrops hashも同期し、A/B共通SHA-256は`52aea19d3fc8dc8991684c51e1b1211add25654430ea8ec47d53fe4027536642`となった。
 - 不変: 出力PNGの保存、crop hashの最終化、mask／thresholdの測定、gate／browser、owner承認、pair lifecycle、role配布、実装は未実行。
 
 ## [181] 2026-08-11 / Codex（fresh Figma source export・asset hash固定）
 
-- 取得・固定: Figma file `KkBHUa1mNd6CiOKXNpSqAS` のPC/SP root・first view・headerについて、capture `20260811T023327Z-07b2fcb5021a` を新規取得した。6 export、6 metadata、6 design context、plan-bound raw asset 26件をfresh-gate evidenceへ保存し、manifest SHA-256は`3bf9e9b787e7f192f74a3d6ab34d3680e400851eff5da324c53518c63fe04c36`。短命asset URLは保存していない。
+- 取得・固定: Figma file `<fileKey>` のPC/SP root・first view・headerについて、capture `20260811T023327Z-07b2fcb5021a` を新規取得した。6 export、6 metadata、6 design context、plan-bound raw asset 26件をfresh-gate evidenceへ保存し、manifest SHA-256は`3bf9e9b787e7f192f74a3d6ab34d3680e400851eff5da324c53518c63fe04c36`。短命asset URLは保存していない。
 - 同期・検証: 26件のasset bytesをfresh download後に再hashし、いずれも直前の凍結値と一致した。node evidence、asset binding plan、reference crops、gate、components、Decision J input、pre-implementation proofおよびcondition別fidelity draftのsource参照を同captureへ更新した。fresh batchと更新対象のA/B共有draftはbyte-identicalである。
 - 境界: 全更新はdraft source evidenceのみであり、mask／threshold、`figma-gate`、browser/Figma比較測定、`ownerApproved:true`、Decision J採用、pair lifecycle、role配布、実装、P-11認可は変更又は開始していない。
 
@@ -202,15 +216,15 @@
 
 ## [187] 2026-08-11 / Codex（P-3 R3 scope採用・page coverage non-runtime sidecar凍結）
 
-- owner scope: pairId `open-service-top-hero-v1-20260809`、source commit `5e43b1e1d5edfa15ffa889c742726017d4b13a88`／tree `aab448dc9ac9cb16a726281d0f392f5ac0ccea09`、現28 changeTargets／6 checkpoints、B-only `hero-asset-provenance-and-responsive-geometry`、R1 attachment-only planを採用した。canonical rootはPC `2153:21702`、SP `2153:22332`はresponsive counterpartとしてdraft decision input／owner-J scaffold／owner packetへ記録した。
-- 凍結: A/B同一のnon-runtime `MyBrain/verify/page-coverage-open-service-top-hero-v1.json`を作成し、SHA-256 `c7b2093748497b6a79ef9f710c8dcf7060ce1b6947f94d168b20e6061606d367`（5,897 bytes）を固定した。sidecar基準のPC/SP metadataPathと宣言SHAは実体と一致する。
+- owner scope: pairId `pilot-top-hero-v1-20260809`、source commit `5e43b1e1d5edfa15ffa889c742726017d4b13a88`／tree `aab448dc9ac9cb16a726281d0f392f5ac0ccea09`、現28 changeTargets／6 checkpoints、B-only `hero-asset-provenance-and-responsive-geometry`、R1 attachment-only planを採用した。canonical rootはPC `<PC root>`、SP `<SP root>`はresponsive counterpartとしてdraft decision input／owner-J scaffold／owner packetへ記録した。
+- 凍結: A/B同一のnon-runtime `MyBrain/verify/page-coverage-pilot-top-hero-v1.json`を作成し、SHA-256 `c7b2093748497b6a79ef9f710c8dcf7060ce1b6947f94d168b20e6061606d367`（5,897 bytes）を固定した。sidecar基準のPC/SP metadataPathと宣言SHAは実体と一致する。
 - 検証: 4対象のA/B byte一致、sidecar JSON parse、draftとの差分がstatusとmetadataPathだけであること、scope入力の一致、`ownerApproved:false`、Decision J未生成、P-11 BLOCKED／NOT_AUTHORIZED、lifecycle未開始を確認した。独立read-only監査もPASSした。
 - 次: `claude`／`p3-osth-v1-ctx-pagecov-review`によるpage coverage独立reviewが、このSHAと実施時刻を持つnon-draft review recordを作成する。owner approval、Decision J、pair lifecycle、role配布、実装、browser/Figma測定は依然開始しない。
 
 ## [188] 2026-08-11 / Codex（P-3 page coverage独立review recordの固定）
 
 - 根拠: Claude（Anthropic）の独立review PASS。添付`C:\\Users\\tane1\\.codex\\attachments\\88a36181-8bbf-436a-b240-6ab55cd751be\\pasted-text.txt`。
-- 記録: baseline/currentの`MyBrain/verify/page-coverage-review-open-service-top-hero-v1.json`をA/B同一で作成し、`status:"approved"`、reviewer `claude`／`p3-osth-v1-ctx-pagecov-review`、`reviewedAt:"2026-08-11T15:36:59+09:00"`、sidecar SHA-256 `c7b2093748497b6a79ef9f710c8dcf7060ce1b6947f94d168b20e6061606d367`を束縛した。review record SHA-256は`827f688b545fc4f600f81fcb63e7b691c0e41c2fa262c70b7980050d4fb8bcc1`。
+- 記録: baseline/currentの`MyBrain/verify/page-coverage-review-pilot-top-hero-v1.json`をA/B同一で作成し、`status:"approved"`、reviewer `claude`／`p3-osth-v1-ctx-pagecov-review`、`reviewedAt:"2026-08-11T15:36:59+09:00"`、sidecar SHA-256 `c7b2093748497b6a79ef9f710c8dcf7060ce1b6947f94d168b20e6061606d367`を束縛した。review record SHA-256は`827f688b545fc4f600f81fcb63e7b691c0e41c2fa262c70b7980050d4fb8bcc1`。
 - 検証: review後もsidecarのbytes／SHA-256は不変であり、metadata roots実体・hash、review recordのA/B byte一致、reviewer／implementation分離を確認した。
 - 境界: page coverage reviewの記録だけである。`ownerApproved:true`、Decision J、final gate、clean-room evidence、pair lifecycle、role配布、実装、browser/Figma測定、P-11は変更又は開始していない。
 
@@ -280,7 +294,7 @@
 - 根拠: Claude（Anthropic）の添付`C:\Users\tane1\.codex\attachments\0924b2b8-acac-4bbe-8785-636c17c1752b\pasted-text.txt`、SHA-256 `253b043a7adc143541bff9ddb1a5a8895dbb462bf298dc926de407bfda7b150e`（13,538 bytes）。判定は **PASS（attachment-onlyへ移行可能）** だが、owner承認前の最小条件7件を要求する。本記録は条件1〜6のdraft準備であり、owner承認又はP-11認可ではない。
 - 条件1〜2: `P3-CLEAN-ROOM-PROTOCOL.md`へ、P-11 FAIL記録はattachment-only開始の禁止ではなく、FAILをPASS又は技術的隔離に扱うことだけを禁止する文を追加した。attachment-onlyではP-7/P-9/P-10/P-12 filesystem probeを観測・PASS計上しないことを明記した。`p3-role-packet.mjs`は`STATE.md`を禁止path classに追加し、path／logical path／USTAR entryの負E2Eを追加した。
 - 条件3〜4: baseline/currentのfidelity comparison draft、Decision J draft、Decision J input draft、condition clean-room evidence draftの14個の`isolationMechanism`を同一文字列（SHA-256 `f846779fe10d27977397efb204e20e5178a51d44133940826606e9d061fe93f7`）へ統一した。文はP-11 BLOCKED、machine-attestedではないtool surface、owner操作によるMCP／connector／plugin無効化、peer artifactを提供・参照させないowner申告、`otherConditionArtifactsAccessible:false`がreachability measurementではないことを明記し、`OS-enforced`／`guarantees`／`cannot access`を含まない。
-- 条件5〜6: A/B byte-identicalの`records/p3-p11-blocked-open-service-top-hero-v1.draft.json`をcoordinator-only／role入力禁止として追加した。逐語FAILはexit 1、`P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE`、UTF-8 211 bytes、SHA-256 `ec2d99f410ea6bd203ab976734cacd58b665345065e5714bff15a3f5630bed5a`である。A/B owner approval packetへ、P-11未証明、attachment-onlyでfilesystem probeを失うこと、peer非参照はowner申告であることを承認前に理解する3条件と、停止／採用の選択を追加した。A/B protocol／registry／READMEをattachment-onlyへ同期し、P-11 recordとattachment manifest＋`p3-role-packet --check`をcoordinator-only要件にした。
+- 条件5〜6: A/B byte-identicalの`records/p3-p11-blocked-pilot-top-hero-v1.draft.json`をcoordinator-only／role入力禁止として追加した。逐語FAILはexit 1、`P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE`、UTF-8 211 bytes、SHA-256 `ec2d99f410ea6bd203ab976734cacd58b665345065e5714bff15a3f5630bed5a`である。A/B owner approval packetへ、P-11未証明、attachment-onlyでfilesystem probeを失うこと、peer非参照はowner申告であることを承認前に理解する3条件と、停止／採用の選択を追加した。A/B protocol／registry／READMEをattachment-onlyへ同期し、P-11 recordとattachment manifest＋`p3-role-packet --check`をcoordinator-only要件にした。
 - 検証: `node --check`×2、generic JSON template parse、`node templates/verify/p3-role-packet.e2e.mjs`はPASS。A/BのREADME、handoff protocol、handoff registry、P-11 blocked record、owner packetはbyte-identical。14 JSONはparse／strict UTF-8／U+FFFD=0、`draftOnly:true`／`status:"draft"`／`ownerApproved:false`、registry executionState全falseを確認した。`node templates/verify/p3-clean-room-probe.mjs --require-p11-authorization`は引き続きexit 1／`P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE`。P-3 runtime coreは変更していない。
 - 境界: final runtime record、ownerApproved:true、pair-begin、pair-preflight、role配布、実装、Figma測定を開始していない。Claude条件7の機械検証はfinal non-draft inputとpair開始前に改めて満たす。次はこの差分の別ベンダー独立確認である。
 
@@ -435,7 +449,7 @@
 
 ## [153] 2026-08-10 / codex（P-3 clean-room隔離方式：BLOCKER-1〜3・P-7/P-9/P-10/P-12起草内是正、P-11 fail-closed）
 
-- 是正範囲: P-3 runtime core、comparison contract schema、gate FAIL条件は変更せず、runtime外のcoordinator helper・雛形・手順・Open Service A/B draftだけを更新した。`p3-role-packet.mjs`はactual v10 contractとowner Decision J v2から相手identityを導出し、safe USTAR展開、path class、raw bytes/JSON identity scanを固定する。任意の自由文にあるhost外path指示は機械証明と主張せず、delivery前のcoordinator手続レビューへ切り分けた。
+- 是正範囲: P-3 runtime core、comparison contract schema、gate FAIL条件は変更せず、runtime外のcoordinator helper・雛形・手順・パイロット案件 A/B draftだけを更新した。`p3-role-packet.mjs`はactual v10 contractとowner Decision J v2から相手identityを導出し、safe USTAR展開、path class、raw bytes/JSON identity scanを固定する。任意の自由文にあるhost外path指示は機械証明と主張せず、delivery前のcoordinator手続レビューへ切り分けた。
 - BLOCKER-1〜3: `p3-role-return.mjs` v4は両conditionのactual pair-preflight／ledger／fixed lockを照合し、`return-apply-intent`→`return-applied`→`checkpoint-recorded`→`feedback-recorded`のprogress順序、component／attempt、same-condition feedback、recoveryを強制する。したがってpair-preflight前のapply、checkpoint/feedback前の次delivery、attempt skip、replayを拒否する。role packet v3 authority-bound scanとrole attachment manifestはcontract/J/evidence/templateをrole入力から除外する。
 - P-7/P-9/P-10/P-12: `p3-clean-room-probe.mjs` v5はactual role processの`TEMP`/`TMP`へ0600 sentinelを作成し、matrix v3で3 peerのoriginal absolute TEMP pathをhash/realpath/provenanceに束縛する。P-10は`.codex`のhistory、sessions、archived sessions、memories、3 SQLite、rules、skills、および条件付きClaude Projectsを具体pathで確認し、P-12はself/peer worktree、3 peer staging、common Git、coordinator scratchへのread/write denialをfinite observationとして照合する。A/B draftはv5記述へ同一バイトで同期し、runtime record・pair lifecycle・site/・active stateは未作成のままである。
 - P-11: `--ignore-user-config --ephemeral --json`の同一actual Codex launchに束縛されたmachine-readable tool/MCP surface inventoryを、現行CLIの契約から機械取得できない。static `all-disabled` config、別プロセスのconfig listing、agent文章、self-authored transcriptは証拠として受理しない。`--validate-evidence`は常に`p11Authorization: "NOT_AUTHORIZED"`を返し、`--require-p11-authorization`は`P11_ACTUAL_ROLE_LAUNCH_SURFACE_UNPROVABLE`でFAILする。owner承認による上書きは不可である。
@@ -460,7 +474,7 @@
 ## [150] 2026-08-10 / codex（P-3 clean-room local sandbox負経路：unelevated不採用）
 
 - 実測: 現在の`C:\Users\tane1\.codex\config.toml`は`[windows] sandbox = "unelevated"`である。fresh `codex exec --ephemeral`をbaseline worktreeに限定し、`-s read-only`と`-s workspace-write`で別々に相手current worktreeとcommon Git directoryの読取りを試した。両方でcurrent worktreeは`READABLE`だった。common Git directoryが見つからないという結果だけでは、A/B境界の成立根拠にならない。
-- 判定: 同一host上のcurrent設定のlocal `unelevated` fresh context、および同一filesystemを共有するteam subagentを、Open Service P-3のbaseline/current implementationまたはreview actorとして使わない。`otherConditionArtifactsAccessible: false`を虚偽に記録しない。pair lifecycle、owner record、実装、実Figma測定は未実行である。
+- 判定: 同一host上のcurrent設定のlocal `unelevated` fresh context、および同一filesystemを共有するteam subagentを、パイロット案件 P-3のbaseline/current implementationまたはreview actorとして使わない。`otherConditionArtifactsAccessible: false`を虚偽に記録しない。pair lifecycle、owner record、実装、実Figma測定は未実行である。
 - 方針: Windows標準アカウントの追加は要件ではない。OpenAI公式のWindows sandbox仕様は`elevated`を優先し、`unelevated`をACL型のfallbackと説明する。非管理者で進める場合は、host worktree・common Git directory・shared project／connectorを渡さないside別attachment-only fresh contextを4本使い、coordinatorは各sideの返却bundleをnamed worktreeへ機械適用する。`elevated`を使う場合も、設定後に相手worktreeとcommon Git directoryの負のアクセス検査に通ったcontextだけを採用する。
 - 境界: この記録はcomparison contract v10の技術合格、判断J-v10のowner採用、`ownerApproved:true`、`pair-begin`、実装、実Figma測定の許可ではない。確定spec、`QUESTIONS.md`、gate manifest、`C:/AI/MyBrain/manifest.json`、既存gate FAIL条件は未変更である。公式根拠: https://learn.chatgpt.com/docs/windows/windows-sandbox
 
@@ -490,30 +504,30 @@
 
 ## [146] 2026-08-10 / codex（P-3 comparison contract v10：draft runtime拒否とowner clean-room承認束縛、独立批評待ち）
 
-- 契機: Open Service P-3 pilot用draft packetの読取監査で、draft marker／`p3-drafts`が「必須field不足で偶然止まる」だけで実行器が明示拒否しないこと、およびclean-room evidenceがowner判断Jへ自己申告SHAだけで結合され、`status`／`ownerApproved`／承認時刻を要求しないことを検出した。owner承認・`pair-begin`前にv10へ是正した。
+- 契機: パイロット案件 P-3 pilot用draft packetの読取監査で、draft marker／`p3-drafts`が「必須field不足で偶然止まる」だけで実行器が明示拒否しないこと、およびclean-room evidenceがowner判断Jへ自己申告SHAだけで結合され、`status`／`ownerApproved`／承認時刻を要求しないことを検出した。owner承認・`pair-begin`前にv10へ是正した。
 - 是正: `fidelity-benchmark.mjs`はruntimeでdraft path、`_draftOnly`／`draftOnly`（falseを含む）、`status:"draft"`、`OWNER_INPUT_REQUIRED*`を拒否し、`pair-begin`では全frozen authorityと間接JSON pathを**reservation前**に検査する。v10はshared `cleanRoomAuthorization`（baseline/currentの2 plan）をDecision J v2へ完全束縛し、condition別evidence v2がJ file SHA-256・plan stable JSON SHA-256・当該conditionの完全複写・`status:"approved"`・`ownerApproved:true`・承認時刻を一方向に束縛する。evidence SHAをJへ戻さないため循環SHAを作らない。started/preflight/report/compareはJ／plan／condition evidenceのpath/SHA/承認時刻を台帳まで照合する。v9以前のfixed reservationは占有済みのままv10 lifecycleへ継続・置換できない。
 - gate: `figma-gate.mjs`はmanifest・execution JSON/evidenceのdraft marker／reserved `p3-drafts`入力をpreflight/checkpoint/close/release前に拒否する。既存の非draft入力に対するgate FAIL条件は変更していない。
 - 実測: `node templates/verify/fidelity-benchmark.e2e.mjs` → `fidelity-benchmark E2E PASS`。J plan hash・shared plan差分、baseline/current evidence未承認、draft contract/J/evidence/plan path、予約後markerのpreflight abort、report/compare/ledger binding、v5 lock／legacy v4 lock、既存CJS・provider・scope負経路を含む。`node templates/verify/figma-gate.e2e.mjs` → `figma-gate E2E PASS`。`node C:/AI/MyBrain/bootstrap.mjs --check` → figma-to-code required 27件で合格。`node C:/AI/vault/scripts/workflow-entrypoints.mjs --self-check` → OK。対象MJSの`node --check`とtemplate JSON parseもPASS、変更対象のU+FFFDは0件。
 - 境界: これは起草内回帰であり、v10の合格判定、J-v10のowner採用、owner recordの`ownerApproved:true`、`pair-begin`・実装・実Figma測定の開始ではない。確定spec、`QUESTIONS.md`、gate manifest、`C:/AI/MyBrain/manifest.json`は未変更。v9を合格と判定したClaude（Anthropic）の結論をv10へ流用しない。v10は別ベンダー独立批評待ちである。
 
-## [145] 2026-08-10 / codex（Open Service P-3 fresh Figma gate evidence：A/B同一保存）
+## [145] 2026-08-10 / codex（パイロット案件 P-3 fresh Figma gate evidence：A/B同一保存）
 
-- fresh evidence: Open Service fileKey `KkBHUa1mNd6CiOKXNpSqAS`のPC/SP root・First View・Header計6 nodeについて、短命export/raw-design-context URL、取得時刻、node IDを記録し、対象asset byteを直ちに保存した。保存先はbaseline/current各`MyBrain/verify/figma/open-service-top-hero-v1/fresh-gate/`のみであり、既存`download-manifest.json`は変更していない。
+- fresh evidence: パイロット案件 fileKey `<fileKey>`のPC/SP root・First View・Header計6 nodeについて、短命export/raw-design-context URL、取得時刻、node IDを記録し、対象asset byteを直ちに保存した。保存先はbaseline/current各`MyBrain/verify/figma/pilot-top-hero-v1/fresh-gate/`のみであり、既存`download-manifest.json`は変更していない。
 - 実測: fresh-gate manifestを含む35ファイルの相対path/SHA-256はA/Bで完全一致し、manifest SHA-256は`ae0ce55065bfe6b57235dab45e9ed8cdf4b0e01dd19137f474258736ebe5a7bf`である。34 asset byteのうち31件は既存download manifestのSHAと一致した。未一致3件は新規のPC root export（1440×6772 JPEG/none）、SP root export（750×18492 JPEG/none）、SP header export（375×62 PNG/opaque）として実byteからMIME/SHA/寸法/alphaを確定した。current B asset provenance draftが期待する26 asset SHAはすべてfresh-gate内に存在する。
 - 境界: URLは短命であり、最終gate manifest作成・実行時点で失効していれば再取得する。`site/`、gate sidecar、pair固有owner record、`pair-begin`・`pair-preflight`・`pair-close`・実装・実Figma測定はまだ開始していない。コード、確定spec、`QUESTIONS.md`、gate manifest、既存gate FAIL条件、`C:/AI/MyBrain/manifest.json`は変更していない。
 
 ## [144] 2026-08-10 / Claude（Anthropic）独立批評（P-3 evaluator CJS direct-property変更：合格）
 
 - 判定: 起草者Codex（OpenAI）とは別ベンダーのClaude（Anthropic）が、[143]の後発CJS direct-property互換/loader hardeningを、P-3 comparison contract v9本体とは別個に**合格**と判定した。`require("literal").identifier`の単一property許可は実依存`pngjs`の`require("assert").ok`と`require("buffer").kMaxLength`を静的閉包に含め、alias / bracket / optional / chain / invocation / constructor、`process`の`getBuiltinModule` / `binding` / `mainModule` / `dlopen`、`module` / `node:module`のproperty取得を拒否する範囲で狭く保たれている。
-- 独立実測: `node templates/verify/fidelity-benchmark.e2e.mjs`はPASS（約620秒）、`bootstrap.mjs --check`はfigma-to-code required 27件で合格、`workflow-entrypoints.mjs --self-check`はOK。Open Service baseline/currentのread-only `p3-evaluator-plan`は、CLI SHA `317a9191891f0d7355da246fd7eefc7c35235eed190a126034c5476ca4cb1200`、input SHA `cbd34ec6a3ac565895619fb37eadba48cb6a801d3019e2efa532cab50820eebe`、root SHA `1033f8b26d40696682eabfca994c622408023554e74979dadca9f0bebc14825d`、bundle SHA `85d9f9aa0c24118d3cb564ac2b8e73744d02f7f4e720d5ac9d06f03f41e07bdc`、root 12 / closure 38 / package 2で一致した。A/B sourceは同一commit/tree・Git clean・`site/`未作成だった。
+- 独立実測: `node templates/verify/fidelity-benchmark.e2e.mjs`はPASS（約620秒）、`bootstrap.mjs --check`はfigma-to-code required 27件で合格、`workflow-entrypoints.mjs --self-check`はOK。パイロット案件 baseline/currentのread-only `p3-evaluator-plan`は、CLI SHA `317a9191891f0d7355da246fd7eefc7c35235eed190a126034c5476ca4cb1200`、input SHA `cbd34ec6a3ac565895619fb37eadba48cb6a801d3019e2efa532cab50820eebe`、root SHA `1033f8b26d40696682eabfca994c622408023554e74979dadca9f0bebc14825d`、bundle SHA `85d9f9aa0c24118d3cb564ac2b8e73744d02f7f4e720d5ac9d06f03f41e07bdc`、root 12 / closure 38 / package 2で一致した。A/B sourceは同一commit/tree・Git clean・`site/`未作成だった。
 - 記録と限定: Claudeのmedium指摘は、変数束縛後のconstructor/process到達が今回の変更以前から存在する経路である点であり、今回scopeの不合格理由ではない。静的execution bundleが識別子束縛や任意runtime loader逃避を完全に証明・sandboxしない限界をREADME/P3-CONTRACT-RECORDSへ明記した。`module`の非loader propertyを使う追加負E2Eはlowの後続候補であり、合格済み意味変更へ新たなコード変更を加えない。
 - draft: A/Bのevaluator baseline draftを最新planから再生成し、両方SHA-256 `7b56c5e1a59108290c678d23058635c12c0fb8202fc718b62dd492247d6a1c8f`、`version:2` / `status:draft` / `ownerApproved:false` / artifact 12件を確認した。fixed ledger / pair lockは未作成である。
 - 境界: Claudeの合格はdraft再生成と後段pair固有record準備を許すが、owner本人の`ownerApproved:true`を代行しない。fresh gate sidecar、4 context、判断J record・baseline record・preImplementationProof・current改善承認recordのowner承認が揃うまで、`pair-begin`・`pair-preflight`・`pair-close`・実装・実Figma測定を開始しない。確定spec、`QUESTIONS.md`、gate manifest、`figma-gate.mjs`、既存gate FAIL条件、`C:/AI/MyBrain/manifest.json`は変更していない。
 
-## [143] 2026-08-09 / codex（Open Service P-3 pilot入力と評価器CJS hardening：独立批評待ち）
+## [143] 2026-08-09 / codex（パイロット案件 P-3 pilot入力と評価器CJS hardening：独立批評待ち）
 
-- P-3 pilot入力: ownerが指定したOpen Service FigmaのPC `2153:21702` / SP `2153:22332` と、First View / Header範囲、PC 1440×850 / SP 375×850、current B改善ID `hero-asset-provenance-and-responsive-geometry` を案件側reportへ記録した。専用source/A/B worktreeは同一commit `5e43b1e1d5edfa15ffa889c742726017d4b13a88`・tree `aab448dc9ac9cb16a726281d0f392f5ac0ccea09`、Git clean、`site/`未作成である。Figma evidenceはPC/SP/headerと親rootをA/Bへ同一保存し、download manifest SHA-256 `543fd752997ca2b463acb9aabbce0cd2c284dd84e6da4888ec8075af64368fac`、106ファイルの相対path/SHA-256一致、短命asset URL残存0を得た。
-- current B draft: `p3-b-hero-asset-provenance-open-service-top-hero-v1.draft.json`へ、Figma source byteのMIME/SHA-256/intrinsic寸法/alpha分類、PC/SP CSS幾何、new `changeTargets` 28件を記録した。これはBのみの未承認実装手順であり、baseline Aへの指示・owner record・`pair-begin`の代替ではない。
+- P-3 pilot入力: ownerが指定したパイロット案件 FigmaのPC `<PC root>` / SP `<SP root>` と、First View / Header範囲、PC 1440×850 / SP 375×850、current B改善ID `hero-asset-provenance-and-responsive-geometry` を案件側reportへ記録した。専用source/A/B worktreeは同一commit `5e43b1e1d5edfa15ffa889c742726017d4b13a88`・tree `aab448dc9ac9cb16a726281d0f392f5ac0ccea09`、Git clean、`site/`未作成である。Figma evidenceはPC/SP/headerと親rootをA/Bへ同一保存し、download manifest SHA-256 `543fd752997ca2b463acb9aabbce0cd2c284dd84e6da4888ec8075af64368fac`、106ファイルの相対path/SHA-256一致、短命asset URL残存0を得た。
+- current B draft: `p3-b-hero-asset-provenance-pilot-top-hero-v1.draft.json`へ、Figma source byteのMIME/SHA-256/intrinsic寸法/alpha分類、PC/SP CSS幾何、new `changeTargets` 28件を記録した。これはBのみの未承認実装手順であり、baseline Aへの指示・owner record・`pair-begin`の代替ではない。
 - 評価器hardening: 実依存`pngjs`の`require("assert").ok`を静的閉包化するため、direct literal requireの単一named propertyだけを許容した。同時に`process`の`getBuiltinModule` / `binding` / `mainModule` / `dlopen`、および`module` / `node:module`のproperty取得はFAILへ追加し、bracket / optional / chain / invocation / constructorを引き続き拒否した。変更template SHA-256は`fidelity-benchmark.mjs=317a9191891f0d7355da246fd7eefc7c35235eed190a126034c5476ca4cb1200`、E2E=`d0b2ab48815806fefe31d806fe9da60bc85f509cbf953531e7086eaa29e24e28`である。
 - 実測: `node templates/verify/fidelity-benchmark.e2e.mjs`は**PASS（1,179秒）**。`bootstrap.mjs --check`はfigma-to-code required 27件で合格、`workflow-entrypoints.mjs --self-check`はOK。A/B双方のread-only `p3-evaluator-plan`はroot SHA `1033f8b26d40696682eabfca994c622408023554e74979dadca9f0bebc14825d`、bundle SHA `85d9f9aa0c24118d3cb564ac2b8e73744d02f7f4e720d5ac9d06f03f41e07bdc`、root 12 / closure 38 / package 2で一致した。変更templateのU+FFFDは各0、STATE.mdは既存190文字である。
 - 境界: この後発評価器意味変更は[141]のv9合格後であり、Codexの自己合格にしない。案件側に独立批評依頼を作成した。合格するまでevaluator baselineは`draft`・`ownerApproved:false`のままとし、owner record・`pair-begin`・実装・実Figma測定を開始しない。確定spec、`QUESTIONS.md`、gate manifest、`figma-gate.mjs`、既存gate FAIL条件、`C:/AI/MyBrain/manifest.json`は変更していない。
@@ -1447,7 +1461,7 @@
   - 未実施: 案件側での実測（案件ルートへの実設置、`npm run figma:gate -- preflight` の実行、上位層 `C:\AI\vault` / `C:\AI\web-development` を読める状態での `local` 判定）はローカルでしか行えない。案件側 `MyBrain/verify/` への配布同期（監査C）と `unverified-figma-value` の滞留（監査D）は別scopeのまま。
 
 - [2026-08-21 kazu実測報告 / 案件入口の現況] **案件側の入口は既に存在するが、上位層へ繋がっていない。**
-  - 実在: `…\\themes\\rpa-technologies-theme\\AGENTS.md` と同 `CLAUDE.md`。本文は「規則本文は `MyBrain/WORKFLOW.md` のみです」の3行。
+  - 実在: `…\\themes\\案件側\\AGENTS.md` と同 `CLAUDE.md`。本文は「規則本文は `MyBrain/WORKFLOW.md` のみです」の3行。
   - 位置はテーマディレクトリであり、リポジトリのルートではない。祖先チェーンはcwdから上へしか辿らないため、上位ディレクトリで起動したセッションには届かない。
   - 内容は開始順の5（案件層）だけを宣言し、1〜4（共通Vault / Web Development / figma-to-code / 本リポジトリの規則本文）を参照しない。**監査Aの「届いても本文が無い」に加えて「届いても上位層へ繋がらない」状態だった。**Codexがfigma-to-codeの規則に従わない直接の経路として辻褄が合う。
   - 対応: `templates/project-entry.md` に「規則を読む順序」（vault → web-development → figma-to-code → 案件 `MyBrain/`）を明記し、案件側 `MyBrain/` は最下層で上位層を置き換えないと規定。`project-entry-install.mjs` は複数ディレクトリを一度に設置・検査できるようにした（リポジトリのルートとテーマディレクトリの両方に同一内容を置くため）。
@@ -1638,7 +1652,7 @@ page coverage の独立レビュー承認は現在のcoverageハッシュにだ�
 
 ## 2026-08-29 検証キットが3日間配布できていなかった（claude / オーナー指示「推奨の改善案を実行しろ」）
 
-発端は案件 rpa-technologies-theme の原因調査レビュー。「規則もspecもゲートも検証器も設置済みなのに
+発端は案件側 の原因調査レビュー。「規則もspecもゲートも検証器も設置済みなのに
 Figma作業がゲートを通らない」の原因を、案件側ではなく**正本側**で特定した。
 
 ### 根本原因
@@ -1702,7 +1716,7 @@ gate本体と同じ規則（`FIGMA_TO_CODE_ROOT`、既定 `C:\AI\figma-to-code`�
 
 `verifier-distribute` はファイル名を省略すると「配布先に既に存在する `.mjs`/`.json` すべて」を対象にする。
 案件には**意図的に正本と違う**ファイルがあり、e2eが落ちないため自動巻き戻しも効かない。
-rpa-technologies-theme では `accessibility-verify-template.json`（オーナー承認済みの色検査停止）と
+案件側 では `accessibility-verify-template.json`（オーナー承認済みの色検査停止）と
 `rule-size-audit.config.json`（案件の必読上限）の2件。**配布は必ずファイル名を明示する。**
 `verifier-sync-audit` はこの2件を「乖離」として数え続けるため、恒久的に赤が残る。
 意図的な案件固有設定を宣言して別枠で数える仕組みが要る（正本は web-development / 未着手）。
@@ -1732,7 +1746,7 @@ rpa-technologies-theme では `accessibility-verify-template.json`（オーナ�
 宣言パス以外の変更をすべて違反にしていた。別scopeが自分の宣言パスを正しく編集しただけで、
 宣言パスが1つも交差しない無関係なscopeが blocked になる。
 
-実測（案件 rpa-technologies-theme、2026-08-26T02:04:39Z）: `why-choose-us-20260826` が
+実測（案件側、2026-08-26T02:04:39Z）: `why-choose-us-20260826` が
 `blog-detail` scope の編集5件で停止した。`begin` は既存stateを不変として、`amend` は blocked を
 修正不可として拒否するため、**復帰不能**だった。2026-08-29 の独立検証はこの停止を
 「直前の別作業の副作用」と誤読し、既知欠陥だと気づかなかった。

@@ -79,7 +79,7 @@ export function withScopePreflightLock({ root = process.cwd(), gateKind, manifes
 
   // 中断lockの回収。持ち主のプロセスが居なくなったlockは、誰も解放できないまま案件全体を止める。
   //
-  // 実測（2026-08-29、rpa-technologies-theme）: preflight が拒否されると gate は fail() から
+  // 実測（2026-08-29、案件側）: preflight が拒否されると gate は fail() から
   // process.exit(1) を呼ぶ。下の finally は callback の return/throw でしか走らないため、
   // **拒否のたびにlockが漏れる**。実際に PID 32980 のlockが残り、別担当者のscopeが
   // 「lockを削除してよいか」を人に聞く以外に進めない状態になった。

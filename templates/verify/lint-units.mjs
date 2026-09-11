@@ -47,7 +47,7 @@ if (files.length === 0) {
 //
 // 旧実装は「行に // があれば検査を飛ばす」だった（hasReason）。内容を問わないため
 // `// x` でも免除され、**検証が自己申告で消える**。実測（2026-09-01、
-// rpa-technologies-theme）: margin-bottom/right 20件のうち17件が行内コメントで
+// 案件側）: margin-bottom/right 20件のうち17件が行内コメントで
 // 免除されており、W1 は警告のままなので exit にも影響していなかった。
 // 今日塞いだ painted:false / uiChange:false と同じ族なので、同じ形で直す。
 //
@@ -356,7 +356,7 @@ for (const file of files) {
     // E10（旧W1）: margin-bottom / margin-right。
     //
     // 旧実装は警告で、しかも行内コメントがあれば検査自体を飛ばしていた（内容は問わない）。
-    // 実測（2026-09-01、rpa-technologies-theme）: 20件中17件がコメントで免除され、
+    // 実測（2026-09-01、案件側）: 20件中17件がコメントで免除され、
     // 警告は exit に影響しないため、規則は事実上機能していなかった。
     // 例外は台帳（coding manifest の scope.styleRuleApplication.exceptions）で宣言する。
     const mb = t.match(/margin-(bottom|right)\s*:/);

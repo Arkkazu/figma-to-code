@@ -34,7 +34,7 @@
 ## 3. 問題点
 
 ### R-1（重大・そのままでは案件で着手不能）
-`WORKFLOW.md:7` は「他の調査・編集より先に**リポジトリ直下で** `node tools/workflow-preflight.mjs` を実行する。非0終了…なら着手しない」と規定した。しかし `STATE.md` の実測どおり、案件の作業ディレクトリは `C:/docker-project/rpa-technologies/...` であり `tools/` は無い。**実測でこの場合 exit 1 になる。**規定を字面どおり守れば案件では永久に着手できず、絶対パス形（`node C:\AI\figma-to-code\tools\workflow-preflight.mjs`）も「先に `cd` せよ」もどの文書にも書かれていない。
+`WORKFLOW.md:7` は「他の調査・編集より先に**リポジトリ直下で** `node tools/workflow-preflight.mjs` を実行する。非0終了…なら着手しない」と規定した。しかし `STATE.md` の実測どおり、案件の作業ディレクトリは `C:/docker-project/<案件>/...` であり `tools/` は無い。**実測でこの場合 exit 1 になる。**規定を字面どおり守れば案件では永久に着手できず、絶対パス形（`node C:\AI\figma-to-code\tools\workflow-preflight.mjs`）も「先に `cd` せよ」もどの文書にも書かれていない。
 
 結果として現場では「各エージェントが適当に解釈する」か「無視する」になる。**守れない形で書かれた規則は、無視の口実を規則側が供給する。**監査B節（読んだことにして着手する経路が最も安い）の再生産である。
 

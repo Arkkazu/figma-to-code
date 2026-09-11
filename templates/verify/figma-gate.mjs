@@ -699,7 +699,7 @@ function validateStartDeclaration(scope, context) {
 
   // 着手宣言は「いま着手する」ことの記録である。したがって preflight の直前にしか作れない。
   //
-  // 2026-08-29 実測（rpa-technologies-theme）: 新しい依頼を受けたエージェントが、3日前の
+  // 2026-08-29 実測（案件側）: 新しい依頼を受けたエージェントが、3日前の
   // 依頼文と3日前の日付を書いた宣言を作って再preflightを通そうとした。形式はすべて満たすが、
   // 目の前の依頼を表していない。着手宣言が「着手の記録」ではなく「ゲートを通す書類」になると、
   // これが担保している5点は意味を失う。
@@ -1168,7 +1168,7 @@ function validateVisualMask(value, label) {
 
 // オーナー承認による「旧Figmaラスター比較の除外」。
 //
-// 背景（2026-09-09 実測、rpa-technologies-theme / partners-20260907）: オーナーが
+// 背景（2026-09-09 実測、案件側 / partners-20260907）: オーナーが
 // 「サービス欄だけ、最新のCSS指定を正として、旧Figma画像との完全一致を配備条件から
 // 外して良い」と承認し、その記録が3か所（decision JSON / spec.ownerApprovedCssSections /
 // gate manifest.scope.servicesDesignApproval）に残された。**しかし検証器はどれも読んで
@@ -1224,7 +1224,7 @@ function pngPixelSize(absolutePath, label) {
 
 // 登録した比較画像の画素寸法が、specの同じセレクターの寸法と一致することをpreflightで確かめる。
 //
-// なぜ要るか（2026-09-10 実測、rpa-technologies-theme / static-resource-download-20260909）:
+// なぜ要るか（2026-09-10 実測、案件側 / static-resource-download-20260909）:
 // カードの比較画像がコンポーネント単体ノードの固有寸法 384x453 で書き出されており、
 // ページ配置後の 264x453（specの宣言値）と食い違っていた。**Figmaはインスタンスを固有寸法で
 // 描画する**ため、get_screenshot でも配置後の寸法は得られない。この食い違いは checkpoint の
@@ -2503,7 +2503,7 @@ function start() {
   console.log(`\n[3] 停止・未確認として報告する条件（${stopConditions.length}件）— どれかに当たったら進めない`);
   for (const condition of stopConditions) console.log(`  - ${condition}`);
   // 着手宣言は「ゲートを通す書類」ではなく「いま着手することの記録」である。
-  // 2026-08-29 実測（rpa-technologies-theme）: 新しい依頼に対し、3日前の依頼文と3日前の日付を
+  // 2026-08-29 実測（案件側）: 新しい依頼に対し、3日前の依頼文と3日前の日付を
   // 書いた宣言が作られ、しかも**今回直すべきファイルが outOfScopePaths に入っていた**。
   // 形式は満たすが、その宣言のまま進めると依頼は構造的に実行不能になる。
   // 書く前にこの3点を目に入れる。preflight 側でも declaredAt の鮮度と依頼文の写しは落とす。
@@ -3167,7 +3167,7 @@ function assertCheckpointsComplete(state, plan, components, validated, checkpoin
       // VISUAL をオーナー承認で外した節には撮影証跡が存在しない。checkpoint 側（"VISUAL SKIPPED
       // (owner approved)"）が captureEvidence を作らないためである。ここで撮影証跡を必須にすると、
       // 承認経路を通った scope は section-close / close で必ず落ち、承認が機械へ届かない。
-      // 実測（2026-09-10、rpa-technologies-theme / static-resource-download-20260909）:
+      // 実測（2026-09-10、案件側 / static-resource-download-20260909）:
       // ownerVisualExemption を宣言した downloads-content が checkpoint は PASS したのに
       // 「checkpoint record capture evidence (downloads-content) is required.」で閉じられなかった。
       // 承認の置き場だけ作って読む側を直さないと、経路は存在しないのと同じである。

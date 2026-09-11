@@ -62,7 +62,7 @@ export function validateCorrectionReceipt(root, receiptPathValue) {
   if (expectedLogHash !== actualLogHash) {
     // これは異常ではなく定常手順である。受領証は記録時点の訂正ログhashを固定するため、
     // 訂正が1件でも追記・退避されると既存の受領証は**すべて**失効する。
-    // 2026-08-29 実測（rpa-technologies-theme）: 受領証115件が105通りのhashを固定しており、
+    // 2026-08-29 実測（案件側）: 受領証115件が105通りのhashを固定しており、
     // 現在のログと一致するものは0件だった。にもかかわらず、この文言だけを見た独立検証は
     // 「scopeが進めない停止経路」と誤読した。何が起きたかと、次に打つコマンドを出す。
     throw new Error(

@@ -200,7 +200,7 @@ NOTE で報告し、宣言は止めない。並行編集の排他は受領証cla
 一行だけでは、相手が作業中なのか置き去りなのか実装役に判別できず、オーナーへの
 問い合わせに化ける。
 
-根拠は実測（2026-09-04 / rpa-technologies-theme）。台帳の live scope 10件が42パスを
+根拠は実測（2026-09-04 / 案件側）。台帳の live scope 10件が42パスを
 保持し、**うち5件は gate受領証を1件も持たず、5件は7日以上更新が無かった**。受領証を
 持たない `static-blog-route-and-comparison-20260831` が `page-static-blog-detail.php` を
 押さえ、別担当の実装7ファイルが pre-commit（`close-receipt-audit --require-coverage`）で

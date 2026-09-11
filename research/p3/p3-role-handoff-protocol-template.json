@@ -99,7 +99,7 @@
       "siteRootOnly": true,
       "laterAttemptsMayNotCreateTargets": true,
       "laterSequencesMayNotRecreateTargets": true,
-      "p3OpenServiceTopHeroOwnership": {
+      "p3PilotTopHeroOwnership": {
         "site/assets/hero/hero-laurel.png": {
           "ownerSequence": 3,
           "mustAppearInAttemptOneCreatePaths": true,

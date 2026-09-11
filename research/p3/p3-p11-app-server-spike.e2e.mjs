@@ -94,7 +94,7 @@ function boundThreadId() { return malformed ? "wrong-thread-" + mode : threadId;
 function candidateMode() { return mode === "candidate" || mode === "candidate-slow-first-inventory" || mode === "candidate-no-project" || mode === "candidate-accessible-only" || mode === "candidate-app-list-unreconciled" || mode === "candidate-app-installed-only" || mode === "candidate-app-id-missing" || mode === "candidate-app-name-id-conflict" || mode === "candidate-app-id-duplicate" || mode === "candidate-app-callability-conflict" || mode === "candidate-missing-app-installed-response"; }
 function projectStates() {
   if (!fieldMode()) return undefined;
-  if (candidateMode() && mode !== "candidate-no-project") return [{ id: "p3-open-service-top-hero-pilot", origin: "mcp" }];
+  if (candidateMode() && mode !== "candidate-no-project") return [{ id: "p3-pilot-top-hero-pilot", origin: "mcp" }];
   if (mode === "project-trusted") return [{ id: "p11-project-trusted-marker", origin: "mcp" }];
   return [];
 }
@@ -243,7 +243,7 @@ function plan(root, fixturePath, candidateMode = "candidate", observationMode = 
     catalog: {
       mcpServers: ["GitKraken", "node_repl", "figma", "openaiDeveloperDocs"],
       pluginApps: ["documents", "spreadsheets", "presentations", "browser-use", "pdf", "chrome", "template-creator", "sites", "visualize", "browser"],
-      projectStates: ["p3-open-service-top-hero-pilot"],
+      projectStates: ["p3-pilot-top-hero-pilot"],
     },
     candidate: { launch: launch(fixturePath, "candidate", candidateMode, codeHomes[0], coordinatorScratchRoot, observationMode) },
     controls: {
@@ -309,7 +309,7 @@ try {
   require(target(report, "mcpServer", "GitKraken").state === "present", "observed MCP server was not present");
   require(target(report, "mcpServer", "node_repl").state === "absent", "complete MCP control did not permit observed-class absence");
   require(target(report, "pluginApp", "documents").state === "unobservable", "plugin/app must not be inferred from app snapshot");
-  require(target(report, "projectState", "p3-open-service-top-hero-pilot").state === "unobservable", "project trusted state must not be inferred from control only");
+  require(target(report, "projectState", "p3-pilot-top-hero-pilot").state === "unobservable", "project trusted state must not be inferred from control only");
   require(report.candidate.rawAppServerResponseEvidence.state === "unobservable", "baseline raw response lacking thread fields became observable");
   require(report.requiredApiCapabilities.atomicTurnStartBinding.observed === false, "two observations must not claim atomic turn binding");
   require(report.requiredApiCapabilities.snapshotId.observed === false, "missing snapshot API must stay unobserved");
@@ -526,7 +526,7 @@ try {
   require(availabilityProvenance.requestMethod === "app/list" && availabilityProvenance.fieldPath.includes(".isAccessible"), "app/list isAccessible provenance missing");
   require(target(rich.report, "pluginApp", "documents").state === "present", "rich thread-bound plugin/app target was not present");
   require(target(rich.report, "pluginApp", "spreadsheets").state === "absent", "rich thread-bound plugin/app target was not absent");
-  require(target(rich.report, "projectState", "p3-open-service-top-hero-pilot").state === "present", "rich thread-bound project state was not present");
+  require(target(rich.report, "projectState", "p3-pilot-top-hero-pilot").state === "present", "rich thread-bound project state was not present");
 
   // Each raw inventory method must have a thread-bound request/response pair.
   // An unpaired app/installed request cannot silently narrow enabled/callable
@@ -652,7 +652,7 @@ try {
   const richAbsentFixture = join(richAbsentRoot, "fixture-app-server.mjs");
   writeFileSync(richAbsentFixture, fixtureServerSource(), "utf8");
   const richAbsent = await runP11AppServerSpike(plan(richAbsentRoot, richAbsentFixture, "candidate-no-project", "rich"));
-  require(target(richAbsent.report, "projectState", "p3-open-service-top-hero-pilot").state === "absent", "rich empty project-state list did not establish controlled absence");
+  require(target(richAbsent.report, "projectState", "p3-pilot-top-hero-pilot").state === "absent", "rich empty project-state list did not establish controlled absence");
   require(richAbsent.report.p11Authorization === "NOT_AUTHORIZED" && richAbsent.report.outcome.state === "NOT_AUTHORIZED", "rich project absence changed P-11 authorization");
 
   // Lookalike fields with a mismatched response thread ID are not evidence.
@@ -666,7 +666,7 @@ try {
     require(malformed.report.requiredApiCapabilities[capability].observed === false, "mismatched raw response thread ID observed " + capability);
   }
   require(target(malformed.report, "pluginApp", "documents").state === "unobservable", "mismatched raw plugin/app response became observed");
-  require(target(malformed.report, "projectState", "p3-open-service-top-hero-pilot").state === "unobservable", "mismatched raw project response became observed");
+  require(target(malformed.report, "projectState", "p3-pilot-top-hero-pilot").state === "unobservable", "mismatched raw project response became observed");
   require(malformed.report.p11Authorization === "NOT_AUTHORIZED" && malformed.report.outcome.state === "NOT_AUTHORIZED", "malformed raw response changed P-11 authorization");
 
   // A syntactically valid but non-reproducible cursor stream never becomes an

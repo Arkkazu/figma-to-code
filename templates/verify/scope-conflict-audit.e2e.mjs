@@ -217,7 +217,7 @@ try {
   //     編集には preflight 受領証が要るため、受領証の無い scope は定義上まだ1行も編集して
   //     いない。ここを止めると、予約が失効しないまま他担当の実装が commit まで到達できない。
   //
-  //     2026-09-04 実測（rpa-technologies-theme）: 台帳の live scope 10件が42パスを保持し、
+  //     2026-09-04 実測（案件側）: 台帳の live scope 10件が42パスを保持し、
   //     5件は受領証を1件も持たず、5件は7日以上更新が無かった。受領証を持たない
   //     `static-blog-route-and-comparison-20260831` が `page-static-blog-detail.php` を
   //     押さえ、別担当の実装7ファイルが pre-commit で止まっていた。

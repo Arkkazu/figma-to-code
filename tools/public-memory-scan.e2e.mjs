@@ -35,10 +35,10 @@ write(
 write(
   "leaked.md",
   [
-    "対象ノードは 2153:21943 で、PC側は 3288:45292。",
+    "対象ノードは 1234:56789 で、PC側は 4321:98765。",
     "参照は https://www.figma.com/design/AbCdEf123456 を見ること。",
     "fileKey = AbCdEf1234567890",
-    "見出しの高さは 121px、余白は 195px。",
+    "見出しの高さは 123px、余白は 456px。",
     "-----BEGIN OPENSSH PRIVATE KEY-----",
     "token: ghp_abcdefghijklmnopqrstuvwxyz0123",
     "api_key: 1234567890abcdef",

@@ -196,7 +196,7 @@ specに `viewportPolicy.scrollbars`（`hidden` または `visible`）を宣言�
 - **TEXTノードは文言を必ず検証する。** node map が `figmaNodeType: "TEXT"` と宣言した対応先に `text` も `textPattern` も無いspecはゲートが落とす。幾何値だけ合わせて文言が違う実装が「verified」として出荷されるのを防ぐため。
 - **動的文言は書式で検証する（`textPattern`）。** 件数・日付・ページ番号のように実データで変わる文言は、Figmaのtextノード名をそのまま期待値にしない。textノード名はデザイン時点のダミーで、実装の正解ではないことがある（実例：services一覧のPCは「該当 18 件 / 全 18 件」だがカード実体は21件、SPでは同じノードが hidden になり `txt` に置き換わっていた）。この場合は `textPattern`（正規表現）と `textPatternReason`（20文字以上、なぜ動的かとFigma証跡が何を示すか）を書く。`text` との併記は認めない（固定なのか動的なのかが曖昧になるため）。
 - 動的かどうか迷ったら、**もう一方のviewportの同じノードを見る。**片方で literal、もう片方で汎用名や hidden になっていれば動的値である。
-- **インスタンス内部の文言とIDを `get_metadata` から採らない（2026-08-04昇格）。** `get_metadata` をINSTANCEに対して呼ぶと、子は「インスタンス相対ID（`0:3` 等）」と「コンポーネントの既定テキスト」で返る。オーバーライド後の実文言ではない。実例：service詳細 H3-01（PC 2034:26820）の見出しは metadata では「機能コンテンツA」だが、実際は**「機能コンテンツC」**。同様に services一覧の H2-02 は8箇所すべてが metadata では "BPMS" と返る（幅が 36 と 53 で違うのに同名＝既定値である証拠）。
+- **インスタンス内部の文言とIDを `get_metadata` から採らない（2026-08-04昇格）。** `get_metadata` をINSTANCEに対して呼ぶと、子は「インスタンス相対ID（`0:3` 等）」と「コンポーネントの既定テキスト」で返る。オーバーライド後の実文言ではない。実例：ある詳細ページの H3-01 の見出しは metadata では「機能コンテンツA」だが、実際は**「機能コンテンツC」**。同様に services一覧の H2-02 は8箇所すべてが metadata では "BPMS" と返る（幅が 36 と 53 で違うのに同名＝既定値である証拠）。
   - インスタンス内部の正本は `get_design_context` の出力。ID は `data-node-id="I<instance>;<componentChild>"` の形で出るので、node map の `figmaNodeId` にはこれを使う。
   - 直接の TEXT ノード（インスタンスの外）は `get_metadata` のノード名が実文言なので、そのまま使ってよい。
   - **見分け方：同じコンポーネントの別インスタンスを2つ metadata で取り、テキストノード名が同一で幅が違えば既定値を見ている。**

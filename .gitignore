@@ -7,3 +7,11 @@ error.log
 # エージェント個別の設定。プレイブック本体とは別に管理する。
 .claude/
 .codex/
+
+# 案件固有のパイロット実行記録。案件のローカルパス・pair ID・承認 hash を直接持つため、
+# 公開リポジトリに置かずローカルにだけ残す（2026-09-11。WORKFLOW.md「Figma差異指摘の保存先」）。
+tools/r4-*
+tools/r5-baseline-reissue-3-candidate-*
+tools/r5-launch-baseline-seq1.mjs
+tools/r5-prepare-baseline-seq1-launch-records.mjs
+research/p3/p3-role-return.e2e.mjs

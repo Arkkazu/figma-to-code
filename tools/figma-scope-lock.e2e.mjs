@@ -224,7 +224,7 @@ try {
   run(["rebaseline", amendStatePath, rebaselinePath], 1);
 
   // glob文字を含む「実在ファイル名」で走査が止まらないこと。glob禁止は宣言パスの検査であり、
-  // git が返す実在パスへ適用すると運用が止まる。実測（案件 rpa-technologies-theme, 2026-08-29）:
+  // git が返す実在パスへ適用すると運用が止まる。実測（案件側, 2026-08-29）:
   // ルートに `{` という0バイトファイルが1つあっただけで begin / verify / rebaseline が
   // 案件全体で実行不能になった。
   // Windowsでは * ? がファイル名に使えないため、両OSで作成できる { } [ ] だけを対象にする。

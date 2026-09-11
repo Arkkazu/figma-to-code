@@ -167,7 +167,7 @@
 
 ## 2026-08-04: node map の figmaNodeId は実IDだけを使う
 <!-- loop-log: {"id":"correction-node-map-real-id-20260804","kind":"correction","failureClass":"node-map-real-id","recurrenceKey":"node-map-real-id","action":"strengthen","promotability":"promotable","ruleTargets":["rules/figma-spec-pipeline.md"],"verifierTargets":["templates/verify/figma-gate.e2e.mjs"]} -->
-- 指摘：node map の網羅性検査（inventory との双方向照合）を入れた直後、最初に落ちたのが自分で作った node map だった。行内のテキストセルを `3288:45292:label` のような**役割ベースの合成ID**で180件登録していた。Figma には実IDがあるのに転記を省いていた。
+- 指摘：node map の網羅性検査（inventory との双方向照合）を入れた直後、最初に落ちたのが自分で作った node map だった。行内のテキストセルを `<実node-id>:label` のような**役割ベースの合成ID**で180件登録していた。Figma には実IDがあるのに転記を省いていた。
 - なぜ問題か：対応表としては読めるが、**Figmaのノードと機械的に繋がらない**。Figma側でノードが増減・改名しても追跡できず、証跡が「それらしく見えるだけ」になる。
 - 今後：`figmaNodeId` は `get_metadata` が返した実IDのみ。位置や役割から合成しない。合成したくなったら metadata を取り直していないサイン。
 - 併せて：**inventory は Figma の metadata から独立に作る。**node map から生成すると照合が空になり、検査そのものが無意味になる（実際に一度やりかけた）。
@@ -308,7 +308,7 @@
 
 ## 2026-09-04: 予約は編集ではない。受領証を持たない台帳行で他担当を止めない
 <!-- loop-log: {"id":"correction-stale-reservation-blocks-commit-20260904","kind":"correction","failureClass":"stale-path-ownership-blocks-other-actor","recurrenceKey":"stale-path-ownership-blocks-other-actor","action":"weaken","promotability":"promotable","ruleTargets":["rules/figma-scope-lock.md"],"verifierTargets":["templates/verify/scope-conflict-audit.mjs","templates/verify/scope-conflict-audit.e2e.mjs"]} -->
-- 指摘：「別の進行中scopeと競合しているためコミット・再デプロイできない。これが起こるのは問題だろ」。2026-09-01 に所有台帳へ入れた失効の仕組みが、同じ「解放されない保持」を scope coordination 台帳の active/waiting 行へ移しただけで終わっていた。実測（rpa-technologies-theme）で live scope 10件が42パスを保持し、うち5件は gate受領証を1件も持たず、5件は7日以上更新が無く、受領証を持たない1件が別担当の実装7ファイルを pre-commit まで止めていた。止める側の出力は「competes」の一行だけで、担当者も受領証の状態も放置日数も無かった。
+- 指摘：「別の進行中scopeと競合しているためコミット・再デプロイできない。これが起こるのは問題だろ」。2026-09-01 に所有台帳へ入れた失効の仕組みが、同じ「解放されない保持」を scope coordination 台帳の active/waiting 行へ移しただけで終わっていた。実測（案件側）で live scope 10件が42パスを保持し、うち5件は gate受領証を1件も持たず、5件は7日以上更新が無く、受領証を持たない1件が別担当の実装7ファイルを pre-commit まで止めていた。止める側の出力は「competes」の一行だけで、担当者も受領証の状態も放置日数も無かった。
 - 今後：**台帳の予約行を停止事由にするのは、その scope が live な gate受領証を保持しているときだけにする。**両gateとも編集前に preflight 受領証を要求するため、受領証を持たない scope は定義上まだ1行も編集しておらず、守るべき編集が存在しない。受領証を持たない交差は、担当者・台帳ステータス・manifest最終更新日数を添えて NOTE で報告し、宣言は止めない。止めるときは交差判定の枝でも担当者・受領証の phase・次の行動を必ず出す。負のE2Eは「受領証を持たない予約は止めない」と「受領証を1件置けば従来どおり止まる」を対で置き、交差判定ごと無効化したのではないことを機械で区別できるようにする。
 - 弱体化の実測：同案件 live scope 10件で FAIL 総数 4 → 2。消えた2件はいずれも受領証を持たない予約による停止。**同じ形の停止は 2026-08-26・2026-09-01 に続き3回目である。台帳を手で解除して機構を直さない対処を繰り返さない。**
 
@@ -420,7 +420,7 @@ Figmaデザインの実装・修正に関する恒久ルールを記録する。
 
 - 指摘: FV見出しで推測した `halt` / `palt` を指定すると、Figmaと文字幅・位置が一致しなかった。
 - 今後: OpenType設定はフォントが対応しているかだけで採用せず、対象Figma text nodeの `fontFeatureSettings` を取得して同じtagを実装する。PC/SPでtagが異なる場合はブレークポイントごとに分ける。
-- 確認: Figma Top PC `2153:21943` は `"pwid" 1`、SP `2336:30368` は `"pwid" 1, "halt" 1`。PCのテキスト実測座標は x=121, y=195。
+- 確認: Figma Top PC は `"pwid" 1`、SP は `"pwid" 1, "halt" 1`（node-id・実測座標は案件固有値のため本リポジトリに置かない）。
 
 ## 2026-07-19
 - 指摘：`CSSで対応できる単純な図形・装飾はCSSにする` を、ノイズ・ブレンド・複数レイヤーを含む複合背景へ拡張してはいけない。

@@ -13,7 +13,7 @@
 
 Codexが自動で読み込むのは `AGENTS.md` のうち **cwd とその祖先ディレクトリ、およびグローバル `~/.codex/AGENTS.md`** だけである。
 
-- `STATE.md` の実測によれば、案件の作業ディレクトリは `C:/docker-project/rpa-technologies/...` にある。
+- `STATE.md` の実測によれば、案件の作業ディレクトリは `C:/docker-project/<案件>/...` にある。
 - `C:\AI\figma-to-code` はその祖先ではない。**したがって本リポジトリの `AGENTS.md` は、案件でCodexを起動しても自動読込されない。**
 - `README.md` が示す4段チェーン（`.codex/AGENTS.md` → vault → web-development → 本リポジトリ）のうち、自動で効くのは1段目だけである。2〜4段目は「1段目が明示的に転送している」ことに全面依存する単一障害点であり、本リポジトリからは検証も強制もできない。
 
@@ -85,8 +85,8 @@ Codexが自動で読み込むのは `AGENTS.md` のうち **cwd とその祖先�
 1. **入口2枚で必読集合が違う。** `WORKFLOW.md` は `rules/figma-scope-lock.md`（D-012スコープロック）を必読に含むが、`README.md` の必読リストには**欠落**している。
 2. **実在しない相対パス参照が19件。** うち `rules/scss.md` `rules/breakpoints.md` `rules/accordion.md` `rules/video-embedding.md` は web-development 側、`spec/06-self-improvement.md` `spec/07-graph-orchestration.md` `templates/LOOP-spec-dev.md` `templates/LOOP-implementation.md` は loop-engineering 側のファイルを、**本リポジトリ相対に見える書式**で書いている。読み手が本リポジトリ内を探して見つけられない。
 3. **`WORKFLOW.md` が禁じた案件固有値が `rules/` に残存。**
-   - `rules/corrections.md:425` — 実node-id `2153:21943` / `2336:30368` と実測座標 `x=121, y=195`
-   - `rules/corrections.md:23` — 実node-id `3288:45292`
+   - `rules/corrections.md:425` — 実node-id `<node-id>` / `<node-id>` と実測座標 `<座標>`
+   - `rules/corrections.md:23` — 実node-id `<node-id>`
    - `rules/mistakes.md:94,100,107` — 案件名「OPEN」
 4. **`README.md` の版表記が実態と乖離。** 「版: 0.3.1 / 最終更新: 2026-07-18」だが `STATE.md` は 2026-08-12 まで更新されている。
 5. **E2Eの実FAIL 1件。** `templates/verify/p3-role-packet.e2e.mjs` が `Owner Decision J record cleanRoomAuthorizationStableJsonSha256 differs from the bound comparison authorization` で失敗する。ブラウザ必須の6本（accessibility / asset / motion / gate-browser-batch / p3-page-provider / fidelity-benchmark）とクラウド未同期の1本（checkpoint-diff）は環境要因のため別扱い。

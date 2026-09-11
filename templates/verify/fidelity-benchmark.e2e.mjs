@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 // 複製元は cwd ではなく、このE2E自身の隣から取る。
 // 旧実装は resolve("templates/verify/...") と cwd 相対で書いており、正本リポジトリでしか
 // 通らなかった。このE2Eは配布物であり、案件では MyBrain/verify/ に置かれる。
-// 実測（2026-08-29、rpa-technologies-theme）: 配布後に実行すると
+// 実測（2026-08-29、案件側）: 配布後に実行すると
 // `ENOENT: copyfile <案件>/templates/verify/fidelity-benchmark.mjs` で落ちた。
 // 同じ欠陥を figma-gate.e2e.mjs でも直している。正本リポジトリ内でだけ回すE2Eは、
 // 配布先で動くことを証明しない。
