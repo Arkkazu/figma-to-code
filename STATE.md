@@ -24,6 +24,17 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [203] 2026-09-11 / Claude（点検: CI の audit が 09-06 から赤のまま放置され、master へ反映されていなかった）
+
+- owner指示: 「このプロジェクトfigma-to-codeに問題がないか確認しろ」
+- 実測: `feat/entry-gate-and-vendored-sync` の `audit` は `eebeeeb`（09-06）以降6回連続 failure（17/19。`codex-edit-guard.e2e` と `rule-size-guard.e2e`）。同ブランチは PR 無しで master より31 commit 先行し、master の最終更新は 09-03。[202] の「run-checks 19/19 PASS」はローカル（上位層あり）の値で、CI では同じ日から赤かった。
+- 修正（1）`codex-edit-guard`: 上位層の既定パス（Windows 絶対パス）を POSIX の `dirname()` が `.` に潰し、CI では許可リストがリポジトリ自身の `WORKFLOW.md`・`README.md`・`AGENTS.md`・`rules/*.md` を「上位層の必読」として配っていた（CI ログは21件中13件だけが ENOENT。同名がリポジトリに在る8件は ok 判定）。その環境で絶対パスでない既定値を「上位層不在」として扱う `upstreamRootFor` を足し、e2e に posix/win32 の負のテストと「承認済み文書がリポジトリ内へ解決しない」検査を足した。e2e の「配送できた文書が1件以上」は、環境判定が `local` のときだけ要求する。
+- 修正（2）`rule-size-guard`: 設定ファイル欠落の検査を上位層の有無より先に置いた。逆順だったため、上位層の無い CI では設定が無くても skipped / exit 0 だった。
+- 修正（3）`WORKFLOW.md` 204行: `C:\AI` + U+000B + `ault`（`ec712f5` で混入。`\v` が制御文字に化けた）を `C:\AI\vault` に戻した。バイト列で1箇所だけ置換し、改行コードは変えていない。
+- 修正（4）`run-checks`: `KNOWN_FAILING` の p3 3件が実在しない `templates/verify/` を指していたので `research/p3/` へ直した。spawnSync の timeout（ETIMEDOUT）を FAIL と区別し `TIMEOUT（合否未確定）` と表示する。
+- 検証: `codex-edit-guard.e2e` 26 groups PASS（ローカル）。`rule-size-guard.e2e` PASS（ローカル、および `WEB_DEVELOPMENT_VERIFY_DIR` を不在にした CI 再現の両方）。`figma-gate.e2e` 単体 PASS（859 assertions / 514s）。`rule-size-audit`（必読合計 143,106 / 143,360）・`entry-trigger-audit`・`doc-command-audit` PASS。Linux での結果は push 後の CI で確かめる。
+- ⚠️ 未対応（オーナー判断が要る）: (a) PUBLIC リポジトリに案件名が40ファイル104箇所、実案件の Figma node-id が `learning/` の1ファイルに残る。HEAD から消しても履歴には残る (b) 本ブランチの master 未反映 (c) ルートの空ファイル `{console.log('NG'`（`55e91a6` で混入）の削除 (d) 作成者不明の未commit変更 `templates/verify/cdp-browser*.mjs`（09-09）。本 commit には含めていない (e) `figma-gate.e2e` の所要 514s が、自称の目安約100秒と run-checks の上限600秒に対して乖離し、並行負荷があると上限を超える (f) 必読合計の残りが254 bytes。
+
 ## [202] 2026-09-06 / Codex（編集前フック接続と迂回試験。実機有効化は未確認）
 
 - owner指示: 「既存検証器の不整合修正 → 編集前フック接続 → 迂回試験」の順で修正する。

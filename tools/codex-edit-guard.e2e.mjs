@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, posix, resolve, win32 } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { deliveryVerdict, evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, readRequiredDocument, REQUIRED_READING, requiredKeyForPath, selftest, TOOL } from "./codex-edit-guard.mjs";
+import { deliveryVerdict, evaluateHook, hookReply, hookConfig, install, patchPaths, readCommand, readRequiredDocument, REQUIRED_READING, requiredKeyForPath, selftest, TOOL, upstreamRootFor } from "./codex-edit-guard.mjs";
+import { evaluateWorkflowEnvironment } from "./workflow-preflight.mjs";
 
 const self = fileURLToPath(import.meta.url);
 const root = mkdtempSync(join(tmpdir(), "codex-edit-guard-test-"));
@@ -194,7 +195,10 @@ try {
         assert.equal(result.stdout, readFileSync(entry.absolute, "utf8"), key);
         checked += 1;
       }
-      assert.ok(checked > 0, "no approved document was present to verify");
+      // Where the environment check really reads the upper layers, something must be verified.
+      // Elsewhere (CI, cloud) nothing may be: before 2026-09-11 this count was satisfied there by
+      // the repository's own files served under upper-layer names.
+      if (evaluateWorkflowEnvironment().mode === "local") assert.ok(checked > 0, "no approved document was present to verify");
       // The list itself is metadata, never a directory listing.
       const listing = JSON.parse(run({ op: "required" }).stdout);
       assert.equal(listing.length, REQUIRED_READING.size);
@@ -295,6 +299,22 @@ try {
       assert.equal(deliveryVerdict("d", { status: 0, stdout: "abcdefg" }, "abcdef").ok, false);
       assert.equal(deliveryVerdict("d", { status: 2, stdout: "", stderr: "boom" }, "abcdef").ok, false);
       assert.equal(deliveryVerdict("d", { status: 0, stdout: "anything" }).ok, true);
+    });
+    test("upstream roots never collapse into the repository where the playbooks cannot exist", () => {
+      assert.equal(upstreamRootFor("C:\\AI\\vault\\WORKFLOW.md", win32), "C:\\AI\\vault");
+      // POSIX dirname() of a Windows path is ".", which resolved every approved key against the cwd.
+      assert.equal(upstreamRootFor("C:\\AI\\vault\\WORKFLOW.md", posix), null);
+      assert.equal(upstreamRootFor("/srv/vault/WORKFLOW.md", posix), "/srv/vault");
+      const repository = resolve(dirname(self), "..").toLowerCase();
+      for (const [key, entry] of REQUIRED_READING) {
+        if (entry.absolute === null) {
+          assert.throws(() => readRequiredDocument(key), /not reachable on this platform/, key);
+          // The repository's own same-named file must not be accepted under the upper-layer key.
+          assert.equal(requiredKeyForPath(resolve(dirname(self), "..", entry.relativePath)), undefined, key);
+          continue;
+        }
+        assert.equal(entry.absolute.toLowerCase().startsWith(repository), false, `${key} resolved inside the repository: ${entry.absolute}`);
+      }
     });
     test("approved reading grants no write or execute permission", () => {
       // Reading a document does not make it editable: edits still resolve against the repository.

@@ -26,7 +26,16 @@ const check = (condition, message) => { if (!condition) throw new Error(message)
 // somewhere else cannot grant new reads. This list lives in a protectedPath file, so a Codex
 // session cannot widen its own access. Reading a document here never implies edit or execute
 // permission: edits still resolve against the repository root and are refused as outside it.
-const UPSTREAM_ROOTS = Object.fromEntries(LOCAL_WORKFLOW_SOURCES.map((source) => [source.id, dirname(source.defaultPath)]));
+//
+// defaultPath is declared as a Windows absolute path. On POSIX (CI runner, cloud sessions)
+// dirname() of it is ".", so every approved key resolved against the cwd: the repository's own
+// WORKFLOW.md, README.md, AGENTS.md and rules/*.md were served as "upper-layer" documents, and
+// only names absent from the repository failed (2026-09-11 CI log: 13 ENOENT out of 21). A
+// default that is not absolute on this platform means the playbook is absent here.
+export function upstreamRootFor(defaultPath, pathApi = { isAbsolute, dirname }) {
+  return pathApi.isAbsolute(defaultPath) ? pathApi.dirname(defaultPath) : null;
+}
+const UPSTREAM_ROOTS = Object.fromEntries(LOCAL_WORKFLOW_SOURCES.map((source) => [source.id, upstreamRootFor(source.defaultPath)]));
 
 const REQUIRED_READING_DECLARATION = [
   ["vault/WORKFLOW.md", "共通Vaultの規則本文。vault WORKFLOW.md「起動時の必読手順」1"],
@@ -59,10 +68,10 @@ export const REQUIRED_READING = new Map(REQUIRED_READING_DECLARATION.map(([key, 
   const separator = key.indexOf("/");
   const id = key.slice(0, separator);
   const relativePath = key.slice(separator + 1);
+  check(Object.hasOwn(UPSTREAM_ROOTS, id), `Required reading names an undeclared upstream playbook: ${id}`);
   const rootPath = UPSTREAM_ROOTS[id];
-  check(typeof rootPath === "string", `Required reading names an undeclared upstream playbook: ${id}`);
   check(!relativePath.includes("..") && !relativePath.includes("\\"), `Required reading path must be a plain relative path: ${key}`);
-  return [key, { id, relativePath, why, absolute: resolve(rootPath, relativePath) }];
+  return [key, { id, relativePath, why, absolute: rootPath === null ? null : resolve(rootPath, relativePath) }];
 }));
 
 export function repositoryRoot(cwd) {
@@ -236,6 +245,7 @@ function validateReadRequest(request) {
 export function readRequiredDocument(key, entries = REQUIRED_READING) {
   const entry = entries.get(key);
   check(entry !== undefined, `Not an approved required-reading document: ${key}`);
+  check(entry.absolute !== null, `Upstream playbook is not reachable on this platform: ${key}`);
   const stat = lstatSync(entry.absolute);
   check(!stat.isSymbolicLink(), `Symlinked required-reading document denied: ${key}`);
   check(stat.isFile(), `Required-reading document is not a regular file: ${key}`);
@@ -252,7 +262,7 @@ export function readRequiredDocument(key, entries = REQUIRED_READING) {
 export function requiredKeyForPath(value, entries = REQUIRED_READING) {
   if (typeof value !== "string" || !isAbsolute(value)) return undefined;
   const absolute = resolve(value);
-  for (const [key, entry] of entries) if (same(absolute, entry.absolute)) return key;
+  for (const [key, entry] of entries) if (entry.absolute !== null && same(absolute, entry.absolute)) return key;
   return undefined;
 }
 
@@ -376,7 +386,7 @@ export function selftest({ cwd = PLAYBOOK_ROOT, evaluate = evaluateHook } = {}) 
     ok: REQUIRED_READING.size > 0, reason: `${REQUIRED_READING.size} approved documents` });
   for (const [key, entry] of REQUIRED_READING) {
     const name = `required reading arrives: ${key}`;
-    if (!existsSync(UPSTREAM_ROOTS[entry.id])) {
+    if (UPSTREAM_ROOTS[entry.id] === null || !existsSync(UPSTREAM_ROOTS[entry.id])) {
       results.push({ name, expected: "exit 0", actual: "skipped", ok: true, reason: `upstream playbook absent: ${entry.id}` });
       continue;
     }

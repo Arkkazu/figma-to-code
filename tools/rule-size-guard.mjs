@@ -45,6 +45,14 @@ export function runRuleSizeGuard(deps = {}) {
   } = deps;
 
   const audit = auditPath(env);
+  // 設定はこのリポジトリ側に在るので、上位層の有無より先に確かめる。順序が逆だと、
+  // 上位層が無い環境（CI）では設定が無くても skipped / exit 0 で通っていた
+  // （2026-09-06〜09-11 の CI で rule-size-guard.e2e が赤のまま放置された原因）。
+  const config = path.join(root, configPath);
+  if (!exists(config)) {
+    return { mode: "error", audit, config, reason: "設定ファイルが無い", exitCode: 2, output: "" };
+  }
+
   if (!exists(audit)) {
     return {
       mode: "skipped",
@@ -53,11 +61,6 @@ export function runRuleSizeGuard(deps = {}) {
       exitCode: 0,
       output: "",
     };
-  }
-
-  const config = path.join(root, configPath);
-  if (!exists(config)) {
-    return { mode: "error", audit, config, reason: "設定ファイルが無い", exitCode: 2, output: "" };
   }
 
   const result = run(process.execPath, [audit, config], { cwd: root, encoding: "utf8" });

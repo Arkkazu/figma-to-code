@@ -58,13 +58,14 @@ export const CHECKS = Object.freeze([
 
 export const KNOWN_FAILING = Object.freeze([
   { since: "2026-08-22", path: "templates/verify/fidelity-benchmark.e2e.mjs", reason: "検証基準と同一の描画環境（フォント・ブラウザ版）を要する。2026-08-21時点で本変更以前から赤。" },
-  { since: "2026-08-22", path: "templates/verify/p3-role-packet.e2e.mjs", reason: "P-3 clean-room の未解決（cleanRoomAuthorization のハッシュ不一致）。本変更以前から赤。" },
-  { since: "2026-08-22", path: "templates/verify/p3-p11-app-server-spike.e2e.mjs", reason: "P-11 のプロセスツリー確認が現行環境で成立しない。本変更以前から赤。" },
+  // p3-* の3件は 2026-09-11 まで templates/verify/ を指しており、実在しないパスだった。実体は research/p3/。
+  { since: "2026-08-22", path: "research/p3/p3-role-packet.e2e.mjs", reason: "P-3 clean-room の未解決（cleanRoomAuthorization のハッシュ不一致）。本変更以前から赤。" },
+  { since: "2026-08-22", path: "research/p3/p3-p11-app-server-spike.e2e.mjs", reason: "P-11 のプロセスツリー確認が現行環境で成立しない。本変更以前から赤。" },
   { since: "2026-08-22", path: "templates/verify/accessibility-verify.e2e.mjs", reason: "実ブラウザを要する。" },
   { since: "2026-08-22", path: "templates/verify/asset-verify.e2e.mjs", reason: "実ブラウザを要する。" },
   { since: "2026-08-22", path: "templates/verify/motion-verify.e2e.mjs", reason: "実ブラウザを要する。" },
   { since: "2026-08-22", path: "templates/verify/gate-browser-batch.e2e.mjs", reason: "実ブラウザを要する。" },
-  { since: "2026-08-22", path: "templates/verify/p3-page-provider.e2e.mjs", reason: "実ブラウザを要する。" },
+  { since: "2026-08-22", path: "research/p3/p3-page-provider.e2e.mjs", reason: "実ブラウザを要する。" },
   { since: "2026-08-22", path: "templates/verify/checkpoint-diff.e2e.mjs", reason: "案件側の成果物を要する。" },
 ]);
 
@@ -75,15 +76,27 @@ export function excludedDays(since, now = new Date()) {
   return Math.max(0, Math.floor((now.getTime() - started) / 86400000));
 }
 
+export const CHECK_TIMEOUT_MS = 600000;
+
 export function runCheck(target, deps = {}) {
   const { run = spawnSync, root = REPO_ROOT } = deps;
-  const result = run(process.execPath, [target], { cwd: root, encoding: "utf8", timeout: 600000 });
+  const result = run(process.execPath, [target], { cwd: root, encoding: "utf8", timeout: CHECK_TIMEOUT_MS });
   return {
     target,
     ok: result.status === 0,
     status: result.status,
+    // spawnSync は timeout で子を止めると error.code に ETIMEDOUT を入れる。これは打ち切りであって
+    // 合否ではない。FAIL と同じ表示にすると、途中出力だけを見て不合格と読まれる（2026-09-11 実測:
+    // figma-gate.e2e が 22段中19段・587秒の時点で止められ、FAIL と表示された）。
+    timedOut: result.error?.code === "ETIMEDOUT",
     output: `${result.stdout || ""}${result.stderr || ""}`.trim(),
   };
+}
+
+export function resultLabel(result) {
+  if (result.ok) return "PASS";
+  if (result.timedOut) return `TIMEOUT（${CHECK_TIMEOUT_MS / 1000}秒で打ち切り。完了行なし＝合否未確定。単体で完走させて判定する）`;
+  return "FAIL";
 }
 
 export function runChecks(targets = CHECKS, deps = {}) {
@@ -94,7 +107,7 @@ export function runChecks(targets = CHECKS, deps = {}) {
 if (process.argv[1] && fileURLToPath(new URL(import.meta.url)) === process.argv[1]) {
   const { results, failed, ok } = runChecks();
   for (const result of results) {
-    process.stdout.write(`${result.ok ? "PASS" : "FAIL"} ${result.target}\n`);
+    process.stdout.write(`${resultLabel(result)} ${result.target}\n`);
     if (!result.ok) process.stdout.write(`${result.output}\n`);
   }
   process.stdout.write(`\n${results.length - failed.length}/${results.length} passed\n`);

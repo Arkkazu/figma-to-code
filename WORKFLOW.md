@@ -201,7 +201,7 @@ GitHub Actions は2つある。
 
 **ローカルのGit hookはcloneに残らない。**案件テーマの pre-commit は `.git/hooks/` にだけ在り、`core.hooksPath` は未設定で追跡下にも無い。クラウドセッションはhookもCIも無い状態で clone するため、CIが無いと検査を通らない変更が正本へ入る。
 
-CI runner には上位層（`C:\AIault` / `C:\AI\web-development`）が無く、「クラウドセッションでの実行範囲」と同じ `cloud-restricted` 条件で動く。そのため次の2点は**CIでは検査されない**。CIが緑でも未検査なので、ローカルで通してから push する。
+CI runner には上位層（`C:\AI\vault` / `C:\AI\web-development`）が無く、「クラウドセッションでの実行範囲」と同じ `cloud-restricted` 条件で動く。そのため次の2点は**CIでは検査されない**。CIが緑でも未検査なので、ローカルで通してから push する。
 
 - `rule-size-audit`（上位層に在るため実行不能）
 - 入口の発火条件のうち `C:\AI\web-development\WORKFLOW.md` の1文書（`entry-trigger-audit.e2e` は上位層を読めない環境では4文書だけを検査する。読めるのに skip して通す取り違えは、同じE2Eが落とす）
