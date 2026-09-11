@@ -32,7 +32,8 @@
 - 修正（2）`rule-size-guard`: 設定ファイル欠落の検査を上位層の有無より先に置いた。逆順だったため、上位層の無い CI では設定が無くても skipped / exit 0 だった。
 - 修正（3）`WORKFLOW.md` 204行: `C:\AI` + U+000B + `ault`（`ec712f5` で混入。`\v` が制御文字に化けた）を `C:\AI\vault` に戻した。バイト列で1箇所だけ置換し、改行コードは変えていない。
 - 修正（4）`run-checks`: `KNOWN_FAILING` の p3 3件が実在しない `templates/verify/` を指していたので `research/p3/` へ直した。spawnSync の timeout（ETIMEDOUT）を FAIL と区別し `TIMEOUT（合否未確定）` と表示する。
-- 検証: `codex-edit-guard.e2e` 26 groups PASS（ローカル）。`rule-size-guard.e2e` PASS（ローカル、および `WEB_DEVELOPMENT_VERIFY_DIR` を不在にした CI 再現の両方）。`figma-gate.e2e` 単体 PASS（859 assertions / 514s）。`rule-size-audit`（必読合計 143,106 / 143,360）・`entry-trigger-audit`・`doc-command-audit` PASS。Linux での結果は push 後の CI で確かめる。
+- 検証: `codex-edit-guard.e2e` 26 groups PASS（ローカル）。`rule-size-guard.e2e` PASS（ローカル、および `WEB_DEVELOPMENT_VERIFY_DIR` を不在にした CI 再現の両方）。`figma-gate.e2e` 単体 PASS（859 assertions / 514s）。`rule-size-audit`（必読合計 143,106 / 143,360）・`entry-trigger-audit`・`doc-command-audit` PASS。ローカル `run-checks` 19/19 PASS。
+- 追補（同日）: 1回目の push（`28ea69a`）の CI で `rule-size-guard.e2e` は緑になり、`codex-edit-guard.e2e` は18段目を越えた。代わりに、それまで一度も CI で実行されていなかった24段目が落ちた。拒否理由の正規表現が Windows 前提で、POSIX では `C:/AI/vault/...` が絶対パスにならず、リポジトリ内の相対パスとして scope 外で拒否される。編集が拒否されること自体は両環境で検査したまま、非 Windows だけ `Out-of-scope edit denied` も理由として受理する。`node:22` コンテナ（上位層なし）と Windows の両方で 26 groups PASS。
 - ⚠️ 未対応（オーナー判断が要る）: (a) PUBLIC リポジトリに案件名が40ファイル104箇所、実案件の Figma node-id が `learning/` の1ファイルに残る。HEAD から消しても履歴には残る (b) 本ブランチの master 未反映 (c) ルートの空ファイル `{console.log('NG'`（`55e91a6` で混入）の削除 (d) 作成者不明の未commit変更 `templates/verify/cdp-browser*.mjs`（09-09）。本 commit には含めていない (e) `figma-gate.e2e` の所要 514s が、自称の目安約100秒と run-checks の上限600秒に対して乖離し、並行負荷があると上限を超える (f) 必読合計の残りが254 bytes。
 
 ## [202] 2026-09-06 / Codex（編集前フック接続と迂回試験。実機有効化は未確認）

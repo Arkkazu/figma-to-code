@@ -318,10 +318,15 @@ try {
     });
     test("approved reading grants no write or execute permission", () => {
       // Reading a document does not make it editable: edits still resolve against the repository.
+      // On POSIX these strings are not absolute: they name a path inside the repository, which the
+      // scope check refuses instead. The edit is denied either way; only the stated reason differs.
+      const refusal = process.platform === "win32"
+        ? /outside repository|Ambiguous|Drive-relative/
+        : /outside repository|Ambiguous|Drive-relative|Out-of-scope edit denied/;
       for (const path of ["C:/AI/vault/WORKFLOW.md", "C:/AI/vault/rules/corrections.md", "C:/AI/web-development/rules/html.md"]) {
         const verdict = evaluateHook(event({ tool_input: { command: patch(path) } }), deps);
         assert.equal(verdict.allowed, false, path);
-        assert.match(verdict.reason, /outside repository|Ambiguous|Drive-relative/);
+        assert.match(verdict.reason, refusal, path);
       }
       // Guard, authorisation config and out-of-scope edits stay refused.
       for (const path of ["tools/codex-edit-guard.mjs", ".codex/edit-guard.json", ".codex/hooks.json", "src/outside.txt"]) {
