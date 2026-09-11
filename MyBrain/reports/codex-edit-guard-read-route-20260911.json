@@ -30,7 +30,14 @@
     ]
   },
   "notChanged": [
-    "Edit admission. The Codex session is bound only to one report file, so editing rules/ would still be refused as out of scope, and builds, tests and git remain operator-terminal work. Whether this guard should stay armed for maintenance of this repository is an owner decision and was reported, not changed.",
-    ".codex/hooks.json and the /hooks trust state were not touched; the hook definition is unchanged, so no re-trust is needed."
-  ]
+    "Edit admission. The Codex session is bound only to one report file, so editing rules/ would still be refused as out of scope, and builds, tests and git remain operator-terminal work. Whether this guard should stay armed for maintenance of this repository is an owner decision and was reported, not changed."
+  ],
+  "hookRemoval": {
+    "date": "2026-09-11",
+    "ownerInstruction": "フックをはずせ",
+    "reason": "The hook was installed only in this repository, so it restricted nothing but Codex maintaining this repository, and even with reads fixed it left owner-directed Codex work unable to edit, test or commit. The repository stays protected by CI and the master ruleset.",
+    "action": "Deleted .codex/hooks.json (gitignored). Before deletion its content was byte-identical to hookConfig(), so `node tools/codex-edit-guard.mjs install <repo>` restores it exactly; re-trust via /hooks is then required.",
+    "kept": "tools/codex-edit-guard.mjs, its tests and docs, .codex/edit-guard.json and .codex/scope are unchanged. The trusted_hash entry for the removed file in the user-level Codex config is left as is; it points at a file that no longer exists and enforces nothing.",
+    "liveVerification": "not performed: no Codex session was started from this side"
+  }
 }
