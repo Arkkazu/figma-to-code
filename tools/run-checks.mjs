@@ -49,6 +49,7 @@ export const CHECKS = Object.freeze([
   // responsiveHtml の例外が「既存の重複の持ち越しか」を裏取りされることを固定する。
   "templates/verify/responsive-html-guard.e2e.mjs",
   "templates/verify/figma-gate.e2e.mjs",
+  "templates/verify/figma-gate-style-exceptions.e2e.mjs",
   "templates/verify/gate-contract-audit.e2e.mjs",
   "templates/verify/figma-feature-coverage.e2e.mjs",
   // 正本そのものへの検査（規範文書のコマンド、公開MyBrainの機密）

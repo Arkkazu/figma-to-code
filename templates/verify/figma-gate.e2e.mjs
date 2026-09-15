@@ -10,7 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const fixturePath = fileURLToPath(import.meta.url);
-const gatePath = resolve(dirname(fixturePath), "figma-gate.mjs");
+let gatePath = resolve(dirname(fixturePath), "figma-gate.mjs");
 const implementationIdentity = Object.freeze({
   actor: "fixture-implementation",
   contextId: "fixture-implementation-context",
@@ -1877,6 +1877,102 @@ function assertMultipleDesignViewports() {
   } finally { assert(dirname(mismatch.root) === resolve(tmpdir()), "fixture cleanup is within tmpdir"); rmSync(mismatch.root, { recursive: true, force: true }); }
 }
 
+function assertStyleRuleExceptionForwarding() {
+  const ledgerRelativePath = "MyBrain/verify/fixture/coding.json";
+  const makeFixture = () => {
+    const fixture = multiDesignFixture(["pc", "sp"]);
+    fixture.ledgerPath = join(fixture.root, ledgerRelativePath);
+    writeFileSync(join(fixture.root, "site/check.scss"), ".fixture-space {\n  margin-bottom: 1rem;\n}\n");
+    cpSync(join(dirname(fixturePath), "lint-units.mjs"), join(fixture.root, "MyBrain/verify/lint-units.mjs"));
+    mutateJson(join(fixture.root, "MyBrain/verify/shared-component-ownership.json"), (v) => { v.components = []; });
+    // Only Sass/browser are doubles; the unit checker is the actual distributed CLI.
+    writeJson(join(fixture.root, "package.json"), { scripts: { "sass:build": "node -e \"process.exit(0)\"" } });
+    mutateJson(fixture.manifestPath, (v) => {
+      v.scope.changeTargets.push("site/check.scss");
+      v.scope.scssFiles = ["site/check.scss"];
+      v.scope.styleRuleExceptionsPath = ledgerRelativePath;
+    });
+    mutateJson(join(fixture.directory, "scope-lock.state.json"), (v) => {
+      v.scope.allowedPaths.push("site/check.scss");
+      v.baseline.push({ path: "site/check.scss", sha256: null });
+    });
+    writeJson(fixture.ledgerPath, { id: "fixture-gate", scope: { styleRuleApplication: { exceptions: [{
+      file: "site/check.scss", selector: ".fixture-space", property: "margin-bottom",
+      reason: "Preserve the documented existing fixture spacing outside this change.",
+    }] } } });
+    run("git", ["add", "--all"], fixture.root);
+    run("git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.test", "commit", "--quiet", "-m", "style fixture"], fixture.root);
+    return fixture;
+  };
+  const throughSectionClose = (fixture) => {
+    preflightFixture(fixture);
+    accept(["section-start", fixture.manifestRelativePath, "fixture-section"], fixture.root);
+    accept(["checkpoint", fixture.manifestRelativePath, "fixture-component"], fixture.root);
+    accept(["section-close", fixture.manifestRelativePath, "fixture-section"], fixture.root);
+  };
+  const clean = (fixture) => {
+    assert(dirname(fixture.root) === resolve(tmpdir()), "style fixture cleanup stays in tmpdir");
+    rmSync(fixture.root, { recursive: true, force: true });
+  };
+  for (const variant of ["valid", "undeclared", "wrong selector", "other violation"]) {
+    const fixture = makeFixture();
+    try {
+      if (variant === "undeclared") mutateJson(fixture.manifestPath, (v) => { delete v.scope.styleRuleExceptionsPath; });
+      if (variant === "wrong selector") mutateJson(fixture.ledgerPath, (v) => { v.scope.styleRuleApplication.exceptions[0].selector = ".other"; });
+      throughSectionClose(fixture);
+      if (variant === "other violation") writeFileSync(join(fixture.root, "site/check.scss"), ".fixture-space {\n  margin-bottom: 1rem;\n  line-height: 1rem;\n}\n");
+      if (variant === "valid") {
+        const output = accept(["close", fixture.manifestRelativePath], fixture.root).output;
+        assert(output.includes("エラー 0 / 警告 0"), "close invokes real lint with the declared exception");
+      } else reject(["close", fixture.manifestRelativePath], variant === "other violation" ? "E1 " : "E10 ", fixture.root);
+    } finally { clean(fixture); }
+  }
+  const fixture = makeFixture();
+  try {
+    const original = readFileSync(fixture.ledgerPath);
+    for (const [mutate, expected] of [
+      [(v) => { v.id = "foreign-scope"; }, "same scope id"],
+      [(v) => { delete v.scope.styleRuleApplication.exceptions; }, "requires scope.styleRuleApplication.exceptions"],
+      [(v) => { v.scope.styleRuleApplication.exceptions[0].file = "other.scss"; }, "declared SCSS file"],
+      [(v) => { v.scope.styleRuleApplication.exceptions[0].reason = "short"; }, "at least 20 characters"],
+    ]) {
+      mutateJson(fixture.ledgerPath, mutate);
+      reject(preflightArgs(fixture), expected, fixture.root);
+      writeFileSync(fixture.ledgerPath, original);
+    }
+    rmSync(fixture.ledgerPath);
+    reject(preflightArgs(fixture), "Style rule exception ledger", fixture.root);
+    writeFileSync(fixture.ledgerPath, "{ invalid");
+    reject(preflightArgs(fixture), "Style rule exception ledger", fixture.root);
+    writeFileSync(fixture.ledgerPath, original);
+    preflightFixture(fixture);
+    mutateJson(fixture.ledgerPath, (v) => { v.scope.styleRuleApplication.exceptions[0].reason += " Changed."; });
+    reject(["close", fixture.manifestRelativePath], "style rule exception ledger changed after preflight", fixture.root);
+  } finally { clean(fixture); }
+
+  // Mutation proof: removing only forwarding makes the positive close fail at E10.
+  const originalGatePath = gatePath;
+  const mutantRoot = mkdtempSync(join(tmpdir(), "figma-gate-style-mutant-"));
+  const mutantFixture = makeFixture();
+  try {
+    for (const name of readdirSync(dirname(fixturePath)).filter((name) => /\.(mjs|json)$/.test(name))) {
+      cpSync(join(dirname(fixturePath), name), join(mutantRoot, name));
+    }
+    gatePath = join(mutantRoot, "figma-gate.mjs");
+    const source = readFileSync(gatePath, "utf8");
+    const forwarding = '...(validated.styleRuleExceptionsPath ? ["--exceptions", validated.styleRuleExceptionsPath.relativePath] : [])';
+    assert(source.includes(forwarding), "mutation removes the real forwarding expression");
+    writeFileSync(gatePath, source.replace(forwarding, "...[]"));
+    throughSectionClose(mutantFixture);
+    reject(["close", mutantFixture.manifestRelativePath], "E10 ", mutantFixture.root);
+  } finally {
+    gatePath = originalGatePath;
+    clean(mutantFixture);
+    assert(dirname(mutantRoot) === resolve(tmpdir()), "mutant cleanup stays in tmpdir");
+    rmSync(mutantRoot, { recursive: true, force: true });
+  }
+}
+
 const ALL_STEPS = [
   ["variable design viewports + reference SP", assertMultipleDesignViewports],
   ["edit hook + real verifier integration (protocol replay)", assertEditHookIntegration],
@@ -1902,7 +1998,10 @@ const ALL_STEPS = [
   ["owner visual exemption end to end", assertOwnerVisualExemptionClosesAndGuards],
 ];
 
-const STEPS = process.argv.includes("--viewports-only") ? ALL_STEPS.slice(0, 1) : ALL_STEPS;
+// Separate runner is included in CHECKS and distribution, preserving the existing
+// suite's timeout budget without dropping any regression cases.
+const STEPS = process.argv.includes("--style-exceptions-only") ? [["style rule exception forwarding + frozen ledger", assertStyleRuleExceptionForwarding]]
+  : process.argv.includes("--viewports-only") ? ALL_STEPS.slice(0, 1) : ALL_STEPS;
 
 const startedAt = Date.now();
 const elapsed = () => `${((Date.now() - startedAt) / 1000).toFixed(0)}s`;

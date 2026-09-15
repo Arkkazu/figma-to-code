@@ -24,6 +24,12 @@
 ## イテレーション記録（Log）
 
 <!-- 新しいものを上に追記 -->
+## [206] 2026-09-15 / Codex（承認済み：closeから単位lintへの例外台帳連携）
+
+- owner指示により、案件実装とは分けた検証器保守として実施。`scope.styleRuleExceptionsPath` で同じscope idのcoding manifestを明示し、台帳の構造・対象SCSS・理由を検査する。preflightでSHA-256を固定し、closeの単位lintへそのパスを渡す。台帳の自動探索・行内コメントによる免除・閾値変更は行わない。
+- 正常系・未宣言・不一致・別規則の違反・不正台帳・別scope・凍結後変更を実CLIで試験し、連携だけを外すmutationもE10で拒否した。集中回帰83 assertions PASS（130秒）。容量・入口・公開メモリ・文書コマンド・diff検査PASS。全検査・配布は実行中。
+- 詳細は `MyBrain/reports/style-exception-forwarding-20260915.md`。既存の別作業による `cdp-browser` 2ファイルの未commit変更は保持し、今回のcommit・配布から除外する。
+
 ## [205] 2026-09-12 / Claude（R5 証跡検証器の修理と、spike 除外理由の訂正）
 
 - owner指示: 「不具合を修正しろ」（[204] で報告した既存の不具合2件）。

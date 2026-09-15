@@ -1110,9 +1110,32 @@ function validateManifest(manifest, phase, implementationIdentityInput) {
   }
 
 
+  // The coding manifest is an explicit, frozen input, never an auto-discovered
+  // active receipt or a guessed sibling filename. No declaration keeps lint strict.
+  let styleRuleExceptionsPath = null;
+  if (Object.hasOwn(scope, "styleRuleExceptionsPath")) {
+    styleRuleExceptionsPath = toRepoPath(scope.styleRuleExceptionsPath, "manifest.scope.styleRuleExceptionsPath");
+    const ledger = readExecutionJson(styleRuleExceptionsPath.absolutePath, "Style rule exception ledger");
+    if (ledger.id !== manifest.id) fail("Style rule exception ledger must belong to the same scope id.");
+    const entries = ledger.scope?.styleRuleApplication?.exceptions;
+    if (!Array.isArray(entries)) fail("Style rule exception ledger requires scope.styleRuleApplication.exceptions.");
+    const scssPaths = (scope.scssFiles || []).map((path) => toRepoPath(path, "manifest.scope.scssFiles[]").relativePath);
+    for (const entry of entries) {
+      requireObject(entry, "Style rule exception");
+      const file = toRepoPath(entry.file, "Style rule exception.file").relativePath;
+      if (!scssPaths.includes(file)) fail("Style rule exception.file must be a declared SCSS file.");
+      requireString(entry.selector, "Style rule exception.selector");
+      requireString(entry.property, "Style rule exception.property");
+      if (requireString(entry.reason, "Style rule exception.reason").trim().length < 20) {
+        fail("Style rule exception.reason must contain at least 20 characters.");
+      }
+    }
+  }
+
   return {
     id: manifest.id,
     scopeKind,
+    styleRuleExceptionsPath,
     correctionReceipt,
     startDeclaration,
     specPath: specPath.relativePath,
@@ -2690,6 +2713,9 @@ function assertFrozenInputs(state, validated, absoluteManifestPath, phase) {
   if (validated.correctionReceipt) {
     frozen.push(["correctionReceiptSha256", validated.correctionReceipt.absolutePath, "owner correction receipt"]);
   }
+  if (validated.styleRuleExceptionsPath) {
+    frozen.push(["styleRuleExceptionsSha256", validated.styleRuleExceptionsPath.absolutePath, "style rule exception ledger"]);
+  }
   for (const [key, filePath, label] of frozen) {
     const expectedHash = requireString(state[key], `Active gate state ${key} (re-run preflight)`);
     if (hashFile(filePath) !== expectedHash) {
@@ -3441,6 +3467,7 @@ function preflight(manifestPath, implementationIdentityInput, { discardCheckpoin
     axeSourceSha256: hashFile(validated.axeSourceAbsolutePath),
     correctionReceiptSha256: validated.correctionReceipt ? hashFile(validated.correctionReceipt.absolutePath) : null,
     correctionReceiptId: validated.correctionReceipt ? validated.correctionReceipt.id : null,
+    styleRuleExceptionsSha256: validated.styleRuleExceptionsPath ? hashFile(validated.styleRuleExceptionsPath.absolutePath) : null,
     startDeclarationSha256: hashFile(validated.startDeclaration.absolutePath),
     startDeclarationPath: validated.startDeclaration.relativePath,
     startDeclaredAt: validated.startDeclaration.declaredAt,
@@ -3494,7 +3521,8 @@ function close(manifestPath) {
   // build後にverify-layoutだけを別Chromeで後付け実行する経路は作らない。
   if (validated.scssFiles.length > 0) {
     run(npmCommand, ["run", "sass:build"], "Sass build");
-    run("node", ["MyBrain/verify/lint-units.mjs", ...validated.scssFiles.map(({ relativePath }) => relativePath)], "SCSS unit lint");
+    run("node", ["MyBrain/verify/lint-units.mjs", ...validated.scssFiles.map(({ relativePath }) => relativePath),
+      ...(validated.styleRuleExceptionsPath ? ["--exceptions", validated.styleRuleExceptionsPath.relativePath] : [])], "SCSS unit lint");
   }
   for (const phpFile of validated.phpFiles) {
     run(phpCommand, ["-l", phpFile.relativePath], `PHP lint: ${phpFile.relativePath}`);

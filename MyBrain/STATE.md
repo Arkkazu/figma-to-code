@@ -2,6 +2,12 @@
 
 ## Current
 
+- 2026-09-15: Owner-authorized repair of Figma close forwarding to the style unit
+  checker. Explicit same-scope exception ledgers are frozen at preflight.
+  Focused regression: 83 assertions PASS, including a forwarding-removal mutation.
+  Full checks and distribution pending. See
+  [[reports/style-exception-forwarding-20260915]].
+
 - 2026-09-11: Added the explicit variable-design viewport contract to the gate,
   coverage checks and contract audit. Verification and limitations are recorded
   in `reports/variable-design-viewport-verification-20260911.json`.

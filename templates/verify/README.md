@@ -135,13 +135,20 @@ node templates/verify/gate-browser-batch.e2e.mjs  # Chromeを使用
 - `checkpoint-diff.mjs` は比較pixel数・除外pixel数・差分率を出力する。maskを差分の隠蔽に使わず、除外理由をDOM対応表・specへ残す。
 ## lint-units.mjs — SCSS単位規約チェック（フェーズ2）
 
+Figmaゲートの最終closeにも例外台帳を適用する場合は、preflight前に
+`scope.styleRuleExceptionsPath` へ同じscope idのcoding manifestのリポジトリ相対パスを指定する。
+台帳の `scope.styleRuleApplication.exceptions` を検査し、ファイル全体のSHA-256をpreflightで固定する。
+closeは指定した台帳を `--exceptions` として渡す。省略時は例外なし。自動探索はしない。
+検証器更新・台帳変更後はpreflightを引き直し、既存受領証を書き換えない。
+回帰試験は `figma-gate-style-exceptions.e2e.mjs`（正式検査集合に登録済み）。
+
 ```bash
 node MyBrain/verify/lint-units.mjs <対象scss...>
 ```
 
-- 検査内容：E1 line-heightの単位付き指定 / E2 letter-spacingのpx・rem / E3 レイアウト系プロパティのpx直書き / E4 @media内のBEM要素再宣言 / W1 理由コメント無しのmargin-bottom・margin-right
-- E1・E2・E4・W1は案件横断ルール（corrections.md / scss.md）。E3は「Figma px→rem」規約を既定とした検査のため、単位規約が異なる案件では**案件側コピーを units.md に合わせて調整し、調整内容を案件側 corrections.md に記録する**。
-- **終了コード0（エラー0）になるまでビルド・完了報告に進まない。** 例外行には同じ行に理由コメントを付ける（コメント付き行は許容される）。
+- 検査内容：E1 line-heightの単位付き指定 / E2 letter-spacingのpx・rem / E3 レイアウト系プロパティのpx直書き / E4〜E8 SCSS構造 / E9 共通部品の所有プロパティ / E10 margin-bottom・margin-right。
+- E10の例外は台帳へfile・selector・property・20文字以上のreasonを宣言する。行内コメントでは免除しない。他の検査の例外条件はそれぞれの検査器の契約に従う。
+- **終了コード0（エラー0）になるまでビルド・完了報告に進まない。** 検査器の変更・同期は上記のweb-development正本の扱いに従う。
 
 ## verify-layout.mjs — CDP実測照合（フェーズ3）
 
