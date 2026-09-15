@@ -1691,6 +1691,12 @@ function assertPlaybookRootGuard() {
 function assertEditHookIntegration() {
   const fixture = createFixture("figma-gate-edit-hook-");
   const guard = join(playbookRoot, "tools/codex-edit-guard.mjs");
+  // The real guard deliberately invokes its own canonical verifier, not the
+  // deployed copy. Freeze that same kit for this positive integration case.
+  // Other CLI cases still exercise gatePath from the deployed suite. Runtime
+  // tampering below must continue to deny edits; never rewrite receipt hashes.
+  const previousGatePath = gatePath;
+  gatePath = join(playbookRoot, "templates/verify/figma-gate.mjs");
   const lockPath = join(fixture.directory, "scope-lock.state.json");
   const scopePath = join(fixture.directory, "scope-lock.json");
   const args = ["assert-edit", fixture.manifestRelativePath, implementationIdentity.contextId, "site/view.txt"];
@@ -1749,6 +1755,7 @@ function assertEditHookIntegration() {
     assertGateArtifactsUnchanged(snapshot, "assert-edit is read-only");
     assert(sha256(join(fixture.root, "site/view.txt")) === sourceHash, "hook replay does not dispatch or mutate source");
   } finally {
+    gatePath = previousGatePath;
     assert(dirname(fixture.root) === resolve(tmpdir()), "cleanup target remains within tmpdir");
     rmSync(fixture.root, { recursive: true, force: true });
   }
@@ -2001,6 +2008,7 @@ const ALL_STEPS = [
 // Separate runner is included in CHECKS and distribution, preserving the existing
 // suite's timeout budget without dropping any regression cases.
 const STEPS = process.argv.includes("--style-exceptions-only") ? [["style rule exception forwarding + frozen ledger", assertStyleRuleExceptionForwarding]]
+  : process.argv.includes("--edit-hook-only") ? [["edit hook + real verifier integration", assertEditHookIntegration]]
   : process.argv.includes("--viewports-only") ? ALL_STEPS.slice(0, 1) : ALL_STEPS;
 
 const startedAt = Date.now();

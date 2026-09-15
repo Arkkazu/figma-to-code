@@ -35,7 +35,14 @@ verifier copy and require the formerly valid close to fail.
 - Focused CLI regression: PASS, 83 assertions (130 seconds).
 - Public-memory scan, rule-size audit, entry-trigger audit and diff whitespace
   check: PASS.
-- Full `run-checks` and distribution: pending.
+- Full `run-checks`: 19 suites PASS; the existing main gate suite reached its
+  600-second runner limit after step 18 of 22. A standalone completion is pending;
+  the timeout is not a pass and no timeout limit or test case was removed.
+- First distribution: exception regression PASS (83 assertions); rolled back
+  because the existing edit-hook fixture froze the deployed kit but the real
+  hook invokes the canonical kit. The positive hook fixture now freezes that
+  same canonical kit; its runtime-tampering rejection cases are retained.
+  The other CLI cases continue to test the deployed kit.
 
 No client data is included here. Deployment and application-specific results
 belong in the private project memory.
