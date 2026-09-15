@@ -1,7 +1,7 @@
 ---
 title: Frozen style exception ledger forwarding
 date: 2026-09-15
-status: in-progress
+status: verified
 tags: [verification, regression]
 ---
 
@@ -36,13 +36,24 @@ verifier copy and require the formerly valid close to fail.
 - Public-memory scan, rule-size audit, entry-trigger audit and diff whitespace
   check: PASS.
 - Full `run-checks`: 19 suites PASS; the existing main gate suite reached its
-  600-second runner limit after step 18 of 22. A standalone completion is pending;
-  the timeout is not a pass and no timeout limit or test case was removed.
+  600-second runner limit after step 18 of 22. Standalone rerun: all 22 steps,
+  859 assertions PASS (537 seconds). Thus every suite in the 20-suite collection
+  has a passing result; the first aggregate run itself remains 19/20, not 20/20.
+  No timeout limit or test case was removed.
 - First distribution: exception regression PASS (83 assertions); rolled back
   because the existing edit-hook fixture froze the deployed kit but the real
   hook invokes the canonical kit. The positive hook fixture now freezes that
   same canonical kit; its runtime-tampering rejection cases are retained.
   The other CLI cases continue to test the deployed kit.
+- Targeted real edit-hook regression after that fixture correction: 43 assertions
+  PASS (44 seconds). Second distribution main gate suite: 859 assertions PASS
+  (529 seconds); its separate style-exception suite also passed all 83 assertions
+  (55 seconds). Official distribution completed with byte-identical committed
+  source and destination files; backups and the distribution log were retained.
+
+Implementation commits: `73ba1ed` (forwarding and regression) and `8b70b7f`
+(portable real-hook fixture). Existing unrelated browser-module work was not
+committed or distributed. No application source or old gate receipt was changed.
 
 No client data is included here. Deployment and application-specific results
 belong in the private project memory.
