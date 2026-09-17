@@ -147,6 +147,15 @@ try {
       { width: 375, elements: [{ sel: "#copy", display: "block" }] },
     ],
   });
+  // 背景色で描画する #panel を測る spec。撮影0件の検査（painted:false の偽装検出）を発火させる。
+  write("MyBrain/verify/spec-painted.json", {
+    url: "http://127.0.0.1:0/",
+    viewportPolicy: { scrollbars: "hidden" },
+    viewports: [
+      { width: 800, elements: [{ sel: "#panel", display: "block" }] },
+      { width: 375, elements: [{ sel: "#panel", display: "block" }] },
+    ],
+  });
   const accessibilityBase = {
     viewport: { width: 800, height: 600 },
     viewportPolicy: { scrollbars: "hidden" },
@@ -297,6 +306,38 @@ try {
   }
   if (pass.p3Hermetic !== false || pass.pageIdentity !== null) {
     throw new Error(`ordinary gate batch must not acquire P-3 page identity evidence:\n${JSON.stringify(pass, null, 2)}`);
+  }
+
+  // 撮影0件で描画している要素は、承認の記録が無ければ painted:false の偽装として落とす。
+  // 承認済みの除外（figma-gate が validateOwnerVisualExemption を通して渡す記録）だけは通し、
+  // 通した事実を summary.paintGuard に残す（2026-09-17 実測: 承認済み3節がすべてこの検査で停止した）。
+  const paintedEmptyJob = { ...baseJob(url, { captureJobs: [] }), layout: { specPath: "MyBrain/verify/spec-painted.json" } };
+  try {
+    await runGateBrowserBatch(paintedEmptyJob);
+    throw new Error("zero captures on a painted element without owner exemption must reject the gate batch.");
+  } catch (error) {
+    if (!String(error.message).includes("比較キャプチャが0件")) throw error;
+  }
+  for (const incomplete of [{ selector: "#panel" }, { basisPath: "MyBrain/verify/owner-visual-exemption.json" }, { basisPath: "", selector: "#panel" }]) {
+    try {
+      await runGateBrowserBatch({ ...paintedEmptyJob, capture: { jobs: [], ownerVisualExemption: incomplete } });
+      throw new Error(`an incomplete owner exemption record must not bypass the zero-capture guard: ${JSON.stringify(incomplete)}`);
+    } catch (error) {
+      if (!String(error.message).includes("batch job.capture.ownerVisualExemption.")) throw error;
+    }
+  }
+  try {
+    await runGateBrowserBatch({ ...baseJob(url), capture: { ...baseJob(url).capture, ownerVisualExemption: { selector: "#panel", basisPath: "MyBrain/verify/owner-visual-exemption.json" } } });
+    throw new Error("an owner exemption record must not accompany non-empty capture jobs.");
+  } catch (error) {
+    if (!String(error.message).includes("only valid when capture jobs are empty")) throw error;
+  }
+  const exemptPass = await runGateBrowserBatch({
+    ...paintedEmptyJob,
+    capture: { jobs: [], ownerVisualExemption: { elementId: "panel", selector: "#panel", basisPath: "MyBrain/verify/owner-visual-exemption.json" } },
+  });
+  if (exemptPass.status !== "PASS" || exemptPass.captures.length !== 0 || exemptPass.paintGuard?.result !== "skipped-owner-visual-exemption" || !exemptPass.paintGuard.painting?.["#panel"]?.includes("background-color")) {
+    throw new Error(`owner-approved visual exemption must pass zero captures and record the skipped paint guard:\n${JSON.stringify(exemptPass, null, 2)}`);
   }
   const ordinaryCheckpoint = await runGateBrowserBatch({ ...baseJob(url), checkpointElementId: "ordinary-checkpoint", preflightId: "8f4976f3-4d73-4e28-9a17-4a07acee9f18", p3Hermetic: false });
   if (ordinaryCheckpoint.status !== "PASS" || ordinaryCheckpoint.p3Hermetic !== false || ordinaryCheckpoint.pageIdentity !== null) {

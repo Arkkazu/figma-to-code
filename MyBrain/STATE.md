@@ -2,6 +2,22 @@
 
 ## Current
 
+- 2026-09-17: Owner-authorized repair of the owner visual exemption path in the
+  browser batch. The gate intentionally sends zero capture jobs for an
+  owner-approved VISUAL exemption, but the batch zero-capture guard (painted:false
+  forgery detection) rejected every such checkpoint, and batch job normalization
+  dropped any exemption record. The gate now forwards the validated exemption
+  (element id, selector, repo-relative basis path) in the capture document; the
+  batch validates it, accepts it only with empty capture jobs, and records the
+  skipped guard in `summary.paintGuard`. Unapproved or incomplete records still
+  fail. Also reset `verify-layout` paint observations per run (they leaked across
+  runs in one process). Checks: gate-browser-batch E2E PASS locally (real
+  browser; CI known-failing list), figma-gate E2E 869 assertions PASS, owner
+  exemption E2E PASS, run-checks 20/20 PASS. Mutations confirmed: disabling the
+  batch skip, the per-run reset, or the gate forwarding each makes an E2E fail.
+  The working tree had unrelated uncommitted edits to `cdp-browser` files from
+  another session during these runs; they are not part of this change.
+
 - 2026-09-15: Owner-authorized repair of Figma close forwarding to the style unit
   checker. Explicit same-scope exception ledgers are frozen at preflight.
   Focused regression: 83 assertions PASS, including a forwarding-removal mutation.

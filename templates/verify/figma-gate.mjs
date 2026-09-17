@@ -2872,6 +2872,19 @@ function checkpoint(manifestPath, elementIdArg, { finalRecheck = false, release 
     url: verifyUrl,
     scrollbars: readSpecScrollbars(validated),
     jobs: captureJobs,
+    // 撮影を0件にした理由を batch へ渡す。渡さないと、batch の「描画しているのに比較0件」検査が
+    // painted:false の偽装と承認済みの除外を区別できず、承認経路を必ず止める
+    // （2026-09-17 実測、案件側で承認済み3節のcheckpointがすべてこの検査で停止した）。
+    // 値は validateOwnerVisualExemption を通した component からだけ作る。
+    ...(component.painted && component.ownerVisualExemption
+      ? {
+          ownerVisualExemption: {
+            elementId,
+            selector: component.selector,
+            basisPath: relative(repoRoot, resolve(repoRoot, component.ownerVisualExemption.basisPath)).replace(/\\/g, "/"),
+          },
+        }
+      : {}),
   };
   writeFileSync(captureJobsPath, `${JSON.stringify(captureDocument, null, 2)}\n`, "utf8");
   const p3Hermetic = process.env.FIGMA_P3_HERMETIC_PROVIDER === "1";

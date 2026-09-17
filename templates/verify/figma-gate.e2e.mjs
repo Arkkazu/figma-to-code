@@ -576,6 +576,22 @@ function checkpointExemptedFixture(fixture) {
     attempt.output.includes("VISUAL SKIPPED (owner approved)"),
     "checkpoint reports the owner-approved visual skip instead of silently passing"
   );
+  // 撮影0件にした理由を browser batch へ渡していること。渡さないと batch の
+  // 「描画しているのに比較0件」検査が承認済みの除外を偽装として止める（2026-09-17 実測）。
+  const checkpointsRoot = join(fixture.root, "MyBrain", "verify", "checkpoints");
+  const batchJobs = readdirSync(checkpointsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(checkpointsRoot, entry.name, "fixture-component-browser-batch.json"))
+    .filter((path) => existsSync(path));
+  assert(batchJobs.length === 1, "exempted checkpoint writes exactly one browser batch job");
+  const batchJob = JSON.parse(readFileSync(batchJobs[0], "utf8"));
+  assert(
+    Array.isArray(batchJob.capture?.jobs) && batchJob.capture.jobs.length === 0
+      && batchJob.capture.ownerVisualExemption?.selector === ".fixture-root"
+      && batchJob.capture.ownerVisualExemption?.basisPath === "MyBrain/verify/fixture/owner-visual-exemption.json"
+      && batchJob.capture.ownerVisualExemption?.elementId === "fixture-component",
+    `exempted checkpoint forwards the validated owner exemption to the browser batch capture document: ${JSON.stringify(batchJob.capture)}`
+  );
   return attempt;
 }
 

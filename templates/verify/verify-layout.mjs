@@ -61,6 +61,10 @@ function configure(spec, url) {
   tolerance = spec.tolerance ?? 1.5;
   failCount = 0;
   passCount = 0;
+  // 描画実測も実行ごとに初期化する。モジュール変数のままだと、同じプロセスで前に測った
+  // 別specのセレクタが次の実行の paintObservations に残り、撮影0件の検査を誤って発火させる
+  // （2026-09-17、gate-browser-batch.e2e で #panel の観測が後続の #copy だけのspecへ持ち越された）。
+  paintObservations = {};
   return scrollbars;
 }
 

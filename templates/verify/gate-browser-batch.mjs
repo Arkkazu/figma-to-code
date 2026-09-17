@@ -144,8 +144,18 @@ function normalizeJob(raw) {
   const motionReport = toProjectPath(motion.reportPath, "batch job.motion.reportPath");
   const captureDocument = requireObject(job.capture, "batch job.capture");
   if (!Array.isArray(captureDocument.jobs)) fail("batch job.capture.jobs must be an array.");
+  let ownerVisualExemption = null;
+  if (captureDocument.ownerVisualExemption != null) {
+    const declared = requireObject(captureDocument.ownerVisualExemption, "batch job.capture.ownerVisualExemption");
+    if (captureDocument.jobs.length !== 0) fail("batch job.capture.ownerVisualExemption is only valid when capture jobs are empty.");
+    ownerVisualExemption = {
+      elementId: declared.elementId == null ? null : requireString(declared.elementId, "batch job.capture.ownerVisualExemption.elementId"),
+      selector: requireString(declared.selector, "batch job.capture.ownerVisualExemption.selector"),
+      basisPath: requireString(declared.basisPath, "batch job.capture.ownerVisualExemption.basisPath"),
+    };
+  }
   const capture = captureDocument.jobs.length === 0
-    ? { url, jobs: [], timeoutMs: 20000, scrollbars }
+    ? { url, jobs: [], timeoutMs: 20000, scrollbars, ...(ownerVisualExemption ? { ownerVisualExemption } : {}) }
     : normalizeCaptureBatch({ ...captureDocument, url, scrollbars });
   const checkpointElementId = job.checkpointElementId == null ? null : requireString(job.checkpointElementId, "batch job.checkpointElementId");
   const preflightId = job.preflightId == null ? null : requireString(job.preflightId, "batch job.preflightId");
@@ -218,10 +228,28 @@ export async function runGateBrowserBatch(rawJob) {
     // 描画しているのに painted:false なら、比較を消す宣言なので落とす。
     // 逆（painted:true なのに描画signalが無い）は落とさない。比較を余分に行うだけで、
     // 検証を弱めないため。
+    //
+    // 例外は、オーナー承認で VISUAL を外した節だけとする（figma-gate の ownerVisualExemption）。
+    // その節は figma-gate が意図して撮影を0件にし、承認の根拠・selector・承認時CSSハッシュを
+    // 別途検査している。ここで止めると承認経路が一本も通らない（2026-09-17 実測）。
+    // 承認の記録（basisPath と selector）を伴わない0件は、従来どおり偽装として落とす。
     if (job.capture.jobs.length === 0) {
       const painting = Object.entries(summary.layout.paintObservations ?? {})
         .filter(([, signals]) => Array.isArray(signals) && signals.length > 0);
-      if (painting.length > 0) {
+      const exemption = job.capture.ownerVisualExemption;
+      const approvedExemption = exemption !== null
+        && typeof exemption === "object"
+        && typeof exemption.basisPath === "string" && exemption.basisPath.length > 0
+        && typeof exemption.selector === "string" && exemption.selector.length > 0;
+      if (painting.length > 0 && approvedExemption) {
+        summary.paintGuard = {
+          result: "skipped-owner-visual-exemption",
+          elementId: exemption.elementId ?? null,
+          selector: exemption.selector,
+          basisPath: exemption.basisPath,
+          painting: Object.fromEntries(painting),
+        };
+      } else if (painting.length > 0) {
         fail(
           "SPEC FAIL: 比較キャプチャが0件ですが、対象要素は実際に描画しています。" +
             " component manifest の painted:false が比較を消しています。描画している要素は painted:true にし、" +
