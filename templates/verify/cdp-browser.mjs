@@ -989,6 +989,43 @@ export async function navigateAndWait(browser, options) {
   }
 }
 
+export function primeImagesForMeasurement(roots, doc, win) {
+  const scrollPositions = new Map();
+  const windowPosition = { left: win.scrollX, top: win.scrollY };
+  for (const root of roots) {
+    for (let element = root; element; element = element.parentElement) {
+      if (!scrollPositions.has(element)) {
+        scrollPositions.set(element, { left: element.scrollLeft, top: element.scrollTop });
+      }
+    }
+  }
+  const force = (image) => {
+    image.loading = "eager";
+    image.removeAttribute("loading");
+    image.fetchPriority = "high";
+    const source = image.currentSrc || image.src;
+    if (source) image.src = source;
+  };
+  try {
+    if (roots.length === 0) {
+      for (const image of Array.from(doc.images || [])) force(image);
+      return;
+    }
+    for (const root of roots) {
+      root.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
+      const images = [
+        ...(root.tagName === "IMG" ? [root] : []),
+        ...Array.from(root.querySelectorAll("img")),
+      ];
+      for (const image of images) force(image);
+    }
+  } finally {
+    // lazy-loadの準備でoverflow:hiddenの祖先まで動く。測定前に全スクロール位置を戻す。
+    for (const [element, position] of scrollPositions) element.scrollTo({ ...position, behavior: "instant" });
+    win.scrollTo({ ...windowPosition, behavior: "instant" });
+  }
+}
+
 async function navigateAndWaitOnce(browser, { url, width, height = 2000, selectors = [], timeoutMs = NAVIGATION_TIMEOUT_MS }) {
   const uniqueSelectors = [...new Set(selectors.filter((selector) => typeof selector === "string" && selector.trim() !== ""))];
   await browser.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
@@ -1022,31 +1059,11 @@ async function navigateAndWaitOnce(browser, { url, width, height = 2000, selecto
   await browser.evaluate(`(() => {
     const selectors = ${JSON.stringify(uniqueSelectors)};
     const roots = selectors.map((selector) => document.querySelector(selector)).filter(Boolean);
-    const force = (image) => {
-      image.loading = "eager";
-      image.removeAttribute("loading");
-      image.fetchPriority = "high";
-      // Chromeのnative lazy-loadはloading属性の変更だけでは再スケジュールしない場合がある。
-      // 同じURLを代入して、対象画像のリクエストを明示的に開始する。
-      const source = image.currentSrc || image.src;
-      if (source) image.src = source;
-    };
     // 測定rootが1つも解決しないviewportがある。SP専用/PC専用の要素を持つcomponentの
     // checkpointがこれにあたる。このとき readiness はページ全体の画像を待つ側へ落ちるが、
     // 画面外のlazy画像は誰も読み込まないため imagesReady が永久にfalseになり、
     // 実装が正しくてもLAYOUT FAILになる。rootが無いときはページ全体を強制読込する。
-    if (roots.length === 0) {
-      for (const image of Array.from(document.images || [])) force(image);
-      return;
-    }
-    for (const root of roots) {
-      root.scrollIntoView({ block: "center", inline: "nearest" });
-      const images = [
-        ...(root.tagName === "IMG" ? [root] : []),
-        ...Array.from(root.querySelectorAll("img")),
-      ];
-      for (const image of images) force(image);
-    }
+    (${primeImagesForMeasurement.toString()})(roots, document, window);
   })()`);
 
   let lastReadiness = null;
