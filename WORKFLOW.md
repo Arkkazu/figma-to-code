@@ -184,7 +184,7 @@ node C:/AI/web-development/verify/rule-size-audit.mjs verify-config/rule-size-au
 
 GitHub Actions は2つある。
 
-- `.github/workflows/verify-and-merge.yml`：`claude/**` と `codex/**` への push で `run-checks.mjs` を実行し、緑なら `master` へ自動マージする。赤ならマージしない。
+- `.github/workflows/verify-and-merge.yml`：`claude/**` と `codex/**` への push で `run-checks.mjs` を実行し、緑なら `main` へ自動マージする。赤ならマージしない。
 - `.github/workflows/audit.yml`：**すべてのブランチ**への push と pull request で同じ `run-checks.mjs` を実行する。自動マージはしない。`fix/**` など上記2つに当たらないブランチが未検査のまま残る穴を塞ぐ。
 
 実ブラウザや案件側の成果物を要するE2Eは `run-checks.mjs` の `KNOWN_FAILING` に理由つきで外してある。緑と赤を混ぜた集合は「いつも赤いので誰も見ない」状態を作り、検査そのものを無効化する。解消したら `CHECKS` へ移す。

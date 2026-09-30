@@ -2,7 +2,7 @@ name: audit
 
 # すべてのブランチと pull request で `tools/run-checks.mjs` を実行する。
 #
-# verify-and-merge.yml は `claude/**` と `codex/**` と master でしか動かない。
+# verify-and-merge.yml は `claude/**` と `codex/**` と main でしか動かない。
 # `fix/**` などそれ以外のブランチは、push しても何も検査されないまま残る。
 # ここはその穴だけを塞ぐ。自動マージはしない。
 #
