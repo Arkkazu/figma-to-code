@@ -1,6 +1,6 @@
-# claude/** と codex/** への push で検査を実行し、緑なら master へ自動マージする。
+# claude/** と codex/** への push で検査を実行し、緑なら main へ自動マージする。
 # PRを都度作らずに変更を反映するための仕組み。赤ならマージしないので、
-# master には検査を通った変更だけが入る。
+# main には検査を通った変更だけが入る。
 name: verify-and-merge
 
 on:
@@ -8,7 +8,7 @@ on:
     branches:
       - "claude/**"
       - "codex/**"
-      - master
+      - main
 
 permissions:
   contents: write
@@ -30,14 +30,14 @@ jobs:
 
   merge:
     needs: verify
-    if: github.ref != 'refs/heads/master'
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: master
-      - name: merge the verified branch into master
+          ref: main
+      - name: merge the verified branch into main
         run: |
           set -eu
           branch="${GITHUB_REF_NAME}"
@@ -45,9 +45,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin "${branch}"
           if git merge-base --is-ancestor "origin/${branch}" HEAD; then
-            echo "master already contains origin/${branch}; nothing to merge."
+            echo "main already contains origin/${branch}; nothing to merge."
             exit 0
           fi
           git merge --no-ff --no-edit "origin/${branch}" \
             -m "auto-merge ${branch} (verified by tools/run-checks.mjs)"
-          git push origin master
+          git push origin main

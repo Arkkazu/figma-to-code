@@ -54,7 +54,7 @@ node C:/AI/figma-to-code/tools/project-entry-install.mjs <ディレクトリ> [<
 node tools/run-checks.mjs
 ```
 
-`claude/**` と `codex/**` へ push すると、GitHub Actions（`.github/workflows/verify-and-merge.yml`）が同じ検査を実行し、緑なら `master` へ自動マージする。赤ならマージしない。プルリクエストは作らない。
+`claude/**` と `codex/**` へ push すると、GitHub Actions（`.github/workflows/verify-and-merge.yml`）が同じ検査を実行し、緑なら `main` へ自動マージする。赤ならマージしない。プルリクエストは作らない。
 
 実ブラウザや案件側の成果物を要するE2Eは、`run-checks.mjs` の `KNOWN_FAILING` に理由つきで列挙し、集合から外している。緑と赤を混ぜると検査そのものが無視されるため。解消したら `CHECKS` へ移す。
 
