@@ -1,7 +1,8 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { isAbsolute, relative, resolve } from "node:path";
+import { GATE_LEASE_DAYS, expiredLeaseDays, gateReceipts, gateDependencySatisfied } from "./gate-lease.mjs";
 
 // 担当者名は案件ごとに決まる。正本の配布物に特定の名前を焼き込まないため、
 // 既定を持ちつつ scope-coordination.json の actors で上書きできるようにする。
@@ -54,37 +55,10 @@ function operationTargets(manifest, label) {
 // coding gate は状態をworktree外へ置ける（CODING_GATE_STATE_DIR）。受領証の場所を
 // root配下に決め打ちすると、外部stateDirを使う実行では保持中の受領証が見えず、
 // 「誰も保持していない」と誤判定して衝突を素通りさせる。ゲートと同じ規則で解決する。
-function gateStateDir(root, gateKind) {
-  if (gateKind === "coding") {
-    const configured = process.env.CODING_GATE_STATE_DIR?.trim();
-    if (configured) {
-      if (!isAbsolute(configured)) throw new Error("CODING_GATE_STATE_DIR は絶対パスである必要があります。");
-      return configured;
-    }
-  }
-  return resolve(root, `.${gateKind}-gate`);
-}
-
-function readGateState(root, gateKind) {
-  const statePath = resolve(gateStateDir(root, gateKind), "active.json");
-  if (!existsSync(statePath)) return null;
-  return readJson(statePath, `${gateKind} gate state`);
-}
-
 // coding gate の受領証は scope ごとに1ファイル（active/<manifestId>.json）。
 // 1枠だった頃の active.json も移行期間は読む。figma gate も 2026-08-25 に同形式へ移行した。
 function readGateStates(root, gateKind) {
-  const states = [];
-  const activeDir = resolve(gateStateDir(root, gateKind), "active");
-  if (existsSync(activeDir)) {
-    for (const name of readdirSync(activeDir)) {
-      if (!name.endsWith(".json")) continue;
-      states.push(readJson(resolve(activeDir, name), `${gateKind} gate state`));
-    }
-  }
-  const legacy = readGateState(root, gateKind);
-  if (legacy) states.push(legacy);
-  return states;
+  return gateReceipts(root, gateKind).map(({ state }) => state);
 }
 
 function activeGateClaims(root, gateKind) {
@@ -93,17 +67,28 @@ function activeGateClaims(root, gateKind) {
     .map((state) => gateClaimOf(state, gateKind));
 }
 
+// リース判定の正本は verify/gate-lease.mjs。ここに複製しない。
+// scope-takeover.mjs と同じ判定を使わないと、「audit は失効と言うのに takeover は拒む」
+// という食い違いが出る。止める側と解く側は必ず同じ式で判定する。
 function gateClaimOf(state, gateKind) {
   let targets = Array.isArray(state.changeTargets) ? state.changeTargets.map(normalizePath) : null;
   if (!targets && typeof state.manifestPath === "string") {
     targets = operationTargets(readJson(state.manifestPath, `${gateKind} gate manifest`), `${gateKind} gate manifest`);
   }
   if (!targets) throw new Error(`${gateKind} gateのactive受領証にchangeTargetsがありません。`);
+  const expiredDays = expiredLeaseDays(state);
   return {
     id: String(state.manifestId ?? "unknown"),
-    source: `${gateKind} gate receipt`,
+    source: `${gateKind} gate receipt:${state.phase ?? "phase不明"}${expiredDays === null ? "" : "（リース失効）"}`,
     targets,
     state,
+    stale: expiredDays === null ? null : { days: expiredDays, limitDays: GATE_LEASE_DAYS },
+    actor: typeof state.actor === "string" ? state.actor : undefined,
+    hint: expiredDays === null
+      ? `${gateKind} gate の受領証が ${state.phase ?? "phase不明"} のまま保持されています。close / abort で解放されます。`
+      : `${gateKind} gate の受領証が ${expiredDays.toFixed(1)} 日更新されていません（リース ${GATE_LEASE_DAYS} 日）。`
+        + "失効として扱い、他担当の宣言は止めません。保持者が続けるなら受領証を更新すればリースは延びます。"
+        + ` 引き取るなら node MyBrain/verify/scope-takeover.mjs ${String(state.manifestId ?? "<scope-id>")} --actor <担当> --reason "<20文字以上の理由>" を実行します。`,
   };
 }
 
@@ -156,16 +141,26 @@ function validateOwnershipRules(ownership, violations, actors) {
     if (!rule || typeof rule.pattern !== "string" || rule.pattern.trim() === "") violations.push(`共有所有者台帳の ${index} 行目に pattern がありません。`);
     if (!actors.has(rule?.owner)) violations.push(`共有所有者台帳の ${index} 行目の owner が不正です。`);
     if (rule?.except !== undefined && !Array.isArray(rule.except)) violations.push(`共有所有者台帳の ${index} 行目の except は配列である必要があります。`);
-    if (rule?.grantedForScope !== undefined && (typeof rule.grantedForScope !== "string" || rule.grantedForScope.trim() === "")) {
-      violations.push(`共有所有者台帳の ${index} 行目の grantedForScope は空でない文字列である必要があります。`);
+    // **恒久所有は廃止した（2026-09-10）。**所有は必ず scope へ束ねる。
+    // 束ねない所有はどの終了条件にも紐づかず、解くのはオーナーの手作業だけになる。
+    // 2026-09-01 実測: close 済み scope 由来の所有が無関係な実装19ファイルをせき止め、
+    // 所有者側に稼働中の scope が0件でも別担当は宣言できなかった。
+    // grantedForScope があれば、その scope が closed / aborted になった時点で自動失効する。
+    if (typeof rule?.grantedForScope !== "string" || rule.grantedForScope.trim() === "") {
+      violations.push(
+        `共有所有者台帳の ${index} 行目に grantedForScope がありません。所有は scope へ束ねます（恒久所有は 2026-09-10 に廃止）。`
+        + ` 対象の scope ID を書くか、行を削ります。宣言パスの排他は受領証の交差判定が担うため、行を消しても同時編集は防げます。`,
+      );
     }
   }
   return rules;
 }
 
-// 所有をscopeへ束ねる。grantedForScope を持つ行は、その scope が closed / aborted になるか
-// 台帳から消えた時点で失効し、以後は所有として読まない。持たない行は従来どおり恒久として
-// 扱う（既存台帳との互換。移行状況は notes で報告する）。
+// 所有をscopeへ束ねる。行は、束ねた scope が closed / aborted になるか台帳から消えた時点で
+// 失効し、以後は所有として読まない。**grantedForScope を持たない恒久所有は 2026-09-10 に
+// 廃止した**（validateOwnershipRules が違反として落とす）。旧台帳が残っている場合も
+// ここでは失効扱いにせず、validateOwnershipRules の違反として直させる。黙って無効化すると、
+// 台帳が効いているつもりのまま排他が外れる。
 //
 // 2026-09-01 の実測が根拠。所有がエージェント名へ常設で紐づき、close しても解放されない
 // ため、所有者側に稼働中のscopeが0件でも別エージェントは対象を宣言できず、close受領証を
@@ -183,6 +178,17 @@ function expiredOwnership(rule, scopeStatusById) {
 // 実装役は台帳のどの行をどう直せばよいか分からず、オーナーへの問い合わせに化ける。
 function ownershipPatchLine(target, actor, scopeId) {
   return `{ "pattern": "${target}", "owner": "${actor}", "grantedForScope": "${scopeId}" }`;
+}
+
+// 止めるときも読み飛ばすときも、放置日数を必ず出す。「competes」の一行だけでは、
+// 相手が作業中なのか置き去りなのかを実装役が判別できず、オーナーへの問い合わせに化ける。
+function manifestAgeLabel(manifestPath) {
+  try {
+    const days = (Date.now() - statSync(manifestPath).mtimeMs) / 86400000;
+    return `manifest最終更新 ${days.toFixed(1)}日前`;
+  } catch {
+    return "manifest最終更新 不明";
+  }
 }
 
 function hashFile(path) {
@@ -288,8 +294,7 @@ function loadCoordinationEntry(root, entry, violations, actors) {
 
 function dependencySatisfied(root, dependency) {
   if (!dependency || typeof dependency !== "object" || !GATE_KINDS.has(dependency.gate)) return false;
-  const state = readGateState(root, dependency.gate);
-  return Boolean(state && state.manifestId === dependency.scopeId && state.phase === (dependency.phase ?? "closed"));
+  return gateDependencySatisfied(root, dependency);
 }
 
 function audit({ root, manifestPath, gateKind, operation, identity = {}, discardCheckpoints = false }) {
@@ -405,7 +410,12 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
         notes.push(`${label} gate受領証 ${claim.id} が保持中ですが、宣言パスが交差しないため並行して進めます。`);
         continue;
       }
-      violations.push(`${label} gate受領証は ${claim.id} が保持中で、次の宣言パスが交差します: ${overlap.join("、")}。`);
+      const message = `${label} gate受領証は ${claim.id} が保持中で、次の宣言パスが交差します: ${overlap.join("、")}。`
+        + (claim.hint ? `
+      ${claim.hint}` : "");
+      // リースが切れた受領証は他人の宣言を止めない。黙って無視もしない — noteとして必ず出す。
+      if (claim.stale) notes.push(message);
+      else violations.push(message);
       continue;
     }
     // 同一scopeが既に受領証を持っている場合。引き直しは明示フラグを要求する。
@@ -426,15 +436,50 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
       }
     }
   }
-  const codingState = readGateState(root, "coding");
-  if (gateKind === "figma" && codingState && !["closed", "aborted"].includes(codingState.phase) && codingState.figmaGate) {
-    violations.push(`Coding scope ${codingState.manifestId} がFigma受領証 ${codingState.figmaGate.manifestId} を参照中です。Figma preflightで上書きできません。`);
+  for (const { state: codingState } of codingClaims) {
+    if (gateKind === "figma" && codingState.figmaGate?.manifestId === scopeId) {
+      violations.push(`Coding scope ${codingState.manifestId} がFigma受領証 ${codingState.figmaGate.manifestId} を参照中です。Figma preflightで上書きできません。`);
+    }
   }
 
-  const claims = [
-    ...loadedEntries.map(({ entry, targets: entryTargets }) => ({ id: entry.id, source: `coordination:${entry.status}`, targets: entryTargets })),
-    ...[...figmaClaims, ...codingClaims],
-  ];
+  // 台帳の active / waiting 行は「予約」であって「進行中の編集」ではない。
+  //
+  // 両gateとも、対象ファイルを編集する前に preflight 受領証を要求する（下の dirty 判定が
+  // その担保）。したがって live な受領証を1件も持たない scope は、定義上まだ1行も編集して
+  // いない。守るべき編集が存在しないのに、その行が他担当の宣言を止める理由は無い。
+  // 並行編集の排他は、受領証claimの交差判定（この下）が担う。
+  //
+  // 2026-09-04 実測（案件側）。台帳の live scope 10件が42パスを保持し、
+  // うち5件は受領証を1件も持たず、5件は7日以上更新が無かった。受領証を持たない scope が
+  // あるページテンプレートを押さえ、別担当の実装7ファイルが commit まで到達できなかった。しかもその行自身の
+  // `changeTargets` と note は「2026-09-02に対象外とした」と書いており、manifest だけが
+  // 古い宣言を残していた。**予約が失効しないまま、宣言時ではなく commit 直前で表面化した。**
+  // これは 2026-09-01 の `stale-path-ownership-blocks-other-actor` と同じ形であり、
+  // 所有台帳へ入れた失効の仕組みを、こちらの関門にも入れる。
+  const liveReceiptScopeIds = new Set([...figmaClaims, ...codingClaims].map((claim) => claim.id));
+  const coordinationClaims = [];
+  for (const { entry, targets: entryTargets, absoluteManifestPath: entryManifestPath } of loadedEntries) {
+    if (entry.id === scopeId) continue;
+    if (liveReceiptScopeIds.has(entry.id)) {
+      coordinationClaims.push({
+        id: entry.id,
+        source: `coordination:${entry.status}`,
+        targets: entryTargets,
+        actor: entry.actor,
+        hint: "相手はlive な gate受領証を保持しています。close / abort を待つか、担当を調整します。",
+      });
+      continue;
+    }
+    const overlap = entryTargets.filter((entryTarget) => targets.includes(entryTarget));
+    if (overlap.length === 0) continue;
+    notes.push(
+      `${entry.id}（${entry.actor} / coordination:${entry.status} / gate受領証なし / ${manifestAgeLabel(entryManifestPath)}）が`
+      + ` ${overlap.join("、")} を予約していますが、編集に必要な受領証を持たないため止めません。`
+      + " 実際に着手済みなら、先に preflight を実行して受領証を取り直します。",
+    );
+  }
+
+  const claims = [...coordinationClaims, ...figmaClaims, ...codingClaims];
   let dirty = new Set();
   try {
     dirty = dirtyPaths(root);
@@ -494,7 +539,14 @@ function audit({ root, manifestPath, gateKind, operation, identity = {}, discard
     }
 
     for (const claim of claims.filter((claim) => claim.id !== scopeId && claim.targets.includes(target))) {
-      violations.push(`${target} は ${claim.id}（${claim.source}）と競合します。`);
+      // 所有台帳の枝には「貼れば直る差分まで出す」規則があるのに、交差判定の枝には
+      // 適用されていなかった。担当者も受領証の状態も出ないため、止められた側は
+      // 何を待てばよいのか分からない（2026-09-04 実測）。
+      const message = `${target} は ${claim.id}（${claim.source}${claim.actor ? ` / ${claim.actor}` : ""}）と競合します。`
+        + (claim.hint ? `\n      ${claim.hint}` : "");
+      // リースが切れた受領証は他人の宣言を止めない。黙って無視もしない — noteとして必ず出す。
+      if (claim.stale) notes.push(message);
+      else violations.push(message);
     }
     if (dirty.has(target) && !permittedDirty.has(target) && !(operation === "amend" && frozenAmendTargets.has(target))) {
       violations.push(

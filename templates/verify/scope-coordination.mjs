@@ -1,5 +1,7 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { gateReceipts } from "./gate-lease.mjs";
 
 export function coordinationPath(root = process.cwd()) {
   return resolve(root, "MyBrain/verify/scope-coordination.json");
@@ -77,7 +79,7 @@ export function withScopePreflightLock({ root = process.cwd(), gateKind, manifes
 
   // 中断lockの回収。持ち主のプロセスが居なくなったlockは、誰も解放できないまま案件全体を止める。
   //
-  // 実測（2026-08-29、rpa-technologies-theme）: preflight が拒否されると gate は fail() から
+  // 実測（2026-08-29、案件側）: preflight が拒否されると gate は fail() から
   // process.exit(1) を呼ぶ。下の finally は callback の return/throw でしか走らないため、
   // **拒否のたびにlockが漏れる**。実際に PID 32980 のlockが残り、別担当者のscopeが
   // 「lockを削除してよいか」を人に聞く以外に進めない状態になった。
@@ -184,4 +186,210 @@ export function markCoordinationGateAborted({ root = process.cwd(), scopeId, gat
   data.updatedAt = new Date().toISOString();
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf8");
   return { status: entry.status, gateState: entry.gates[gateKind] };
+}
+
+// ---------------------------------------------------------------------------
+// scope の解放（release）
+//
+// 2026-09-05 まで、予約を解放する手段は**どのエージェントにも無かった**。
+// `markCoordinationGateAborted` は export されているだけで呼び出し元が1件も無い死んだ関数で、
+// figma-gate に abort コマンドは無く、実際の解放は `scope-coordination.json` を手で書き換え、
+// 受領証ファイルを `aborted-scopes/` へ手で移すという未記録の操作で行われていた
+// （案件実測: `aborted-scopes/` に16ファイルが手作業で積まれている）。
+//
+// その結果、放置された予約に当たった実装役は「担当の codex 側で close / abort してください」
+// としか言えず、オーナーが担当者間の配車係になっていた。**だがその codex にも同じだけの
+// 機構しか無い。**手で JSON を編集する以上の手段が存在しないのだから、
+// 「担当だから解放できる」という前提自体が成り立っていない。
+//
+// したがって解放は権限ではなく記録の問題として扱う。**どのactorでも解放できる。**
+// 代わりに、誰がどのactorの予約をなぜ解放したかを台帳へ追記で残し、
+// 実行済みcheckpointを持つ受領証を捨てるときだけ明示フラグを要求する。
+// これは上の「中断lockの回収」（持ち主のプロセスが居ないlockは奪ってよい）と同じ方針である。
+
+function executedCount(state) {
+  return [state?.checkpoints, state?.sections, state?.components]
+    .filter((value) => value && typeof value === "object")
+    .reduce((total, value) => total + (Array.isArray(value) ? value.length : Object.keys(value).length), 0);
+}
+
+// live な受領証（phase が closed / aborted 以外）を、ファイルの場所ごと返す。
+// 台帳だけ aborted にしても受領証が active に残れば claim は解放されないため、
+// 解放は必ず両方を動かす。
+export function liveReceiptsOf(root, scopeId) {
+  const found = [];
+  for (const gateKind of ["figma", "coding"]) {
+    for (const { path, state } of gateReceipts(root, gateKind)) {
+      if (String(state?.manifestId ?? "") !== scopeId) continue;
+      if (["closed", "aborted"].includes(state?.phase)) continue;
+      found.push({ gateKind, path, phase: state?.phase ?? "phase不明", executed: executedCount(state) });
+    }
+  }
+  return found;
+}
+
+// 宣言されている manifest を全部見て、いちばん新しいものを活動の目安にする。
+//
+// gate種別ごとに manifest が分かれる scope があるため、1本だけ見ると
+// 「片方が存在しない」を「活動が不明」に丸めてしまう。実測（2026-09-05）:
+// ある scope の `gateManifestPaths.coding` が実在しないファイルを指しており、
+// 放置9.4日の scope が一覧で「manifest不明」になっていた。存在しない宣言は
+// 隠さず missing として返す。scope-conflict-audit も同じ宣言を読むため、これは
+// その scope が preflight できない状態でもある。
+function manifestActivity(root, entry) {
+  const candidates = new Set();
+  for (const gateKind of ["figma", "coding"]) {
+    const declared = entryManifestPath(entry, gateKind);
+    if (typeof declared === "string" && declared.trim() !== "") candidates.add(declared);
+  }
+  if (typeof entry?.manifestPath === "string" && entry.manifestPath.trim() !== "") candidates.add(entry.manifestPath);
+
+  let newest = null;
+  const missing = [];
+  for (const relativePath of candidates) {
+    try {
+      const mtime = statSync(resolve(root, relativePath)).mtimeMs;
+      if (newest === null || mtime > newest) newest = mtime;
+    } catch {
+      missing.push(relativePath);
+    }
+  }
+  return {
+    ageDays: newest === null ? null : (Date.now() - newest) / 86400000,
+    missingManifests: missing,
+  };
+}
+
+/**
+ * 予約中（active / waiting）の scope を、受領証の有無と放置日数つきで一覧する。
+ * 「誰に頼めばよいか」ではなく「どれが実際に動いていないか」を出すための一覧である。
+ */
+export function listReservations({ root = process.cwd() } = {}) {
+  const { data } = readScopeCoordination(root);
+  return data.scopes
+    .filter((entry) => ["active", "waiting"].includes(entry?.status))
+    .map((entry) => ({
+      id: entry.id,
+      actor: entry.actor,
+      status: entry.status,
+      gates: entry.gates ?? {},
+      ...manifestActivity(root, entry),
+      receipts: liveReceiptsOf(root, entry.id),
+    }))
+    .sort((left, right) => (right.ageDays ?? -1) - (left.ageDays ?? -1));
+}
+
+/**
+ * scope を解放する。actor の一致は要求しない。
+ *
+ * 実行済みcheckpointを持つ受領証がある場合は、破棄する中身を全部出したうえで
+ * `force` を要求する。守るべきは「担当者の縄張り」ではなく「検証済みの結果」である。
+ */
+export function releaseScope({ root = process.cwd(), scopeId, releasedBy, reason, force = false }) {
+  if (typeof scopeId !== "string" || scopeId.trim() === "") throw new Error("解放する scope の id が必要です。");
+  if (typeof releasedBy !== "string" || releasedBy.trim() === "") throw new Error("解放したactorを --by で渡してください。");
+  if (typeof reason !== "string" || reason.trim() === "") throw new Error("解放の理由を --reason で渡してください。");
+
+  const { path, data } = readScopeCoordination(root);
+  const entry = data.scopes.find((scope) => scope?.id === scopeId);
+  if (!entry) throw new Error(`scope coordination台帳に scope がありません: ${scopeId}`);
+  if (["closed", "aborted"].includes(entry.status)) {
+    throw new Error(`${scopeId} は既に ${entry.status} です。解放するものがありません。`);
+  }
+
+  const receipts = liveReceiptsOf(root, scopeId);
+  const executed = receipts.filter((receipt) => receipt.executed > 0);
+  if (executed.length > 0 && !force) {
+    const detail = executed.map((receipt) => `${receipt.gateKind}:${receipt.phase}（実行済み ${receipt.executed} 件）`).join("、");
+    throw new Error(
+      `${scopeId} は実行済みの検証結果を持つ受領証を保持しています: ${detail}。`
+      + " 捨てるなら --force を付けます。close で再実行できる場合は、解放ではなく close を選びます。",
+    );
+  }
+
+  const releasedGates = [];
+  for (const [gateKind, state] of Object.entries(entry.gates ?? {})) {
+    if (!["active", "waiting", "suspended"].includes(state)) continue;
+    entry.gates[gateKind] = "aborted";
+    releasedGates.push(`${gateKind}:${state}→aborted`);
+  }
+  entry.status = "aborted";
+
+  // 台帳だけ aborted にしても、受領証が active に残れば claim は解放されない。
+  // 解放は必ず両方を動かす。
+  const movedReceipts = [];
+  const archiveDirectory = resolve(root, "MyBrain/verify/aborted-scopes");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  for (const receipt of receipts) {
+    mkdirSync(archiveDirectory, { recursive: true });
+    const destination = resolve(archiveDirectory, `${scopeId}-${receipt.gateKind}-receipt-${stamp}.json`);
+    renameSync(receipt.path, destination);
+    movedReceipts.push(destination);
+  }
+
+  // 追記のみ。誰がどのactorの予約をなぜ解放したかが後から辿れないと、
+  // 「勝手に消された」と「放置を片付けた」を区別できない。
+  entry.releases = Array.isArray(entry.releases) ? entry.releases : [];
+  entry.releases.push({
+    by: releasedBy,
+    from: entry.actor,
+    reason,
+    at: new Date().toISOString(),
+    gates: releasedGates,
+    discardedReceipts: executed.map((receipt) => `${receipt.gateKind}:${receipt.phase}（実行済み ${receipt.executed} 件）`),
+  });
+
+  data.updatedAt = new Date().toISOString();
+  writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  return { scopeId, status: entry.status, releasedGates, movedReceipts, discarded: executed };
+}
+
+function runCli(argv) {
+  const [command, ...rest] = argv;
+  const root = process.cwd();
+  if (command === "list") {
+    const rows = listReservations({ root });
+    console.log(`予約中の scope ${rows.length} 件（放置日数の長い順）`);
+    for (const row of rows) {
+      const age = row.ageDays === null ? "実在するmanifestなし" : `${row.ageDays.toFixed(1)}日`;
+      const receipts = row.receipts.length
+        ? row.receipts.map((receipt) => `${receipt.gateKind}:${receipt.phase}(実行済み ${receipt.executed})`).join(", ")
+        : "受領証なし";
+      console.log(`  ${row.id} / ${row.actor} / ${row.status} / manifest最終更新 ${age} / ${receipts}`);
+      if (row.missingManifests.length > 0) {
+        console.log(`      台帳が実在しないmanifestを指しています: ${row.missingManifests.join("、")}（この scope は preflight できません）`);
+      }
+    }
+    console.log('解放: node MyBrain/verify/scope-coordination.mjs release <scopeId> --by <actor> --reason "..."');
+    return 0;
+  }
+  if (command === "release") {
+    const scopeId = rest.find((value) => !value.startsWith("--"));
+    const valueOf = (flag) => {
+      const index = rest.indexOf(flag);
+      return index >= 0 ? rest[index + 1] : undefined;
+    };
+    const result = releaseScope({
+      root,
+      scopeId,
+      releasedBy: valueOf("--by"),
+      reason: valueOf("--reason"),
+      force: rest.includes("--force"),
+    });
+    console.log(`RELEASED: ${result.scopeId} / ${result.status} / ${result.releasedGates.join("、") || "解放したgateなし"}`);
+    for (const moved of result.movedReceipts) console.log(`  受領証を退避: ${moved}`);
+    for (const discarded of result.discarded) console.log(`  破棄した検証結果: ${discarded.gateKind}:${discarded.phase}（実行済み ${discarded.executed} 件）`);
+    return 0;
+  }
+  console.error('Usage: node MyBrain/verify/scope-coordination.mjs <list | release <scopeId> --by <actor> --reason "..." [--force]>');
+  return 2;
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  try {
+    process.exit(runCli(process.argv.slice(2)));
+  } catch (error) {
+    console.error(`FAIL: ${error.message}`);
+    process.exit(1);
+  }
 }

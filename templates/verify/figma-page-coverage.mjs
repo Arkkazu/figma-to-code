@@ -133,7 +133,7 @@ export function canonicalCoverageDigest(coverage) {
 const FROZEN_METADATA_TAG = /<([\w-]+)\s+([^>]*?)(\/?)>|<\/([\w-]+)>/g;
 const FROZEN_METADATA_ATTR = /(\w+)="([^"]*)"/g;
 
-function parseFrozenMetadata(raw, label) {
+export function parseFrozenMetadata(raw, label) {
   if (typeof raw !== "string" || raw.trim() === "") {
     fail(label + " has no raw metadata tree to parse");
   }
