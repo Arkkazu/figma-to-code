@@ -62,7 +62,20 @@ node C:/AI/figma-to-code/tools/workflow-preflight.mjs --assert-local
 npm run figma:gate -- preflight MyBrain/verify/gate-<対象>.json --implementation-actor <actor> --implementation-context-id <context>
 ```
 
-いずれかが未了なら、推測で補わず、不足情報を1つだけ確認して停止する。案件側で `figma:gate` script が未導入なら、ゲート未導入として実装を開始せず、導入手順の確認だけを行う。
+いずれかが未了なら、推測で補わず、不足情報を1つだけ確認して停止する。
+
+初回のFigmaコーディングでは、環境判定後、ソース編集と着手前ゲートの前に検証キットを導入する。
+MyBrainの基本設置時にはFigma検証器を取り寄せない。対象案件のルートを指定して次を実行する。
+FigmaキットはWeb基盤も含み、既存の記録・設定・検証器は上書きしない。
+
+```bash
+node C:/AI/MyBrain/bootstrap.mjs <案件ルート> --kit figma
+```
+
+必要な追加機能は `--with` で選び、台帳・単位規約・hook配線を `C:\AI\MyBrain\SETUP.md` に従って揃える。
+既存settingsへの追加は `--kit figma --merge-hooks` を使う。既存検証器の更新は下の配布手順に従う。
+案件側の `figma:gate` / `coding:gate` script が無ければ、その設定を用意してからstartとpreflightへ進む。
+検証キット未導入・hook配線未了・preflight未合格のままソースを編集しない。導入作業だけで実装許可とはしない。
 
 ## 検証器の配布（2026-08-26追加）
 

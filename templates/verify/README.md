@@ -13,6 +13,16 @@ tags: [Figma, verify, CDP, lint, template, Codex, Claude]
 
 ## 導入（案件ごとに1回）
 
+MyBrainの基本設置とFigma検証キットの導入は別工程です。
+Figmaから初めてコーディングする際、ソース編集前に次を実行します。
+
+```bash
+node C:/AI/MyBrain/bootstrap.mjs <案件ルート> --kit figma
+```
+
+Web基盤も同時に追加します。必要な機能は `--with` で指定し、台帳・単位規約・hook配線・
+npm実行入口を `C:\AI\MyBrain\SETUP.md` に従って準備します。start・preflightが通るまで編集しません。
+既存案件への追加は不足分だけで、案件の記録や既存検証器を上書きしません。
 
 ## 正本が web-development にある同梱ファイル
 
