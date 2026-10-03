@@ -31,6 +31,7 @@ export const CHECKS = Object.freeze([
   "tools/figma-scope-lock.e2e.mjs",
   // 配布記録。--allow-dirty で迂回した事実と理由が後から数えられることを固定する。
   "tools/verifier-distribution-log.e2e.mjs",
+  "tools/verifier-runtime-import.e2e.mjs",
   // 排他所有の失効・空台帳・未登録・交差判定。通るのに集合へ入っていなかった。
   "templates/verify/scope-conflict-audit.e2e.mjs",
   // responsiveHtml の例外が「既存の重複の持ち越しか」を裏取りされることを固定する。

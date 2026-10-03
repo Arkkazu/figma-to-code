@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-03",
+  "environment": "local",
+  "scope": "Restore the verifier files required by the MyBrain distribution manifest on main.",
+  "certainty": "verified by local execution",
+  "moduleSource": "feat/entry-gate-and-vendored-sync at ff3c6fcdf9c8749b355af125146693963050eaa7",
+  "restored": ["viewport-contract.mjs", "viewport-node-map.mjs", "css-scope-digest.mjs"],
+  "sharedSource": "web-development at 179fae7a870170613f8ed2646e399ced65b338b8",
+  "synchronized": ["lint-units.mjs", "scope-conflict-audit.mjs", "scope-coordination.mjs", "gate-lease.mjs"],
+  "compatibility": "Export the existing frozen-metadata parser required by viewport-node-map; preserve the existing gate contract version and behavior.",
+  "checks": {
+    "run-checks": { "passed": 16, "failed": 0, "existingExcluded": 9 },
+    "verifier-runtime-import": "PASS, including missing-dependency rejection in an isolated copy",
+    "entry-trigger-audit": "PASS",
+    "rule-size-audit": "PASS",
+    "bootstrap-self-check": "PASS with matching distribution manifest",
+    "bootstrap-e2e": "PASS, zero failures"
+  },
+  "limits": "The existing excluded browser/project-artifact checks were not run for this distribution repair. This is not a visual implementation verification."
+}

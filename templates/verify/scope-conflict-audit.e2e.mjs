@@ -73,10 +73,19 @@ function entry(id, { actor = "codex", status = "active", contextId = "ctx-codex"
 
 const target = "assets/scss/components/_button.scss";
 const ownScope = entry("codex-target", { manifest: "coding-codex-target.json" });
+const otherReceiptPath = join(repo, ".coding-gate", "active", "codex-other.json");
+function holdOtherReceipt() {
+  mkdirSync(dirname(otherReceiptPath), { recursive: true });
+  writeFileSync(otherReceiptPath, JSON.stringify({
+    repository: repo, manifestId: "codex-other", phase: "preflight",
+    actor: "codex", changeTargets: [target], renewedAt: new Date().toISOString(),
+  }), "utf8");
+}
 
 try {
   mkdirSync(verifyDirectory, { recursive: true });
   copyFileSync(resolve(templateDirectory, "scope-conflict-audit.mjs"), join(verifyDirectory, "scope-conflict-audit.mjs"));
+  copyFileSync(resolve(templateDirectory, "gate-lease.mjs"), join(verifyDirectory, "gate-lease.mjs"));
   git("init", "--quiet");
   write("coding-codex-target.json", manifestFor("codex-target", [target]));
 
@@ -144,6 +153,9 @@ try {
     entry("codex-other", { contextId: "ctx-codex-other", manifest: "coding-codex-other.json" }),
   ]));
   result = audit("coding-codex-target.json");
+  check("受領証のない予約は止めない", result.status === 0, `予約だけで停止: ${result.stderr}`);
+  holdOtherReceipt();
+  result = audit("coding-codex-target.json");
   check("交差する並行scopeは止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
   check("交差の説明", result.stderr.includes("codex-other"), `交差相手を示していない: ${result.stderr}`);
 
@@ -153,12 +165,14 @@ try {
   //     `assets/scss/*.scss` のようなディレクトリ丸ごとのglobを生み、
   //     そのglobが次の停止の原因になっていた。
   write("shared-component-ownership.json", { version: 2, exclusivePathOwnership: [] });
+  rmSync(otherReceiptPath);
   write("scope-coordination.json", coordination([ownScope]));
   result = audit("coding-codex-target.json");
   check("空の排他所有台帳を受け付ける", result.status === 0, `PASSするはずが exit ${result.status} / ${result.stderr}`);
   check("空台帳でも交差判定は残る", !result.stderr.includes("exclusivePathOwnership がありません"), `空を欠落として扱っている: ${result.stderr}`);
 
   // (g) 空台帳にしても、交差する並行scopeは従来どおり止まる（最後の砦が効いている）。
+  holdOtherReceipt();
   write("coding-codex-other.json", manifestFor("codex-other", [target], { contextId: "ctx-codex-other" }));
   write("scope-coordination.json", coordination([
     ownScope,
@@ -166,6 +180,7 @@ try {
   ]));
   result = audit("coding-codex-target.json");
   check("空台帳でも交差する並行scopeは止める", result.status === 1, `FAILするはずが exit ${result.status} / ${result.stdout}`);
+  rmSync(otherReceiptPath);
 
   // (h) exclusivePathOwnership が配列でない台帳は従来どおり拒否する。
   write("shared-component-ownership.json", { version: 2, exclusivePathOwnership: "none" });
